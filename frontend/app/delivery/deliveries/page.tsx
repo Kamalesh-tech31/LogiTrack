@@ -14,6 +14,7 @@ import {
   acceptDelivery,
   saveLocationUpdate,
 } from "@/lib/api";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
 const statusOptions: Partial<Record<DeliveryStatus, DeliveryStatus[]>> = {
   Pending: ["Out for Delivery", "Failed Attempt"],
@@ -205,37 +206,26 @@ export default function DeliveriesPage() {
     }
   };
 
-  const [completionPhotos, setCompletionPhotos] = useState<
-    Record<string, string>
-  >({});
+  const [completionOtps, setCompletionOtps] = useState<Record<string, string>>(
+    {},
+  );
 
-  const [completionPreviews, setCompletionPreviews] = useState<
-    Record<string, string>
-  >({});
-
-  const handlePhotoChange = (id: string, file?: File) => {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result;
-      if (typeof result !== "string") return;
-      setCompletionPhotos((prev) => ({ ...prev, [id]: result }));
-      setCompletionPreviews((prev) => ({ ...prev, [id]: result }));
-    };
-    reader.readAsDataURL(file);
+  const handleOtpChange = (id: string, otp: string) => {
+    // normalize non-digit characters and limit to 6
+    const normalized = otp.replace(/\D/g, "").slice(0, 6);
+    setCompletionOtps((prev) => ({ ...prev, [id]: normalized }));
   };
 
   const handleComplete = async (id: string) => {
-    const photo = completionPhotos[id];
-    if (!photo) {
-      toast.error("Please upload a completion photo before marking completed.");
+    const otp = completionOtps[id]?.trim();
+    if (!otp || otp.length === 0) {
+      toast.error("Please enter the delivery OTP provided by the customer.");
       return;
     }
 
     try {
-      const updated = await updateDeliveryStatus(id, "completed", photo);
+      const updated = await updateDeliveryStatus(id, "completed", otp);
       setDeliveries((prev) => prev.map((d) => (d.id === id ? updated : d)));
-      // keep the UI select in sync so it doesn't revert after completion
       setSelectedStatuses((prev) => ({
         ...prev,
         [id]: updated.status as DeliveryStatus,
@@ -398,27 +388,47 @@ export default function DeliveriesPage() {
                       {delivery.raw?.assignedAgent && assignedToMe && (
                         <div className="space-y-3">
                           <label className="block text-sm text-[#A1A1AA]">
-                            Upload completion photo
+                            Delivery OTP
                           </label>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            aria-label="Upload completion photo"
-                            onChange={(event) =>
-                              handlePhotoChange(
-                                delivery.id,
-                                event.target.files?.[0],
-                              )
-                            }
-                            className="w-full rounded-2xl border border-[#27272A] bg-[#0B0B0B] px-4 py-3 text-sm text-white"
-                          />
-                          {completionPreviews[delivery.id] ? (
-                            <img
-                              src={completionPreviews[delivery.id]}
-                              alt="Completion preview"
-                              className="h-32 w-full rounded-2xl object-cover"
-                            />
-                          ) : null}
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="block text-sm text-[#A1A1AA]">Delivery OTP</p>
+                              <p className="text-xs text-[#9CA3AF]">Enter the 6-digit code sent to the customer</p>
+                            </div>
+                            <div className="text-xs">
+                              <button
+                                onClick={() => {
+                                  // quick UX: clear current OTP field
+                                  setCompletionOtps((prev) => ({ ...prev, [delivery.id]: "" }));
+                                }}
+                                className="text-[#C7D2FE] hover:underline"
+                                type="button"
+                              >
+                                Clear
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="mt-3">
+                            <div className="inline-block rounded-2xl bg-[#0B0B0B] border border-[#27272A] p-4">
+                            <InputOTP
+                              value={completionOtps[delivery.id] || ""}
+                              onChange={(val: string) => handleOtpChange(delivery.id, val)}
+                              maxLength={6}
+                              containerClassName="gap-3"
+                              className="bg-transparent text-white"
+                            >
+                              <InputOTPGroup>
+                                <InputOTPSlot index={0} />
+                                <InputOTPSlot index={1} />
+                                <InputOTPSlot index={2} />
+                                <InputOTPSlot index={3} />
+                                <InputOTPSlot index={4} />
+                                <InputOTPSlot index={5} />
+                              </InputOTPGroup>
+                            </InputOTP>
+                            </div>
+                          </div>
 
                           {delivery.status !== "completed" && (
                             <button

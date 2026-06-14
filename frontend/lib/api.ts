@@ -319,11 +319,11 @@ export async function fetchEarnings(): Promise<EarningsResponse> {
 export async function updateDeliveryStatus(
   id: string,
   status: string,
-  completionPhoto?: string,
+  completionOtp?: string,
 ): Promise<DeliveryRecord> {
   return apiRequest<DeliveryRecord>(`/api/deliveries/${id}/status`, {
     method: "PATCH",
-    body: JSON.stringify({ status, completionPhoto }),
+    body: JSON.stringify({ status, completionOtp }),
   });
 }
 

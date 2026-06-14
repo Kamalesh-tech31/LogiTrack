@@ -67,6 +67,30 @@ const OrderSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    completionOtpHash: {
+      type: String,
+      default: null,
+    },
+    completionOtpExpiresAt: {
+      type: Date,
+      default: null,
+    },
+    completionOtpSentAt: {
+      type: Date,
+      default: null,
+    },
+    completionOtpAttempts: {
+      type: Number,
+      default: 0,
+    },
+    completionOtpVerified: {
+      type: Boolean,
+      default: false,
+    },
+    completionOtpUsedAt: {
+      type: Date,
+      default: null,
+    },
     shippedAt: Date,
     deliveredAt: Date,
     cancelledAt: {

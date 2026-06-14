@@ -1,6 +1,15 @@
 const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
+const nodemailer = require("nodemailer");
 const Order = require("../models/Order");
 const User = require("../models/User");
+
+const DELIVERY_OTP_EXPIRY_MINUTES = Number(
+  process.env.DELIVERY_OTP_EXPIRY_MINUTES || 10,
+);
+const DELIVERY_OTP_MAX_ATTEMPTS = Number(
+  process.env.DELIVERY_OTP_MAX_ATTEMPTS || 5,
+);
 
 function formatDuration(ms) {
   if (ms <= 0) return "0m";
@@ -50,6 +59,68 @@ function getEtaMsForOrder(o) {
 
   // fallback estimate for orders not yet shipped
   return bufferMs;
+}
+
+function generateOtpCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+async function sendDeliveryOtpToCustomer(order) {
+  let customerEmail = null;
+  if (order.customerId && typeof order.customerId === "object") {
+    customerEmail = order.customerId.email;
+  }
+  if (!customerEmail && order.customerId) {
+    const customer = await User.findById(order.customerId);
+    customerEmail = customer?.email;
+  }
+
+  if (!customerEmail) {
+    throw new Error("Customer email not found to send delivery OTP.");
+  }
+
+  const otp = generateOtpCode();
+  const otpHash = await bcrypt.hash(otp, 10);
+  const now = new Date();
+  const expiresAt = new Date(
+    now.getTime() + DELIVERY_OTP_EXPIRY_MINUTES * 60 * 1000,
+  );
+
+  order.completionOtpHash = otpHash;
+  order.completionOtpExpiresAt = expiresAt;
+  order.completionOtpSentAt = now;
+  order.completionOtpAttempts = 0;
+  order.completionOtpVerified = false;
+  order.completionOtpUsedAt = null;
+
+  const transporter = nodemailer.createTransport({
+    host: process.env.EMAIL_SMTP_HOST || "smtp-relay.brevo.com",
+    port: Number(process.env.EMAIL_SMTP_PORT || 2525),
+    secure: false,
+    auth: {
+      user: process.env.BREVO_USER,
+      pass: process.env.BREVO_PASS,
+    },
+  });
+
+  await transporter.sendMail({
+    from: process.env.EMAIL_FROM || "LogiTrack <logitrack862@gmail.com>",
+    to: customerEmail,
+    subject: "Your delivery OTP",
+    html: `
+      <div style="font-family: Arial, sans-serif; background:#0b0b0b; color:#ffffff; padding:32px;">
+        <div style="max-width:560px; margin:0 auto; background:#111111; border:1px solid #27272a; border-radius:24px; padding:32px;">
+          <h1 style="margin:0 0 16px; font-size:32px; line-height:1.1;">Logi<span style="color:#7F1D1D;">Track</span></h1>
+          <p style="margin:0 0 24px; color:#d4d4d8; font-size:16px;">Your delivery OTP is below. Share it only with the delivery agent when the order is ready to complete.</p>
+          <div style="background:#1a1a1a; border:1px solid #7F1D1D; border-radius:18px; padding:20px; text-align:center; margin:0 0 24px;">
+            <div style="font-size:12px; letter-spacing:0.2em; text-transform:uppercase; color:#a1a1aa; margin-bottom:10px;">One-time delivery code</div>
+            <div style="font-size:36px; font-weight:700; letter-spacing:0.3em; color:#ffffff;">${otp}</div>
+          </div>
+          <p style="margin:0; color:#a1a1aa; font-size:14px;">This code expires in ${DELIVERY_OTP_EXPIRY_MINUTES} minutes.</p>
+        </div>
+      </div>
+    `,
+  });
 }
 
 function mapOrderToRecord(o) {
@@ -263,11 +334,20 @@ const acceptOrder = async (req, res, next) => {
 
     order.status = "shipped";
     order.shippedAt = new Date();
+    await sendDeliveryOtpToCustomer(order);
     await order.save();
+
     const populated = await Order.findById(order._id)
       .populate("assignedAgent", "fullName email role")
+      .populate("customerId", "fullName email")
       .populate("items.product", "name");
-    res.json({ success: true, data: mapOrderToRecord(populated) });
+
+    res.json({
+      success: true,
+      data: mapOrderToRecord(populated),
+      message:
+        "OTP sent to customer email. Complete delivery after customer provides the code.",
+    });
   } catch (err) {
     next(err);
   }
@@ -314,13 +394,47 @@ const updateDeliveryStatus = async (req, res, next) => {
     }
 
     if (status === "completed" || status === "delivered") {
-      const completionPhoto = req.body.completionPhoto;
-      if (!completionPhoto || typeof completionPhoto !== "string") {
+      const completionOtp = req.body.completionOtp;
+      if (!completionOtp || typeof completionOtp !== "string") {
         return res.status(400).json({
-          message: "A completion photo is required to complete the order.",
+          message: "A valid delivery OTP is required to complete the order.",
         });
       }
-      order.completionPhoto = completionPhoto;
+
+      const now = new Date();
+      if (
+        !order.completionOtpHash ||
+        !order.completionOtpExpiresAt ||
+        new Date(order.completionOtpExpiresAt).getTime() < now.getTime()
+      ) {
+        return res.status(400).json({
+          message:
+            "Delivery OTP is missing or has expired. Re-accept the order to send a new code.",
+        });
+      }
+
+      if ((order.completionOtpAttempts || 0) >= DELIVERY_OTP_MAX_ATTEMPTS) {
+        return res.status(429).json({
+          message: "Too many incorrect OTP attempts. Request a new code.",
+        });
+      }
+
+      const isMatch = await bcrypt.compare(
+        completionOtp.trim(),
+        order.completionOtpHash,
+      );
+
+      if (!isMatch) {
+        order.completionOtpAttempts = (order.completionOtpAttempts || 0) + 1;
+        await order.save();
+        return res.status(400).json({ message: "Invalid delivery OTP." });
+      }
+
+      order.completionOtpVerified = true;
+      order.completionOtpUsedAt = now;
+      order.completionOtpHash = "";
+      order.completionOtpAttempts = 0;
+      order.completionOtpExpiresAt = now;
       order.deliveredAt = new Date();
     }
 
