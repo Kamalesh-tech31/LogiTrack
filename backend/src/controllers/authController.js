@@ -55,6 +55,22 @@ const normalizeUserResponse = (user) => {
   return payload;
 };
 
+function applyProfileUpdates(targetUser, payload) {
+  const fields = [
+    "fullName",
+    "phone",
+    "businessName",
+    "gstNumber",
+    "businessAddress",
+  ];
+
+  fields.forEach((field) => {
+    if (payload[field] !== undefined) {
+      targetUser[field] = payload[field];
+    }
+  });
+}
+
 const DELETION_CONFIRMATION = "DELETE MY ACCOUNT";
 
 async function markRelatedDeliveriesInactive(orderIds, reason) {
@@ -400,10 +416,91 @@ const deleteAccount = async (req, res) => {
   }
 };
 
+const getCurrentUser = async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: normalizeUserResponse(user),
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+const updateCurrentUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.user?._id || req.user?.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    applyProfileUpdates(user, req.body || {});
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      data: normalizeUserResponse(user),
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+const updateCurrentPassword = async (req, res) => {
+  try {
+    const userId = req.user?._id || req.user?.id;
+    const { currentPassword, newPassword, confirmPassword } = req.body || {};
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({
+        message: "Current password, new password, and confirmation are required",
+      });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ message: "Passwords do not match" });
+    }
+
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      return res.status(400).json({ message: passwordError });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Current password is incorrect" });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Password updated successfully",
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   register,
   login,
   deleteAccount,
   requestRegistrationOtp,
   verifyRegistrationOtp,
+  getCurrentUser,
+  updateCurrentUser,
+  updateCurrentPassword,
 };

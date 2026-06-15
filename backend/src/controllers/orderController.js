@@ -1,6 +1,7 @@
 const Order = require("../models/Order");
 const Product = require("../models/product");
 const User = require("../models/User");
+const { createOrderEventNotifications } = require("../services/notificationService");
 const fs = require("fs");
 const path = require("path");
 
@@ -169,6 +170,8 @@ exports.createOrder = async (req, res, next) => {
     // Note: Delivery documents are deprecated. Use Order.assignedAgent/status
     // as the single source of truth for delivery assignment and lifecycle.
 
+    await createOrderEventNotifications(savedOrder, "created");
+
     res.status(201).json({ success: true, data: savedOrder });
   } catch (err) {
     logToFile(`ORDER CREATION ERROR: ${err.message}`);
@@ -300,6 +303,8 @@ exports.updateOrderStatus = async (req, res, next) => {
       order.deliveredAt = new Date();
     await order.save();
 
+    await createOrderEventNotifications(order, status);
+
     res.json({ success: true, data: order });
   } catch (err) {
     next(err);
@@ -317,6 +322,7 @@ exports.deleteOrder = async (req, res, next) => {
 
     // If order not delivered, return stock
     if (order.status !== "delivered") {
+      await createOrderEventNotifications(order, "cancelled");
       for (const it of order.items) {
         await Product.findByIdAndUpdate(it.product, {
           $inc: { stock: it.quantity },

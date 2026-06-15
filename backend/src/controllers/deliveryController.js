@@ -3,6 +3,7 @@ const bcrypt = require("bcryptjs");
 const nodemailer = require("nodemailer");
 const Order = require("../models/Order");
 const User = require("../models/User");
+const { createOrderEventNotifications } = require("../services/notificationService");
 
 const DELIVERY_OTP_EXPIRY_MINUTES = Number(
   process.env.DELIVERY_OTP_EXPIRY_MINUTES || 10,
@@ -13,6 +14,15 @@ const DELIVERY_OTP_MAX_ATTEMPTS = Number(
 
 function formatDuration(ms) {
   if (ms <= 0) return "0m";
+  const mins = Math.round(ms / 60000);
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  const remaining = mins % 60;
+  return remaining === 0 ? `${hours}h` : `${hours}h ${remaining}m`;
+}
+
+function formatAverageDuration(ms) {
+  if (!ms || ms <= 0) return "--";
   const mins = Math.round(ms / 60000);
   if (mins < 60) return `${mins}m`;
   const hours = Math.floor(mins / 60);
@@ -273,6 +283,7 @@ const assignOrder = async (req, res, next) => {
     order.assignedAgent = agent._id;
     order.status = "assigned";
     await order.save();
+    await createOrderEventNotifications(order, "assigned");
 
     const populated = await Order.findById(order._id)
       .populate("assignedAgent", "fullName email role")
@@ -336,6 +347,8 @@ const acceptOrder = async (req, res, next) => {
     order.shippedAt = new Date();
     await sendDeliveryOtpToCustomer(order);
     await order.save();
+    await createOrderEventNotifications(order, "accepted");
+    await createOrderEventNotifications(order, "shipped");
 
     const populated = await Order.findById(order._id)
       .populate("assignedAgent", "fullName email role")
@@ -442,6 +455,10 @@ const updateDeliveryStatus = async (req, res, next) => {
     if (status === "shipped") order.shippedAt = new Date();
     await order.save();
 
+    if (status) {
+      await createOrderEventNotifications(order, status);
+    }
+
     const populated = await Order.findById(order._id)
       .populate("assignedAgent", "fullName email role")
       .populate("items.product", "name");
@@ -537,7 +554,6 @@ const getDashboard = async (req, res, next) => {
       .limit(100)
       .sort({ deliveredAt: -1 });
 
-    const EXTRA_MS = 20 * 60 * 1000; // 20 minutes in ms
     let totalMs = 0;
     let counted = 0;
     completedOrdersForEta.forEach((o) => {
@@ -550,25 +566,12 @@ const getDashboard = async (req, res, next) => {
       if (shipped && delivered) duration = delivered - shipped;
       else if (delivered && created) duration = delivered - created;
       if (duration && duration > 0) {
-        duration += EXTRA_MS; // add 20 minutes per delivery
         totalMs += duration;
         counted += 1;
       }
     });
 
-    let avgEtaStr = "--";
-    if (activeDeliveriesCount > 0) {
-      avgEtaStr = `${activeDeliveriesCount * 20}m`;
-    } else if (counted > 0) {
-      const avgMs = Math.round(totalMs / counted);
-      const mins = Math.round(avgMs / 60000);
-      if (mins < 60) avgEtaStr = `${mins}m`;
-      else {
-        const h = Math.floor(mins / 60);
-        const m = mins % 60;
-        avgEtaStr = m === 0 ? `${h}h` : `${h}h ${m}m`;
-      }
-    }
+    const avgEtaStr = counted > 0 ? formatAverageDuration(totalMs / counted) : "--";
 
     res.json({
       success: true,

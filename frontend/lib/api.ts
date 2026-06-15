@@ -49,6 +49,40 @@ export interface LocationUpdatePayload {
   timestamp: string;
 }
 
+export interface AppNotification {
+  _id: string;
+  title: string;
+  message: string;
+  type: string;
+  orderCode?: string | null;
+  isRead: boolean;
+  createdAt: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface NotificationResponse {
+  notifications: AppNotification[];
+  unreadCount: number;
+}
+
+export interface CustomerAnalyticsSummary {
+  totalOrders: number;
+  deliveredOrders: number;
+  pendingOrders: number;
+  shippedOrders: number;
+  totalSpending: number;
+  monthlyStats: Array<{
+    month: string;
+    monthKey: string;
+    orders: number;
+    spending: number;
+  }>;
+  orderStatusDistribution: Array<{
+    name: string;
+    value: number;
+  }>;
+}
+
 function getApiBaseUrl() {
   return API_BASE_URL;
 }
@@ -367,4 +401,52 @@ export async function fetchLatestLocationUpdate(
   return apiRequest<any>(
     `/api/location-updates/latest?deliveryId=${encodeURIComponent(deliveryId)}`,
   );
+}
+
+export async function fetchCurrentUser(): Promise<any> {
+  return apiRequest<any>("/api/auth/me");
+}
+
+export async function updateCurrentUser(payload: {
+  fullName?: string;
+  phone?: string;
+  businessName?: string;
+  gstNumber?: string;
+  businessAddress?: string;
+}): Promise<any> {
+  return apiRequest<any>("/api/auth/me", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateCurrentPassword(payload: {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}): Promise<any> {
+  return apiRequest<any>("/api/auth/me/password", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function fetchNotifications(): Promise<NotificationResponse> {
+  return apiRequest<NotificationResponse>("/api/notifications");
+}
+
+export async function markNotificationRead(id: string): Promise<NotificationResponse> {
+  return apiRequest<NotificationResponse>(`/api/notifications/${id}/read`, {
+    method: "PATCH",
+  });
+}
+
+export async function markAllNotificationsRead(): Promise<NotificationResponse> {
+  return apiRequest<NotificationResponse>("/api/notifications/read-all", {
+    method: "PATCH",
+  });
+}
+
+export async function fetchCustomerAnalyticsSummary(): Promise<CustomerAnalyticsSummary> {
+  return apiRequest<CustomerAnalyticsSummary>("/api/customer/analytics/summary");
 }

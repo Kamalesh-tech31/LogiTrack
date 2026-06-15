@@ -31,6 +31,7 @@ const inventoryRoutes = require("./routes/inventoryRoutes");
 const deliveryRoutes = require("./routes/deliveries");
 const analyticsRoutes = require("./routes/analyticsRoutes");
 const authRoutes = require("./routes/authRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 const locationRoutes = require("./routes/locations");
 const deliveryAgentRoutes = require("./routes/deliveryAgents");
 
@@ -99,6 +100,7 @@ app.use("/api/inventory", inventoryRoutes);
 app.use("/api/deliveries", deliveryRoutes);
 app.use("/api/delivery-agents", deliveryAgentRoutes);
 app.use("/api/analytics", analyticsRoutes);
+app.use("/api/notifications", notificationRoutes);
 app.use("/api/location-updates", locationRoutes);
 
 /* =========================
