@@ -21,13 +21,20 @@ async function buildCustomerAnalyticsSummary(userId) {
   const totalOrders = orders.length
   const deliveredOrders = orders.filter((order) => {
     const status = String(order.status || "").toLowerCase()
-    return status === "delivered" || status === "completed"
+    return status === "delivered"
+  }).length
+  const completedOrders = orders.filter((order) => {
+    const status = String(order.status || "").toLowerCase()
+    return status === "completed"
   }).length
   const pendingOrders = orders.filter((order) => {
     const status = String(order.status || "").toLowerCase()
     return status === "pending" || status === "processing" || status === "assigned"
   }).length
-  const shippedOrders = orders.filter((order) => String(order.status || "").toLowerCase() === "shipped").length
+  const shippedOrders = orders.filter((order) => {
+    const status = String(order.status || "").toLowerCase()
+    return status === "shipped" || status === "out-for-delivery"
+  }).length
 
   const totalSpending = orders.reduce((sum, order) => sum + Number(order.totalPrice || 0), 0)
 
@@ -38,6 +45,7 @@ async function buildCustomerAnalyticsSummary(userId) {
     ["processing", 0],
     ["assigned", 0],
     ["shipped", 0],
+    ["out-for-delivery", 0],
     ["delivered", 0],
     ["completed", 0],
     ["cancelled", 0],
@@ -72,11 +80,15 @@ async function buildCustomerAnalyticsSummary(userId) {
 
   const orderStatusDistribution = Array.from(statusMap.entries())
     .filter(([, value]) => value > 0)
-    .map(([name, value]) => ({ name, value }))
+    .map(([name, value]) => ({
+      name,
+      value,
+    }))
 
   return {
     totalOrders,
     deliveredOrders,
+    completedOrders,
     pendingOrders,
     shippedOrders,
     totalSpending,

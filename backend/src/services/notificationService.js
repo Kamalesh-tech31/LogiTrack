@@ -1,5 +1,31 @@
 const Notification = require("../models/Notification");
 
+function createRoleNotification({
+  recipient,
+  recipientRole,
+  type,
+  title,
+  message,
+  orderId = null,
+  orderCode = null,
+  metadata = {},
+}) {
+  if (!recipient || !recipientRole) {
+    return null;
+  }
+
+  return Notification.create({
+    recipient,
+    recipientRole,
+    type,
+    title,
+    message,
+    orderId,
+    orderCode,
+    metadata,
+  });
+}
+
 function getRecipients(order, includeAgent = true) {
   const recipients = [];
 
@@ -48,9 +74,9 @@ async function createOrderEventNotifications(order, eventType) {
 
   const templates = {
     created: {
-      type: "order-created",
-      title: "New order created",
-      message: `Order ${orderCode} has been created and is waiting for processing.`,
+      type: "order-placed",
+      title: "Order placed",
+      message: `Order ${orderCode} has been placed and is waiting for processing.`,
     },
     assigned: {
       type: "order-assigned",
@@ -89,12 +115,23 @@ async function createOrderEventNotifications(order, eventType) {
     return [];
   }
 
-  const includeAgent = eventType === "assigned" || eventType === "accepted" || eventType === "cancelled";
+  const recipientOptions = {
+    includeAgent: eventType === "assigned" || eventType === "accepted" || eventType === "cancelled",
+  };
 
-  return createNotificationForRecipients(order, template, { includeAgent });
+  if (eventType === "assigned" || eventType === "accepted") {
+    return createNotificationForRecipients(
+      { ...order, customerId: null },
+      template,
+      recipientOptions,
+    );
+  }
+
+  return createNotificationForRecipients(order, template, recipientOptions);
 }
 
 module.exports = {
+  createRoleNotification,
   createNotificationForRecipients,
   createOrderEventNotifications,
 };

@@ -68,6 +68,7 @@ export interface NotificationResponse {
 export interface CustomerAnalyticsSummary {
   totalOrders: number;
   deliveredOrders: number;
+  completedOrders: number;
   pendingOrders: number;
   shippedOrders: number;
   totalSpending: number;

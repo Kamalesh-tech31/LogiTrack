@@ -1,5 +1,14 @@
 const Product = require("../models/product");
 const InventoryHistory = require("../models/InventoryHistory");
+const { createRoleNotification } = require("../services/notificationService");
+
+function isLowStock(product) {
+  return (
+    typeof product.stock === "number" &&
+    typeof product.minStock === "number" &&
+    product.stock < product.minStock
+  );
+}
 
 // Create a new product
 exports.createProduct = async (req, res, next) => {
@@ -44,6 +53,33 @@ exports.createProduct = async (req, res, next) => {
       quantity: product.stock || 0,
       details: "New product added to inventory",
     });
+
+    await createRoleNotification({
+      recipient: req.user.id,
+      recipientRole: "Business Owner",
+      type: "product-added",
+      title: "Product added",
+      message: `${product.name} was added to your catalog.`,
+      orderId: null,
+      orderCode: null,
+      metadata: {
+        status: isLowStock(product) ? "low-stock" : "active",
+      },
+    });
+
+    if (isLowStock(product)) {
+      await createRoleNotification({
+        recipient: req.user.id,
+        recipientRole: "Business Owner",
+        type: "product-stock-low",
+        title: "Product stock low",
+        message: `${product.name} is below the minimum stock threshold.`,
+        metadata: {
+          stock: product.stock,
+          minStock: product.minStock,
+        },
+      });
+    }
 
     res.status(201).json({ success: true, data: product });
   } catch (err) {
@@ -138,6 +174,9 @@ exports.updateProduct = async (req, res, next) => {
       });
     }
 
+    const originalLowStock = isLowStock(original);
+    const updatedLowStock = isLowStock(product);
+
     if (updates.name && updates.name !== original.name) {
       await InventoryHistory.create({
         ownerId: req.user.id,
@@ -146,6 +185,33 @@ exports.updateProduct = async (req, res, next) => {
         action: `Renamed product from ${original.name} to ${product.name}`,
         quantity: 0,
         details: "Product metadata updated",
+      });
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await createRoleNotification({
+        recipient: req.user.id,
+        recipientRole: "Business Owner",
+        type: "product-updated",
+        title: "Product updated",
+        message: `${product.name} was updated successfully.`,
+        metadata: {
+          updatedFields: Object.keys(updates),
+        },
+      });
+    }
+
+    if (!originalLowStock && updatedLowStock) {
+      await createRoleNotification({
+        recipient: req.user.id,
+        recipientRole: "Business Owner",
+        type: "product-stock-low",
+        title: "Product stock low",
+        message: `${product.name} is below the minimum stock threshold.`,
+        metadata: {
+          stock: product.stock,
+          minStock: product.minStock,
+        },
       });
     }
 

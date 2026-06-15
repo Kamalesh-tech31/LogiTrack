@@ -60,23 +60,37 @@ export default function HistoryPage() {
     (item) => item.status === "returned",
   ).length;
 
-  const averageCompletionTime = (() => {
+  const averageDeliveryTime = (() => {
+    if (history.length === 0) return null;
+
     const durations = history
       .map((delivery) => {
         const raw = delivery as DeliveryRecord & {
-          raw?: { shippedAt?: string; deliveredAt?: string; createdAt?: string };
+          raw?: {
+            assignedAt?: string;
+            shippedAt?: string;
+            deliveredAt?: string;
+            completedAt?: string;
+            createdAt?: string;
+          };
         };
+
+        const assignedAt = raw.raw?.assignedAt ? new Date(raw.raw.assignedAt).getTime() : null;
         const shippedAt = raw.raw?.shippedAt ? new Date(raw.raw.shippedAt).getTime() : null;
         const deliveredAt = raw.raw?.deliveredAt ? new Date(raw.raw.deliveredAt).getTime() : null;
+        const completedAt = raw.raw?.completedAt ? new Date(raw.raw.completedAt).getTime() : null;
         const createdAt = raw.raw?.createdAt ? new Date(raw.raw.createdAt).getTime() : null;
 
-        if (shippedAt && deliveredAt) return deliveredAt - shippedAt;
-        if (deliveredAt && createdAt) return deliveredAt - createdAt;
+        if (assignedAt && shippedAt && shippedAt > assignedAt) return shippedAt - assignedAt;
+        if (shippedAt && deliveredAt && deliveredAt > shippedAt) return deliveredAt - shippedAt;
+        if (deliveredAt && completedAt && completedAt > deliveredAt) return completedAt - deliveredAt;
+        if (deliveredAt && createdAt && deliveredAt > createdAt) return deliveredAt - createdAt;
+        if (completedAt && createdAt && completedAt > createdAt) return completedAt - createdAt;
         return null;
       })
       .filter((value): value is number => typeof value === "number" && value > 0);
 
-    if (durations.length === 0) return "--";
+    if (durations.length === 0) return null;
 
     const averageMs = durations.reduce((sum, duration) => sum + duration, 0) / durations.length;
     return formatAverageDuration(averageMs);
@@ -111,9 +125,13 @@ export default function HistoryPage() {
         />
 
         <StatsCard
-          title="Average completion time"
-          value={averageCompletionTime}
-          description="Derived from shipped and delivered timestamps"
+          title="Average Delivery Time"
+          value={averageDeliveryTime ?? "--"}
+          description={
+            history.length === 0
+              ? "No completed deliveries available yet"
+              : "Derived from real assigned, shipped, delivered, and completed timestamps"
+          }
         />
       </div>
 

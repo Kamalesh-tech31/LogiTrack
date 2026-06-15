@@ -181,7 +181,7 @@ export default function Topbar(): JSX.Element {
                   </div>
                 ))}
                 {visibleNotifications.length === 0 && (
-                  <div className="text-sm text-neutral-500">No notifications yet.</div>
+                  <div className="text-sm text-neutral-500">No notifications available</div>
                 )}
               </div>
             </div>

@@ -1,5 +1,6 @@
 const DeliveryAgent = require("../models/DeliveryAgent");
 const User = require("../models/User");
+const { createRoleNotification } = require("../services/notificationService");
 
 const getAllDeliveryAgents = async (req, res, next) => {
   try {
@@ -53,6 +54,20 @@ const createDeliveryAgent = async (req, res, next) => {
       vehicle: vehicle?.trim?.() || "",
       isAvailable: Boolean(isAvailable),
     });
+
+    if (req.user?.role === "Business Owner") {
+      await createRoleNotification({
+        recipient: req.user.id,
+        recipientRole: "Business Owner",
+        type: "delivery-agent-added",
+        title: "New delivery agent added",
+        message: `${agent.name} was added to your delivery team.`,
+        metadata: {
+          contact: agent.contact,
+          vehicle: agent.vehicle,
+        },
+      });
+    }
 
     res.status(201).json({ success: true, data: agent });
   } catch (error) {

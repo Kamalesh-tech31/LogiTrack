@@ -1,5 +1,14 @@
 const Product = require("../models/product");
 const InventoryHistory = require("../models/InventoryHistory");
+const { createRoleNotification } = require("../services/notificationService");
+
+function isLowStock(product) {
+  return (
+    typeof product.stock === "number" &&
+    typeof product.minStock === "number" &&
+    product.stock < product.minStock
+  );
+}
 
 // Fetch inventory overview
 exports.getInventory = async (req, res, next) => {
@@ -81,7 +90,24 @@ exports.updateStock = async (req, res, next) => {
         .json({ success: false, message: "set or delta required" });
     }
 
+    const wasLowStock = isLowStock(product);
+
     await product.save();
+
+    if (!wasLowStock && isLowStock(product)) {
+      await createRoleNotification({
+        recipient: req.user.id,
+        recipientRole: "Business Owner",
+        type: "product-stock-low",
+        title: "Product stock low",
+        message: `${product.name} is below the minimum stock threshold.`,
+        metadata: {
+          stock: product.stock,
+          minStock: product.minStock,
+          action,
+        },
+      });
+    }
 
     await InventoryHistory.create({
       ownerId: req.user.id,
