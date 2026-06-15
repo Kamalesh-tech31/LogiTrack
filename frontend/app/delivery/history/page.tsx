@@ -7,6 +7,15 @@ import StatusBadge from "@/components/delivery/StatusBadge";
 import type { DeliveryRecord } from "@/components/delivery/deliveryData";
 import { fetchHistory } from "@/lib/api";
 
+function formatAverageDuration(ms: number) {
+  if (!ms || ms <= 0) return "--";
+  const totalMinutes = Math.round(ms / 60000);
+  if (totalMinutes < 60) return `${totalMinutes}m`;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return minutes === 0 ? `${hours}h` : `${hours}h ${minutes}m`;
+}
+
 export default function HistoryPage() {
   const [history, setHistory] = useState<DeliveryRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -51,6 +60,28 @@ export default function HistoryPage() {
     (item) => item.status === "returned",
   ).length;
 
+  const averageCompletionTime = (() => {
+    const durations = history
+      .map((delivery) => {
+        const raw = delivery as DeliveryRecord & {
+          raw?: { shippedAt?: string; deliveredAt?: string; createdAt?: string };
+        };
+        const shippedAt = raw.raw?.shippedAt ? new Date(raw.raw.shippedAt).getTime() : null;
+        const deliveredAt = raw.raw?.deliveredAt ? new Date(raw.raw.deliveredAt).getTime() : null;
+        const createdAt = raw.raw?.createdAt ? new Date(raw.raw.createdAt).getTime() : null;
+
+        if (shippedAt && deliveredAt) return deliveredAt - shippedAt;
+        if (deliveredAt && createdAt) return deliveredAt - createdAt;
+        return null;
+      })
+      .filter((value): value is number => typeof value === "number" && value > 0);
+
+    if (durations.length === 0) return "--";
+
+    const averageMs = durations.reduce((sum, duration) => sum + duration, 0) / durations.length;
+    return formatAverageDuration(averageMs);
+  })();
+
   return (
     <div className="p-4 md:p-6">
       <div>
@@ -80,9 +111,9 @@ export default function HistoryPage() {
         />
 
         <StatsCard
-          title="Average resolution"
-          value="1.4 days"
-          description="Time to close delivery outcomes"
+          title="Average completion time"
+          value={averageCompletionTime}
+          description="Derived from shipped and delivered timestamps"
         />
       </div>
 

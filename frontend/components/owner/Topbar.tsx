@@ -3,6 +3,12 @@
 import { useEffect, useState } from "react";
 import { Bell, Crown } from "lucide-react";
 import { JSX } from "react/jsx-runtime";
+import {
+  fetchNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+  type AppNotification,
+} from "@/lib/api";
 
 const plans = [
   { name: "Starter", price: "₹29/mo", details: "Up to 5 users" },
@@ -10,16 +16,12 @@ const plans = [
   { name: "Enterprise", price: "Custom", details: "Unlimited seats" },
 ];
 
-const notifications = [
-  { title: "Route delay alert", message: "Delivery 12 has a 15 min delay." },
-  { title: "Stock threshold reached", message: "Packaging Box stock is low." },
-  { title: "New agent added", message: "Rahul Sharma joined your fleet." },
-];
-
 export default function Topbar(): JSX.Element {
   const [isPlanOpen, setIsPlanOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [userName, setUserName] = useState("User");
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const name = localStorage.getItem("userName");
@@ -27,6 +29,55 @@ export default function Topbar(): JSX.Element {
       setUserName(name);
     }
   }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadNotifications = async () => {
+      try {
+        const response = await fetchNotifications();
+        if (!isMounted) return;
+
+        setNotifications(Array.isArray(response.notifications) ? response.notifications : []);
+        setUnreadCount(Number(response.unreadCount || 0));
+      } catch {
+        if (isMounted) {
+          setNotifications([]);
+          setUnreadCount(0);
+        }
+      }
+    };
+
+    void loadNotifications();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleMarkAllRead = async () => {
+    try {
+      const response = await markAllNotificationsRead();
+      setUnreadCount(Number(response.unreadCount || 0));
+      setNotifications((current) => current.map((item) => ({ ...item, isRead: true })));
+    } catch {
+      // ignore update failures
+    }
+  };
+
+  const handleMarkOneRead = async (id: string) => {
+    try {
+      const response = await markNotificationRead(id);
+      setUnreadCount(Number(response.unreadCount || 0));
+      setNotifications((current) =>
+        current.map((item) => (item._id === id ? { ...item, isRead: true } : item)),
+      );
+    } catch {
+      // ignore update failures
+    }
+  };
+
+  const visibleNotifications = notifications.slice(0, 5);
 
   return (
     <div className="w-full h-20 bg-[#111111] border-b border-neutral-900 px-8 flex items-center justify-between">
@@ -92,18 +143,36 @@ export default function Topbar(): JSX.Element {
             aria-expanded={isNotifOpen}
           >
             <Bell size={20} aria-hidden="true" />
+            {unreadCount > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-medium text-white">
+                {unreadCount}
+              </span>
+            )}
           </button>
 
           {isNotifOpen && (
             <div className="absolute right-0 mt-3 w-80 rounded-3xl bg-[#0B0B0B] border border-neutral-800 shadow-xl z-20">
-              <div className="p-4 border-b border-neutral-800">
-                <p className="text-sm text-neutral-400">Notifications</p>
+              <div className="flex items-center justify-between p-4 border-b border-neutral-800">
+                <div>
+                  <p className="text-sm text-neutral-400">Notifications</p>
+                  <p className="text-xs text-neutral-500">{unreadCount} unread</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleMarkAllRead}
+                  className="text-xs font-medium text-[#F87171] hover:text-white"
+                >
+                  Mark all read
+                </button>
               </div>
               <div className="space-y-3 p-4">
-                {notifications.map((item) => (
+                {visibleNotifications.map((item) => (
                   <div
-                    key={item.title}
-                    className="rounded-2xl border border-[#1F1F1F] p-3 hover:border-[#7F1D1D] transition-colors"
+                    key={item._id}
+                    className={`rounded-2xl border p-3 transition-colors hover:border-[#7F1D1D] ${item.isRead ? "border-[#1F1F1F]" : "border-[#7F1D1D]/40"}`}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => void handleMarkOneRead(item._id)}
                   >
                     <p className="text-white font-semibold">{item.title}</p>
                     <p className="text-sm text-neutral-500 mt-1">
@@ -111,6 +180,9 @@ export default function Topbar(): JSX.Element {
                     </p>
                   </div>
                 ))}
+                {visibleNotifications.length === 0 && (
+                  <div className="text-sm text-neutral-500">No notifications yet.</div>
+                )}
               </div>
             </div>
           )}

@@ -9,6 +9,8 @@ import {
   ShoppingCart,
   CheckCircle,
   Truck,
+  LineChart,
+  UserRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +19,8 @@ const navItems = [
   { href: "/customer/products", icon: Package, label: "Products" },
   { href: "/customer/cart", icon: ShoppingCart, label: "Cart" },
   { href: "/customer/orders", icon: CheckCircle, label: "Orders" },
+  { href: "/customer/analytics", icon: LineChart, label: "Analytics" },
+  { href: "/customer/profile", icon: UserRound, label: "Profile" },
 ];
 
 export function CustomerSidebar() {
