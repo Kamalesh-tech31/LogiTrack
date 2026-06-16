@@ -34,11 +34,17 @@ function getRecipients(order, includeAgent = true) {
   }
 
   if (order.ownerId) {
-    recipients.push({ recipient: order.ownerId, recipientRole: "Business Owner" });
+    recipients.push({
+      recipient: order.ownerId,
+      recipientRole: "Business Owner",
+    });
   }
 
   if (includeAgent && order.assignedAgent) {
-    recipients.push({ recipient: order.assignedAgent, recipientRole: "Delivery Agent" });
+    recipients.push({
+      recipient: order.assignedAgent,
+      recipientRole: "Delivery Agent",
+    });
   }
 
   return recipients;
@@ -70,7 +76,38 @@ async function createNotificationForRecipients(order, config, options = {}) {
 }
 
 async function createOrderEventNotifications(order, eventType) {
+  // Populate product names from order items
+  let populatedOrder = order;
+  try {
+    if (!order.items[0]?.product?.name) {
+      const Order = require("../models/Order");
+      populatedOrder = await Order.findById(order._id).populate(
+        "items.product",
+      );
+    }
+  } catch {
+    // Continue with unpopulated order if population fails
+  }
+
   const orderCode = order.orderId || order._id?.toString() || "unknown-order";
+
+  // Get product names from items
+  const productNames =
+    populatedOrder.items
+      ?.map((item) => {
+        if (typeof item.product === "object" && item.product?.name) {
+          return item.product.name;
+        }
+        return null;
+      })
+      .filter(Boolean) || [];
+
+  const productName =
+    productNames.length > 0
+      ? productNames.length === 1
+        ? productNames[0]
+        : `${productNames[0]} and ${productNames.length - 1} more`
+      : "Product";
 
   const templates = {
     created: {
@@ -116,18 +153,33 @@ async function createOrderEventNotifications(order, eventType) {
   }
 
   const recipientOptions = {
-    includeAgent: eventType === "assigned" || eventType === "accepted" || eventType === "cancelled",
+    includeAgent:
+      eventType === "assigned" ||
+      eventType === "accepted" ||
+      eventType === "cancelled",
+  };
+
+  // Add productName to metadata
+  const templateWithProductName = {
+    ...template,
+    metadata: {
+      productName,
+    },
   };
 
   if (eventType === "assigned" || eventType === "accepted") {
     return createNotificationForRecipients(
       { ...order, customerId: null },
-      template,
+      templateWithProductName,
       recipientOptions,
     );
   }
 
-  return createNotificationForRecipients(order, template, recipientOptions);
+  return createNotificationForRecipients(
+    order,
+    templateWithProductName,
+    recipientOptions,
+  );
 }
 
 module.exports = {

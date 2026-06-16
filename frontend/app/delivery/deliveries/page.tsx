@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+// notifications are shown in Topbar; removed local bell
 import toast from "react-hot-toast";
 
 import DeliveryCard from "@/components/delivery/DeliveryCard";
@@ -13,18 +14,24 @@ import {
   updateDeliveryStatus,
   acceptDelivery,
   saveLocationUpdate,
+  resendDeliveryOtp,
+  // notifications handled by Topbar
 } from "@/lib/api";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 
 const statusOptions: Partial<Record<DeliveryStatus, DeliveryStatus[]>> = {
-  Pending: ["Out for Delivery", "Failed Attempt"],
-  pending: ["Out for Delivery", "Failed Attempt"],
-  Assigned: ["Out for Delivery", "Failed Attempt"],
-  assigned: ["Out for Delivery", "Failed Attempt"],
-  "Out for Delivery": ["Delivered", "Failed Attempt"],
-  "out-for-delivery": ["Delivered", "Failed Attempt"],
-  Shipped: ["Delivered", "Failed Attempt"],
-  shipped: ["Delivered", "Failed Attempt"],
+  Pending: ["Out for Delivery"],
+  pending: ["Out for Delivery"],
+  Assigned: ["Out for Delivery"],
+  assigned: ["Out for Delivery"],
+  "Out for Delivery": ["Delivered"],
+  "out-for-delivery": ["Delivered"],
+  Shipped: ["Delivered"],
+  shipped: ["Delivered"],
   Delivered: [],
   delivered: [],
   "Failed Attempt": ["Returned"],
@@ -48,6 +55,7 @@ export default function DeliveriesPage() {
   >({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // notifications handled by Topbar
 
   useEffect(() => {
     let isMounted = true;
@@ -83,6 +91,8 @@ export default function DeliveriesPage() {
       isMounted = false;
     };
   }, []);
+
+  // notification logic removed — Topbar displays notifications
 
   const isAssignedToCurrentUser = (delivery: DeliveryRecord) => {
     if (typeof window === "undefined") return false;
@@ -254,6 +264,8 @@ export default function DeliveriesPage() {
           </p>
         </div>
 
+        {/* Notifications moved to Topbar component */}
+
         <div className="grid grid-cols-2 gap-3 min-w-70">
           <div className="rounded-2xl border border-[#27272A] bg-[#1A1A1A] p-4">
             <p className="text-sm text-[#A1A1AA]">Active</p>
@@ -387,47 +399,76 @@ export default function DeliveriesPage() {
 
                       {delivery.raw?.assignedAgent && assignedToMe && (
                         <div className="space-y-3">
-                          <label className="block text-sm text-[#A1A1AA]">
-                            Delivery OTP
-                          </label>
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="block text-sm text-[#A1A1AA]">Delivery OTP</p>
-                              <p className="text-xs text-[#9CA3AF]">Enter the 6-digit code sent to the customer</p>
-                            </div>
-                            <div className="text-xs">
-                              <button
-                                onClick={() => {
-                                  // quick UX: clear current OTP field
-                                  setCompletionOtps((prev) => ({ ...prev, [delivery.id]: "" }));
-                                }}
-                                className="text-[#C7D2FE] hover:underline"
-                                type="button"
-                              >
-                                Clear
-                              </button>
-                            </div>
+                          <div>
+                            <p className="block text-sm text-[#A1A1AA] mb-2">
+                              Delivery OTP
+                            </p>
+                            <p className="text-xs text-[#9CA3AF] mb-3">
+                              Enter the 6-digit code sent to the customer
+                            </p>
                           </div>
 
                           <div className="mt-3">
                             <div className="inline-block rounded-2xl bg-[#0B0B0B] border border-[#27272A] p-4">
-                            <InputOTP
-                              value={completionOtps[delivery.id] || ""}
-                              onChange={(val: string) => handleOtpChange(delivery.id, val)}
-                              maxLength={6}
-                              containerClassName="gap-3"
-                              className="bg-transparent text-white"
-                            >
-                              <InputOTPGroup>
-                                <InputOTPSlot index={0} />
-                                <InputOTPSlot index={1} />
-                                <InputOTPSlot index={2} />
-                                <InputOTPSlot index={3} />
-                                <InputOTPSlot index={4} />
-                                <InputOTPSlot index={5} />
-                              </InputOTPGroup>
-                            </InputOTP>
+                              <InputOTP
+                                value={completionOtps[delivery.id] || ""}
+                                onChange={(val: string) =>
+                                  handleOtpChange(delivery.id, val)
+                                }
+                                maxLength={6}
+                                containerClassName="gap-3"
+                                className="bg-transparent text-white"
+                              >
+                                <InputOTPGroup>
+                                  <InputOTPSlot index={0} />
+                                  <InputOTPSlot index={1} />
+                                  <InputOTPSlot index={2} />
+                                  <InputOTPSlot index={3} />
+                                  <InputOTPSlot index={4} />
+                                  <InputOTPSlot index={5} />
+                                </InputOTPGroup>
+                              </InputOTP>
                             </div>
+                          </div>
+
+                          <div className="flex gap-3 mt-4">
+                            <button
+                              onClick={() => {
+                                setCompletionOtps((prev) => ({
+                                  ...prev,
+                                  [delivery.id]: "",
+                                }));
+                              }}
+                              className="flex-1 px-4 py-2.5 rounded-lg bg-[#0B1220] border border-[#2b556b] text-[#C7D2FE] hover:bg-[#122034] hover:border-[#3b6a8b] transition font-medium text-sm"
+                              type="button"
+                            >
+                              Clear
+                            </button>
+
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await resendDeliveryOtp(delivery.id);
+                                  setCompletionOtps((prev) => ({
+                                    ...prev,
+                                    [delivery.id]: "",
+                                  }));
+                                  toast.success(
+                                    "OTP resent to customer email.",
+                                  );
+                                } catch (err) {
+                                  toast.error(
+                                    err instanceof Error
+                                      ? err.message
+                                      : "Unable to resend OTP.",
+                                  );
+                                }
+                              }}
+                              className="flex-1 px-4 py-2.5 rounded-lg bg-[#0B1220] border border-[#2b556b] text-[#C7D2FE] hover:bg-[#122034] hover:border-[#3b6a8b] transition font-medium text-sm"
+                              type="button"
+                            >
+                              Resend OTP
+                            </button>
                           </div>
 
                           {delivery.status !== "completed" && (
@@ -454,6 +495,8 @@ export default function DeliveriesPage() {
           })}
         </div>
       )}
+
+      {/* Notification modal removed; Topbar provides notification details */}
     </div>
   );
 }

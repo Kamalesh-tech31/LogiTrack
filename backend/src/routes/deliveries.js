@@ -13,6 +13,7 @@ const {
   acceptOrder,
   assignOrder,
   getDeliveries,
+  resendDeliveryOtp,
 } = require("../controllers/deliveryController.js");
 
 const router = express.Router();
@@ -32,6 +33,9 @@ router.get("/", getAllDeliveries);
 
 // Accept order as delivery agent
 router.post("/orders/:orderId/accept", acceptOrder);
+
+// Resend OTP to customer (assigned agent or owner)
+router.post("/orders/:orderId/resend-otp", resendDeliveryOtp);
 
 // Owner assigns an agent to an order
 router.post("/orders/:orderId/assign", assignOrder);

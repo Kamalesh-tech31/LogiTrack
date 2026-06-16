@@ -3,10 +3,14 @@ const bcrypt = require("bcryptjs");
 const nodemailer = require("nodemailer");
 const Order = require("../models/Order");
 const User = require("../models/User");
-const { createOrderEventNotifications } = require("../services/notificationService");
+const {
+  createOrderEventNotifications,
+  createNotificationForRecipients,
+} = require("../services/notificationService");
 
+// Make delivery OTP valid for 1 day by default (in minutes)
 const DELIVERY_OTP_EXPIRY_MINUTES = Number(
-  process.env.DELIVERY_OTP_EXPIRY_MINUTES || 10,
+  process.env.DELIVERY_OTP_EXPIRY_MINUTES || 24 * 60,
 );
 const DELIVERY_OTP_MAX_ATTEMPTS = Number(
   process.env.DELIVERY_OTP_MAX_ATTEMPTS || 5,
@@ -113,6 +117,11 @@ async function sendDeliveryOtpToCustomer(order) {
     },
   });
 
+  const expiryLabel =
+    DELIVERY_OTP_EXPIRY_MINUTES >= 60
+      ? `${Math.round(DELIVERY_OTP_EXPIRY_MINUTES / 60)} hours`
+      : `${DELIVERY_OTP_EXPIRY_MINUTES} minutes`;
+
   await transporter.sendMail({
     from: process.env.EMAIL_FROM || "LogiTrack <logitrack862@gmail.com>",
     to: customerEmail,
@@ -126,12 +135,55 @@ async function sendDeliveryOtpToCustomer(order) {
             <div style="font-size:12px; letter-spacing:0.2em; text-transform:uppercase; color:#a1a1aa; margin-bottom:10px;">One-time delivery code</div>
             <div style="font-size:36px; font-weight:700; letter-spacing:0.3em; color:#ffffff;">${otp}</div>
           </div>
-          <p style="margin:0; color:#a1a1aa; font-size:14px;">This code expires in ${DELIVERY_OTP_EXPIRY_MINUTES} minutes.</p>
+          <p style="margin:0; color:#a1a1aa; font-size:14px;">This code expires in ${expiryLabel}.</p>
         </div>
       </div>
     `,
   });
 }
+
+// POST /api/deliveries/orders/:orderId/resend-otp
+const resendDeliveryOtp = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const { orderId } = req.params;
+
+    if (!orderId) return res.status(400).json({ message: "orderId required" });
+
+    const order = await Order.findById(orderId).populate(
+      "customerId",
+      "fullName email",
+    );
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    const userId = user && (user._id || user.id);
+    // allow resend for assigned agent, owner of order, or Owner role
+    if (
+      order.assignedAgent &&
+      userId &&
+      String(order.assignedAgent) !== String(userId) &&
+      String(order.ownerId) !== String(userId) &&
+      user.role !== "Owner"
+    ) {
+      return res.status(403).json({ message: "Not authorized to resend OTP" });
+    }
+
+    // send and persist
+    await sendDeliveryOtpToCustomer(order);
+    await order.save();
+
+    // create notifications to involved parties
+    await createNotificationForRecipients(order, {
+      type: "otp-resent",
+      title: "Delivery OTP resent",
+      message: `A new OTP has been sent for order ${order.orderId || order._id}`,
+    });
+
+    res.json({ success: true, message: "OTP resent to customer email." });
+  } catch (err) {
+    next(err);
+  }
+};
 
 function mapOrderToRecord(o) {
   const addr = o.deliveryAddress || {};
@@ -571,7 +623,8 @@ const getDashboard = async (req, res, next) => {
       }
     });
 
-    const avgEtaStr = counted > 0 ? formatAverageDuration(totalMs / counted) : "--";
+    const avgEtaStr =
+      counted > 0 ? formatAverageDuration(totalMs / counted) : "--";
 
     res.json({
       success: true,
@@ -699,4 +752,5 @@ module.exports = {
   updateDelivery,
   deleteDelivery,
   getDeliveries,
+  resendDeliveryOtp,
 };

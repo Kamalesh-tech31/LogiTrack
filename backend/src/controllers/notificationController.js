@@ -13,6 +13,7 @@ const NOTIFICATION_TYPES_BY_ROLE = {
     "product-updated",
     "product-stock-low",
     "delivery-agent-added",
+    "otp-resent",
   ]),
   Customer: new Set([
     "order-placed",
@@ -21,6 +22,7 @@ const NOTIFICATION_TYPES_BY_ROLE = {
     "order-delivered",
     "order-completed",
     "order-cancelled",
+    "otp-resent",
   ]),
   "Delivery Agent": new Set([
     "order-created",
@@ -29,6 +31,7 @@ const NOTIFICATION_TYPES_BY_ROLE = {
     "order-delivered",
     "order-completed",
     "order-cancelled",
+    "otp-resent",
   ]),
 };
 
@@ -41,7 +44,10 @@ function normalizeCustomerNotification(notification) {
     ...notification,
     type: "order-placed",
     title: "Order placed",
-    message: notification.message.replace("has been created", "has been placed"),
+    message: notification.message.replace(
+      "has been created",
+      "has been placed",
+    ),
   };
 }
 
@@ -55,15 +61,22 @@ async function getNotifications(req, res, next) {
 
     const allowedTypes = NOTIFICATION_TYPES_BY_ROLE[role] || new Set();
 
+    // Filter notifications older than 24 hours and get only the 5 most recent
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
     const filter = {
       recipient: userId,
       recipientRole: role,
       type: { $in: Array.from(allowedTypes) },
+      createdAt: { $gte: oneDayAgo }, // Only notifications from last 24 hours
     };
 
     const [notifications, unreadCount] = await Promise.all([
-      Notification.find(filter).sort({ createdAt: -1 }).limit(50).lean(),
-      Notification.countDocuments({ ...filter, isRead: false }),
+      Notification.find(filter).sort({ createdAt: -1 }).limit(5).lean(),
+      Notification.countDocuments({
+        ...filter,
+        isRead: false,
+      }),
     ]);
 
     res.json({

@@ -48,11 +48,9 @@ const Sidebar = () => {
 
   return (
     <div className="w-72 min-h-screen bg-black border-r border-[#1f1f1f] p-6">
-      <h1 className="text-4xl font-bold text-white mb-2">
+      <h1 className="text-4xl font-bold text-white mb-10">
         Logi<span className="text-red-600">Track</span>
       </h1>
-
-      <p className="text-gray-500 mb-10">Delivery Agent</p>
 
       <div className="space-y-3">
         {navItems.map((item) => {

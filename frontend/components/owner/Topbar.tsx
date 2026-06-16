@@ -5,7 +5,6 @@ import { Bell, Crown } from "lucide-react";
 import { JSX } from "react/jsx-runtime";
 import {
   fetchNotifications,
-  markAllNotificationsRead,
   markNotificationRead,
   type AppNotification,
 } from "@/lib/api";
@@ -19,6 +18,8 @@ const plans = [
 export default function Topbar(): JSX.Element {
   const [isPlanOpen, setIsPlanOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [selectedNotification, setSelectedNotification] =
+    useState<AppNotification | null>(null);
   const [userName, setUserName] = useState("User");
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -38,7 +39,9 @@ export default function Topbar(): JSX.Element {
         const response = await fetchNotifications();
         if (!isMounted) return;
 
-        setNotifications(Array.isArray(response.notifications) ? response.notifications : []);
+        setNotifications(
+          Array.isArray(response.notifications) ? response.notifications : [],
+        );
         setUnreadCount(Number(response.unreadCount || 0));
       } catch {
         if (isMounted) {
@@ -55,25 +58,25 @@ export default function Topbar(): JSX.Element {
     };
   }, []);
 
-  const handleMarkAllRead = async () => {
-    try {
-      const response = await markAllNotificationsRead();
-      setUnreadCount(Number(response.unreadCount || 0));
-      setNotifications((current) => current.map((item) => ({ ...item, isRead: true })));
-    } catch {
-      // ignore update failures
-    }
-  };
-
   const handleMarkOneRead = async (id: string) => {
     try {
       const response = await markNotificationRead(id);
       setUnreadCount(Number(response.unreadCount || 0));
       setNotifications((current) =>
-        current.map((item) => (item._id === id ? { ...item, isRead: true } : item)),
+        current.map((item) =>
+          item._id === id ? { ...item, isRead: true } : item,
+        ),
       );
     } catch {
       // ignore update failures
+    }
+  };
+
+  const handleOpenNotification = async (notification: AppNotification) => {
+    setSelectedNotification(notification);
+    // Auto-mark as read when opened
+    if (!notification.isRead) {
+      await handleMarkOneRead(notification._id);
     }
   };
 
@@ -155,24 +158,19 @@ export default function Topbar(): JSX.Element {
               <div className="flex items-center justify-between p-4 border-b border-neutral-800">
                 <div>
                   <p className="text-sm text-neutral-400">Notifications</p>
-                  <p className="text-xs text-neutral-500">{unreadCount} unread</p>
+                  <p className="text-xs text-neutral-500">
+                    {unreadCount} unread
+                  </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleMarkAllRead}
-                  className="text-xs font-medium text-[#F87171] hover:text-white"
-                >
-                  Mark all read
-                </button>
               </div>
               <div className="space-y-3 p-4">
                 {visibleNotifications.map((item) => (
                   <div
                     key={item._id}
-                    className={`rounded-2xl border p-3 transition-colors hover:border-[#7F1D1D] ${item.isRead ? "border-[#1F1F1F]" : "border-[#7F1D1D]/40"}`}
+                    className={`rounded-2xl border p-3 transition-colors hover:border-[#7F1D1D] cursor-pointer ${item.isRead ? "border-[#1F1F1F]" : "border-[#7F1D1D]/40"}`}
                     role="button"
                     tabIndex={0}
-                    onClick={() => void handleMarkOneRead(item._id)}
+                    onClick={() => void handleOpenNotification(item)}
                   >
                     <p className="text-white font-semibold">{item.title}</p>
                     <p className="text-sm text-neutral-500 mt-1">
@@ -181,7 +179,9 @@ export default function Topbar(): JSX.Element {
                   </div>
                 ))}
                 {visibleNotifications.length === 0 && (
-                  <div className="text-sm text-neutral-500">No notifications available</div>
+                  <div className="text-sm text-neutral-500">
+                    No notifications available
+                  </div>
                 )}
               </div>
             </div>
@@ -198,6 +198,65 @@ export default function Topbar(): JSX.Element {
           </div>
         </div>
       </div>
+
+      {selectedNotification && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={() => setSelectedNotification(null)}
+        >
+          <div
+            className="bg-[#111111] border border-neutral-800 rounded-3xl p-6 max-w-md w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between mb-4">
+              <h2 className="text-xl font-bold text-white pr-4">
+                {selectedNotification.title}
+              </h2>
+              <button
+                onClick={() => setSelectedNotification(null)}
+                className="text-neutral-400 hover:text-white text-2xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+
+            <p className="text-neutral-300 mb-4">
+              {selectedNotification.message}
+            </p>
+
+            {selectedNotification.orderCode && (
+              <div className="mb-4 p-3 bg-[#0B0B0B] border border-neutral-800 rounded-xl">
+                <p className="text-xs text-neutral-500 mb-1">Order ID</p>
+                <p className="text-sm font-mono text-white">
+                  {selectedNotification.orderCode}
+                </p>
+              </div>
+            )}
+
+            {selectedNotification.metadata?.productName && (
+              <div className="mb-4 p-3 bg-[#0B0B0B] border border-neutral-800 rounded-xl">
+                <p className="text-xs text-neutral-500 mb-1">Product</p>
+                <p className="text-sm text-white">
+                  {selectedNotification.metadata.productName}
+                </p>
+              </div>
+            )}
+
+            <div className="text-xs text-neutral-500 mb-4">
+              {selectedNotification.createdAt
+                ? new Date(selectedNotification.createdAt).toLocaleString()
+                : "Just now"}
+            </div>
+
+            <button
+              onClick={() => setSelectedNotification(null)}
+              className="w-full bg-[#7F1D1D] hover:bg-[#9D2D2D] text-white py-2 rounded-lg font-medium transition"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

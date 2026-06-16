@@ -217,10 +217,18 @@ export async function fetchDeliveryByOrderId(orderId: string): Promise<any> {
 export interface OwnerAnalyticsData {
   totalRevenue: number;
   totalOrders: number;
+  totalDeliveredOrders: number;
   salesGrowthPercent: number;
   lowStockCount: number;
+  totalProducts?: number;
+  healthyCount?: number;
+  noStockCount?: number;
   last30Revenue: number;
   prev30Revenue: number;
+  last30Orders: number;
+  prev30Orders: number;
+  last30DeliveredOrders: number;
+  prev30DeliveredOrders: number;
 }
 
 export async function fetchAnalytics(): Promise<OwnerAnalyticsData> {
@@ -343,6 +351,15 @@ export async function acceptDelivery(
   );
 }
 
+export async function resendDeliveryOtp(
+  orderId: string,
+): Promise<{ success: boolean; message?: string }> {
+  return apiRequest<{ success: boolean; message?: string }>(
+    `/api/deliveries/orders/${orderId}/resend-otp`,
+    { method: "POST" },
+  );
+}
+
 export async function fetchHistory(): Promise<DeliveryRecord[]> {
   return apiRequest<DeliveryRecord[]>("/api/deliveries/history");
 }
@@ -436,7 +453,9 @@ export async function fetchNotifications(): Promise<NotificationResponse> {
   return apiRequest<NotificationResponse>("/api/notifications");
 }
 
-export async function markNotificationRead(id: string): Promise<NotificationResponse> {
+export async function markNotificationRead(
+  id: string,
+): Promise<NotificationResponse> {
   return apiRequest<NotificationResponse>(`/api/notifications/${id}/read`, {
     method: "PATCH",
   });
@@ -449,5 +468,7 @@ export async function markAllNotificationsRead(): Promise<NotificationResponse> 
 }
 
 export async function fetchCustomerAnalyticsSummary(): Promise<CustomerAnalyticsSummary> {
-  return apiRequest<CustomerAnalyticsSummary>("/api/customer/analytics/summary");
+  return apiRequest<CustomerAnalyticsSummary>(
+    "/api/customer/analytics/summary",
+  );
 }
