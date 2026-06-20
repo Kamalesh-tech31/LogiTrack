@@ -15,6 +15,7 @@ import toast from "react-hot-toast";
 import { PasswordInput } from "@/components/common/PasswordInput";
 import { Button } from "@/components/ui/button";
 import {
+  API_BASE_URL,
   completeRegistration,
   requestRegistrationOtp,
   verifyRegistrationOtp,
@@ -37,6 +38,10 @@ export default function RegisterPage() {
   const [otp, setOtp] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [aadhaar, setAadhaar] = useState<File | null>(null);
+  const [drivingLicense, setDrivingLicense] = useState<File | null>(null);
+  const [gstCertificate, setGstCertificate] = useState<File | null>(null);
+  const [shopLicense, setShopLicense] = useState<File | null>(null);
   const [selectedRole, setSelectedRole] = useState("Business Owner");
   const [registrationToken, setRegistrationToken] = useState("");
   const [isSendingOtp, setIsSendingOtp] = useState(false);
@@ -179,17 +184,50 @@ export default function RegisterPage() {
     setError(null);
 
     try {
-      await completeRegistration({
-        registrationToken,
-        fullName: fullName.trim(),
-        email: email.trim().toLowerCase(),
-        password,
-        confirmPassword,
-        role: selectedRole,
-      });
+      const formData = new FormData();
 
-      toast.success("Registration successful. Please sign in.");
-      router.push("/login");
+      formData.append("registrationToken", registrationToken);
+      formData.append("fullName", fullName.trim());
+      formData.append("email", email.trim().toLowerCase());
+      formData.append("password", password);
+      formData.append("confirmPassword", confirmPassword);
+      formData.append("role", selectedRole);
+
+      if (aadhaar)
+        formData.append("aadhaar", aadhaar);
+
+      if (drivingLicense)
+        formData.append("drivingLicense", drivingLicense);
+
+      if (gstCertificate)
+        formData.append("gstCertificate", gstCertificate);
+
+      if (shopLicense)
+        formData.append("shopLicense", shopLicense);
+      const response = await fetch(
+        `${API_BASE_URL}/api/auth/register`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message);
+      }
+
+      if (
+        selectedRole === "Business Owner" ||
+        selectedRole === "Delivery Agent"
+      ) {
+        toast.success("Registration submitted successfully.");
+        router.push("/awaiting_approval");
+      } else {
+        toast.success("Registration successful. Please sign in.");
+        router.push("/login");
+      }
     } catch (registrationError) {
       const message =
         registrationError instanceof Error
@@ -411,6 +449,74 @@ export default function RegisterPage() {
                 })}
               </div>
             </div>
+              {selectedRole === "Delivery Agent" && (
+                <div className="space-y-4">
+
+                  <div>
+                    <label className="mb-2 block text-sm text-gray-300">
+                      Aadhaar Card
+                    </label>
+
+                    <input
+                      type="file"
+                      onChange={(e) =>
+                        setAadhaar(e.target.files?.[0] || null)
+                      }
+                      className="w-full rounded-2xl border border-gray-700 bg-black/40 px-5 py-4"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm text-gray-300">
+                      Driving License
+                    </label>
+
+                    <input
+                      type="file"
+                      onChange={(e) =>
+                        setDrivingLicense(e.target.files?.[0] || null)
+                      }
+                      className="w-full rounded-2xl border border-gray-700 bg-black/40 px-5 py-4"
+                    />
+                  </div>
+
+                </div>
+              )}
+
+
+              {selectedRole === "Business Owner" && (
+                <div className="space-y-4">
+
+                  <div>
+                    <label className="mb-2 block text-sm text-gray-300">
+                      GST Certificate
+                    </label>
+
+                    <input
+                      type="file"
+                      onChange={(e) =>
+                        setGstCertificate(e.target.files?.[0] || null)
+                      }
+                      className="w-full rounded-2xl border border-gray-700 bg-black/40 px-5 py-4"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm text-gray-300">
+                      Shop License
+                    </label>
+
+                    <input
+                      type="file"
+                      onChange={(e) =>
+                        setShopLicense(e.target.files?.[0] || null)
+                      }
+                      className="w-full rounded-2xl border border-gray-700 bg-black/40 px-5 py-4"
+                    />
+                  </div>
+
+                </div>
+              )}
 
             <button
               type="submit"

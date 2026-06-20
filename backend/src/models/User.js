@@ -28,6 +28,17 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
 
+    status: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+
+    applicationRejectionReason: {
+      type: String,
+      default: "",
+    },
+
     businessName: {
       type: String,
     },
@@ -38,6 +49,72 @@ const userSchema = new mongoose.Schema(
 
     businessAddress: {
       type: String,
+    },
+
+    documents: {
+      aadhaar: {
+        path: {
+          type: String,
+          default: ""
+        },
+        status: {
+          type: String,
+          enum: ["pending", "approved", "rejected"],
+          default: "pending"
+        },
+        rejectionReason: {
+          type: String,
+          default: ""
+        }
+      },
+
+      gstCertificate: {
+        path: {
+          type: String,
+          default: ""
+        },
+        status: {
+          type: String,
+          enum: ["pending", "approved", "rejected"],
+          default: "pending"
+        },
+        rejectionReason: {
+          type: String,
+          default: ""
+        }
+      },
+
+      shopLicense: {
+        path: {
+          type: String,
+          default: ""
+        },
+        status: {
+          type: String,
+          enum: ["pending", "approved", "rejected"],
+          default: "pending"
+        },
+        rejectionReason: {
+          type: String,
+          default: ""
+        }
+      },
+
+      drivingLicense: {
+        path: {
+          type: String,
+          default: ""
+        },
+        status: {
+          type: String,
+          enum: ["pending", "approved", "rejected"],
+          default: "pending"
+        },
+        rejectionReason: {
+          type: String,
+          default: ""
+        }
+      }
     },
 
     isActive: {

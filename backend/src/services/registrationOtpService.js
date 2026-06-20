@@ -237,6 +237,7 @@ async function completeRegistration({
   confirmPassword,
   role,
   passwordValidator,
+  documents,
 }) {
   if (!registrationToken) {
     const error = new Error("OTP verification is required before registration");
@@ -324,8 +325,32 @@ async function completeRegistration({
     email: normalizedEmail,
     password: hashedPassword,
     role,
+
+    status:
+      role === "Customer"
+        ? "approved"
+        : "pending",
+
+    documents: {
+      aadhaar: {
+        path: documents?.aadhaar || "",
+      },
+
+      drivingLicense: {
+        path: documents?.drivingLicense || "",
+      },
+
+      gstCertificate: {
+        path: documents?.gstCertificate || "",
+      },
+
+      shopLicense: {
+        path: documents?.shopLicense || "",
+      },
+        },
   });
 
+  
   await RegistrationOtp.updateOne(
     { _id: record._id },
     {

@@ -42,6 +42,9 @@ export default function LoginPage() {
       });
 
       const data = await res.json();
+      console.log("res.ok =", res.ok);
+      console.log("status =", res.status);
+      console.log("data =", data);
       console.log("LOGIN RESPONSE:", data);
       console.log(data);
 
@@ -57,7 +60,24 @@ export default function LoginPage() {
         } else {
           router.push("/delivery/dashboard");
         }
-      } else {
+      }
+      else {
+        if (data.status === "pending") {
+          console.log("PENDING BLOCK ENTERED");
+          console.log("TOKEN =", data.token);
+          console.log(data);
+          console.log(data.token);
+          
+          localStorage.setItem("token", data.token);
+          localStorage.setItem("userName", data.user.fullName);
+          localStorage.setItem("userId", data.user._id);
+          console.log("STORED TOKEN =", localStorage.getItem("token"));
+
+
+          router.push("/awaiting_approval");
+          return;
+      }
+
         alert(data.message);
       }
     } catch (error) {

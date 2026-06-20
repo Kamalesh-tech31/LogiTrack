@@ -6,6 +6,7 @@ const User = require("../models/User");
 const Order = require("../models/Order");
 const Product = require("../models/product");
 const Delivery = require("../models/Delivery");
+const uploadToCloudinary = require("../utils/uploadToCloudinary");
 const {
   isGmailAddress,
   normalizeEmail,
@@ -156,6 +157,24 @@ const register = async (req, res) => {
       role,
     } = req.body;
 
+    const files = req.files || {};
+
+    const aadhaarUrl = files.aadhaar?.[0]
+      ? await uploadToCloudinary(files.aadhaar[0].path, "aadhaar")
+      : "";
+
+    const drivingLicenseUrl = files.drivingLicense?.[0]
+      ? await uploadToCloudinary(files.drivingLicense[0].path, "driving-license")
+      : "";
+
+    const gstCertificateUrl = files.gstCertificate?.[0]
+      ? await uploadToCloudinary(files.gstCertificate[0].path, "gst-certificate")
+      : "";
+
+    const shopLicenseUrl = files.shopLicense?.[0]
+      ? await uploadToCloudinary(files.shopLicense[0].path, "shop-license")
+      : "";
+
     const user = await completeRegistrationFlow({
       registrationToken,
       fullName,
@@ -164,6 +183,13 @@ const register = async (req, res) => {
       confirmPassword,
       role,
       passwordValidator: validatePassword,
+
+      documents: {
+        aadhaar: aadhaarUrl,
+        drivingLicense: drivingLicenseUrl,
+        gstCertificate: gstCertificateUrl,
+        shopLicense: shopLicenseUrl,
+    },
     });
 
     // CREATE TOKEN
@@ -212,6 +238,31 @@ const login = async (req, res) => {
       });
     }
 
+    if (user.status === "pending") {
+      const token = jwt.sign(
+        {
+          userId: user._id,
+          role: user.role,
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" }
+      );
+
+      return res.status(403).json({
+        message: "Your account is awaiting approval",
+        status: "pending",
+        token,
+        user: normalizeUserResponse(user),
+      });
+    }
+
+    if (user.status === "rejected") {
+      return res.status(403).json({
+        message: "Your account has been rejected",
+        status: "rejected",
+      });
+    }
+
     // CHECK PASSWORD
     const isMatch = await bcrypt.compare(password, user.password);
 
@@ -257,11 +308,31 @@ const requestRegistrationOtp = async (req, res) => {
     });
 
     if (existingUser) {
-      return res.status(400).json({
-        message: "An account with this email already exists",
-      });
-    }
 
+      if (existingUser.status === "pending") {
+        return res.status(403).json({
+          message: "Your account is awaiting approval",
+          status: "pending",
+        });
+      }
+
+      if (existingUser.status === "approved") {
+        return res.status(400).json({
+          message: "An account with this email already exists",
+        });
+      }
+
+      if (existingUser.status === "rejected") {
+
+        await User.deleteOne({
+          _id: existingUser._id,
+        });
+
+      
+    } 
+  }
+
+    
     const result = await upsertOtpDocument(normalizedEmail);
 
     res.status(200).json({
