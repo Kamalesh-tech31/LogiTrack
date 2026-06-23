@@ -142,24 +142,40 @@ export default function CustomerAnalyticsPage() {
     <div className="space-y-6 p-2 md:p-4">
       <div className="flex flex-col gap-4 rounded-[2rem] border border-neutral-800 bg-[linear-gradient(135deg,rgba(127,29,29,0.28),rgba(17,17,17,0.96)_60%)] p-6 md:p-8 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-3xl space-y-3">
-          <p className="text-xs uppercase tracking-[0.3em] text-neutral-400">Customer analytics</p>
-          <h1 className="text-3xl font-bold text-white md:text-4xl">Analytics Dashboard</h1>
+          <p className="text-xs uppercase tracking-[0.3em] text-neutral-400">
+            Customer analytics
+          </p>
+          <h1 className="text-3xl font-bold text-white md:text-4xl">
+            Analytics Dashboard
+          </h1>
           <p className="text-sm text-neutral-300 md:text-base">
-            Real order activity, spend, and status trends across your account, refreshed automatically.
+            Real order activity, spend, and status trends across your account,
+            refreshed automatically.
           </p>
         </div>
         <div className="rounded-2xl border border-neutral-800 bg-[#0B0B0B]/80 px-4 py-3 text-sm text-neutral-300">
-          <p className="text-xs uppercase tracking-[0.25em] text-neutral-500">Last updated</p>
+          <p className="text-xs uppercase tracking-[0.25em] text-neutral-500">
+            Last updated
+          </p>
           <p className="mt-1 text-white">
-            {lastUpdated ? lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Waiting for data"}
+            {lastUpdated
+              ? lastUpdated.toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "Waiting for data"}
           </p>
         </div>
       </div>
 
       {loading ? (
-        <div className="rounded-2xl border border-neutral-800 bg-[#111111] p-6 text-white">Loading analytics...</div>
+        <div className="rounded-2xl border border-neutral-800 bg-[#111111] p-6 text-white">
+          Loading analytics...
+        </div>
       ) : error ? (
-        <div className="rounded-2xl border border-neutral-800 bg-[#111111] p-6 text-[#FCA5A5]">{error}</div>
+        <div className="rounded-2xl border border-neutral-800 bg-[#111111] p-6 text-[#FCA5A5]">
+          {error}
+        </div>
       ) : summary ? (
         <>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -167,12 +183,19 @@ export default function CustomerAnalyticsPage() {
               const Icon = item.icon;
 
               return (
-                <Card key={item.label} className="overflow-hidden border border-[#27272A] bg-[#111111]">
-                  <CardContent className={`relative p-5 bg-gradient-to-br ${item.accent}`}>
+                <Card
+                  key={item.label}
+                  className="overflow-hidden border border-[#27272A] bg-[#111111]"
+                >
+                  <CardContent
+                    className={`relative p-5 bg-gradient-to-br ${item.accent}`}
+                  >
                     <div className="flex items-start justify-between gap-4">
                       <div>
                         <p className="text-sm text-neutral-300">{item.label}</p>
-                        <p className="mt-2 text-3xl font-bold text-white">{item.value}</p>
+                        <p className="mt-2 text-3xl font-bold text-white">
+                          {item.value}
+                        </p>
                       </div>
                       <div className="rounded-2xl border border-white/10 bg-black/20 p-3 text-white">
                         <Icon size={20} />
@@ -196,10 +219,19 @@ export default function CustomerAnalyticsPage() {
                     <XAxis dataKey="month" stroke="#A1A1AA" />
                     <YAxis stroke="#A1A1AA" />
                     <Tooltip
-                      contentStyle={{ background: "#111111", border: "1px solid #27272A" }}
+                      contentStyle={{
+                        background: "#111111",
+                        border: "1px solid #27272A",
+                      }}
                       labelStyle={{ color: "#FFFFFF" }}
                     />
-                    <Line type="monotone" dataKey="orders" stroke="#F87171" strokeWidth={3} dot={{ r: 4 }} />
+                    <Line
+                      type="monotone"
+                      dataKey="orders"
+                      stroke="#F87171"
+                      strokeWidth={3}
+                      dot={{ r: 4 }}
+                    />
                   </LineChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -216,11 +248,21 @@ export default function CustomerAnalyticsPage() {
                     <XAxis dataKey="month" stroke="#A1A1AA" />
                     <YAxis stroke="#A1A1AA" />
                     <Tooltip
-                      contentStyle={{ background: "#111111", border: "1px solid #27272A" }}
+                      contentStyle={{
+                        background: "#111111",
+                        border: "1px solid #27272A",
+                      }}
                       labelStyle={{ color: "#FFFFFF" }}
-                      formatter={(value: number) => [`₹${currencyFormatter.format(value)}`, "Spending"]}
+                      formatter={(value) => [
+                        `₹${currencyFormatter.format(Number(value))}`,
+                        "Spending",
+                      ]}
                     />
-                    <Bar dataKey="spending" fill="#60A5FA" radius={[8, 8, 0, 0]} />
+                    <Bar
+                      dataKey="spending"
+                      fill="#60A5FA"
+                      radius={[8, 8, 0, 0]}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -243,12 +285,18 @@ export default function CustomerAnalyticsPage() {
                     paddingAngle={2}
                   >
                     {statusDistribution.map((entry, index) => (
-                      <Cell key={`cell-${entry.name}`} fill={colors[index % colors.length]} />
+                      <Cell
+                        key={`cell-${entry.name}`}
+                        fill={colors[index % colors.length]}
+                      />
                     ))}
                   </Pie>
                   <Legend wrapperStyle={{ color: "#D4D4D8" }} />
                   <Tooltip
-                    contentStyle={{ background: "#111111", border: "1px solid #27272A" }}
+                    contentStyle={{
+                      background: "#111111",
+                      border: "1px solid #27272A",
+                    }}
                     labelStyle={{ color: "#FFFFFF" }}
                   />
                 </PieChart>
