@@ -327,6 +327,24 @@ export async function updateDeliveryStatus(
   });
 }
 
+export async function completeDelivery(
+  id: string,
+  completionPhoto?: File | string,
+): Promise<DeliveryRecord> {
+  let photoString: string | undefined;
+  if (typeof window !== "undefined" && completionPhoto instanceof File) {
+    photoString = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(completionPhoto);
+    });
+  } else if (typeof completionPhoto === "string") {
+    photoString = completionPhoto;
+  }
+
+  return updateDeliveryStatus(id, "completed", photoString);
+}
+
 export async function createDelivery(
   payload: Partial<DeliveryRecord>,
 ): Promise<DeliveryRecord> {

@@ -14,12 +14,14 @@ export function PasswordInput({ className = "", ...props }: PasswordInputProps) 
         {...props}
         type={visible ? "text" : "password"}
         className={`${className} pr-12`}
+        suppressHydrationWarning
       />
       <button
         type="button"
         onClick={() => setVisible((current) => !current)}
         className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
         aria-label={visible ? "Hide password" : "Show password"}
+        suppressHydrationWarning
       >
         {visible ? <EyeOff size={18} /> : <Eye size={18} />}
       </button>

@@ -248,6 +248,7 @@ export default function RegisterPage() {
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="name@gmail.com"
+                suppressHydrationWarning
                 className="w-full rounded-2xl border border-gray-700 bg-black/40 px-5 py-4 text-white outline-none transition focus:border-[#7F1D1D]"
               />
               <p className="mt-2 text-xs text-gray-500">
@@ -266,6 +267,7 @@ export default function RegisterPage() {
                     value={otp}
                     onChange={(event) => setOtp(event.target.value.replace(/\D/g, ""))}
                     placeholder="Enter 6-digit OTP"
+                    suppressHydrationWarning
                     className="w-full rounded-2xl border border-gray-700 bg-black/40 px-5 py-4 text-center tracking-[0.35em] text-white outline-none transition focus:border-[#7F1D1D]"
                   />
                   <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
@@ -281,6 +283,7 @@ export default function RegisterPage() {
                       type="button"
                       onClick={resendOtp}
                       disabled={resendCountdown > 0 || isSendingOtp}
+                      suppressHydrationWarning
                       className="inline-flex items-center gap-2 text-[#F87171] disabled:cursor-not-allowed disabled:text-gray-500"
                     >
                       <RotateCcw size={14} />
@@ -331,7 +334,7 @@ export default function RegisterPage() {
             )}
           </div>
         ) : (
-          <form onSubmit={handleRegister} className="space-y-6">
+          <form onSubmit={handleRegister} className="space-y-6" suppressHydrationWarning>
             <div>
               <label className="mb-2 block text-sm text-gray-300">Full Name</label>
               <input
@@ -339,6 +342,7 @@ export default function RegisterPage() {
                 placeholder="Enter your full name"
                 value={fullName}
                 onChange={(event) => setFullName(event.target.value)}
+                suppressHydrationWarning
                 className="w-full rounded-2xl border border-gray-700 bg-black/40 px-5 py-4 text-white outline-none transition focus:border-[#7F1D1D]"
               />
             </div>
@@ -349,6 +353,7 @@ export default function RegisterPage() {
                 type="email"
                 value={email}
                 readOnly
+                suppressHydrationWarning
                 className="w-full cursor-not-allowed rounded-2xl border border-gray-700 bg-black/40 px-5 py-4 text-gray-300 outline-none"
               />
             </div>
@@ -360,6 +365,7 @@ export default function RegisterPage() {
                 value={password}
                 minLength={8}
                 onChange={(event) => setPassword(event.target.value)}
+                suppressHydrationWarning
                 className="w-full rounded-2xl border border-gray-700 bg-black/40 px-5 py-4 text-white outline-none transition focus:border-[#7F1D1D]"
               />
 
@@ -381,6 +387,7 @@ export default function RegisterPage() {
                 placeholder="Confirm password"
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
+                suppressHydrationWarning
                 className="w-full rounded-2xl border border-gray-700 bg-black/40 px-5 py-4 text-white outline-none transition focus:border-[#7F1D1D]"
               />
             </div>
@@ -398,6 +405,7 @@ export default function RegisterPage() {
                       key={role.name}
                       type="button"
                       onClick={() => setSelectedRole(role.name)}
+                      suppressHydrationWarning
                       className={`rounded-2xl border p-4 transition-all ${
                         active
                           ? "border-[#7F1D1D] bg-[#7F1D1D]/20"
@@ -415,6 +423,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={!canSubmitDetails}
+              suppressHydrationWarning
               className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#7F1D1D] py-4 font-semibold text-white transition-all hover:bg-[#991B1B] disabled:cursor-not-allowed disabled:bg-gray-700"
             >
               Create Account

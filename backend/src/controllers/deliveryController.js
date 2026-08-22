@@ -54,7 +54,7 @@ function getEtaMsForOrder(o) {
 
 function mapOrderToRecord(o) {
   const addr = o.deliveryAddress || {};
-  const addressStr = [
+  const constructedAddress = [
     addr.street,
     addr.city,
     addr.state,
@@ -63,6 +63,8 @@ function mapOrderToRecord(o) {
   ]
     .filter(Boolean)
     .join(", ");
+  const addressStr = addr.fullAddress || addr.street || constructedAddress;
+
   // Normalize assigned agent if present
   let agent = null;
   if (o.assignedAgent) {
@@ -85,7 +87,7 @@ function mapOrderToRecord(o) {
     id: o._id.toString(),
     orderId: o.orderId,
     customer:
-      o.customerName || (o.customerId ? o.customerId.toString() : "Unknown"),
+      addr.fullName || o.customerName || (o.customerId ? o.customerId.toString() : "Unknown"),
     city: addr.city || null,
     address: addressStr,
     latitude: addr.latitude || null,
@@ -93,7 +95,7 @@ function mapOrderToRecord(o) {
     eta: getEtaForOrder(o),
     status: o.status,
     priority: o.priority || null,
-    contact: o.customerPhone || null,
+    contact: o.customerPhone || addr.phone || null,
     agent,
     location: null,
     lastUpdated: o.updatedAt ? o.updatedAt.toISOString() : null,

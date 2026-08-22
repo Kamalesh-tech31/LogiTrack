@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "react-hot-toast";
 
 import { ThemeProvider } from "@/components/theme-provider";
+import { ChunkErrorRecovery } from "@/components/common/ChunkErrorRecovery";
 
 import "./globals.css";
 
@@ -56,8 +57,36 @@ export default function RootLayout({
         className={`${geist.variable} ${geistMono.variable} font-sans antialiased`}
       >
         <ThemeProvider>
-          <Toaster position="top-right" />
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              duration: 3500,
+              style: {
+                background: "#161616",
+                color: "#FFFFFF",
+                border: "1px solid #27272A",
+                borderRadius: "16px",
+                padding: "12px 18px",
+                fontSize: "14px",
+                fontWeight: "500",
+                boxShadow: "0 10px 30px rgba(0,0,0,0.6)",
+              },
+              success: {
+                iconTheme: {
+                  primary: "#22C55E",
+                  secondary: "#FFFFFF",
+                },
+              },
+              error: {
+                iconTheme: {
+                  primary: "#EF4444",
+                  secondary: "#FFFFFF",
+                },
+              },
+            }}
+          />
 
+          <ChunkErrorRecovery />
           {children}
 
           {process.env.NODE_ENV === "production" && <Analytics />}

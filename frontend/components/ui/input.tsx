@@ -16,6 +16,7 @@ export function Input({
     <input
       type={type}
       placeholder={placeholder}
+      suppressHydrationWarning
       className={`
         w-full
         bg-[#0B0B0B]

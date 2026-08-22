@@ -1,6 +1,7 @@
 const Order = require("../models/Order");
 const Product = require("../models/product");
 const User = require("../models/User");
+const { geocodeAddress, getAddressSuggestions } = require("../services/geocodingService");
 const fs = require("fs");
 const path = require("path");
 
@@ -129,6 +130,46 @@ exports.createOrder = async (req, res, next) => {
       orderItems.push({ product: product._id, quantity, price });
     }
 
+    // Process delivery address and ensure coordinates are present
+    let processedAddress = typeof deliveryAddress === "object" ? { ...deliveryAddress } : {};
+    const rawAddressText =
+      (typeof deliveryAddress === "string" ? deliveryAddress : "") ||
+      processedAddress.fullAddress ||
+      processedAddress.street ||
+      "";
+
+    // If coordinates are not provided, geocode the address
+    const hasCoordinates =
+      processedAddress.latitude !== undefined &&
+      processedAddress.longitude !== undefined &&
+      processedAddress.latitude !== null &&
+      processedAddress.longitude !== null &&
+      !isNaN(Number(processedAddress.latitude)) &&
+      !isNaN(Number(processedAddress.longitude));
+
+    if (!hasCoordinates && rawAddressText && rawAddressText.trim().length > 0) {
+      logToFile(`Attempting server-side geocode for: "${rawAddressText}"`);
+      console.log(`[OrderController] Geocoding address: "${rawAddressText}"`);
+      const geoResult = await geocodeAddress(rawAddressText);
+      if (geoResult.success && geoResult.data) {
+        processedAddress.latitude = geoResult.data.latitude;
+        processedAddress.longitude = geoResult.data.longitude;
+        processedAddress.street = processedAddress.street || geoResult.data.street || rawAddressText;
+        processedAddress.fullAddress = processedAddress.fullAddress || rawAddressText;
+        processedAddress.city = processedAddress.city || geoResult.data.city;
+        processedAddress.state = processedAddress.state || geoResult.data.state;
+        processedAddress.postalCode = processedAddress.postalCode || geoResult.data.postalCode;
+        processedAddress.country = processedAddress.country || geoResult.data.country || "India";
+      } else {
+        logToFile(`GEOCODING FAILED: ${geoResult.message}`);
+        console.warn(`[OrderController] Geocoding failed: ${geoResult.message}`);
+        return res.status(400).json({
+          success: false,
+          message: geoResult.message || "Unable to determine coordinates for the provided delivery address.",
+        });
+      }
+    }
+
     logToFile(
       `Creating order; total=${total}, customerName=${user.fullName}, items=${JSON.stringify(orderItems)}`,
     );
@@ -139,7 +180,7 @@ exports.createOrder = async (req, res, next) => {
     console.log("  customerName:", user.fullName);
     console.log("  items:", JSON.stringify(orderItems, null, 2));
     console.log("  totalPrice:", total);
-    console.log("  deliveryAddress:", JSON.stringify(deliveryAddress, null, 2));
+    console.log("  deliveryAddress:", JSON.stringify(processedAddress, null, 2));
 
     const orderId = generateOrderId();
     const order = new Order({
@@ -149,7 +190,7 @@ exports.createOrder = async (req, res, next) => {
       customerName: user.fullName,
       items: orderItems,
       totalPrice: total,
-      deliveryAddress: deliveryAddress || {},
+      deliveryAddress: processedAddress,
       status: "pending",
     });
 
@@ -328,5 +369,63 @@ exports.deleteOrder = async (req, res, next) => {
     res.json({ success: true, message: "Order deleted" });
   } catch (err) {
     next(err);
+  }
+};
+
+// Geocode address using Geoapify
+exports.geocodeAddressController = async (req, res, next) => {
+  try {
+    const address = req.body?.address || req.query?.address;
+    if (!address || typeof address !== "string" || address.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Delivery address is required for geocoding.",
+      });
+    }
+
+    const result = await geocodeAddress(address);
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: result.message,
+      });
+    }
+    return res.status(200).json({
+      success: true,
+      source: result.source,
+      data: result.data,
+    });
+  } catch (err) {
+    console.error("Geocoding controller error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to geocode the provided address. Please try again.",
+      error: err.message,
+    });
+  }
+};
+
+// Address suggestions / autocomplete endpoint
+exports.getAddressSuggestionsController = async (req, res, next) => {
+  try {
+    const query = req.query?.query || req.body?.query || req.query?.text || req.body?.text;
+    if (!query || typeof query !== "string" || query.trim().length < 2) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+      });
+    }
+
+    const suggestions = await getAddressSuggestions(query.trim());
+    return res.status(200).json({
+      success: true,
+      data: suggestions,
+    });
+  } catch (err) {
+    console.error("Address suggestions error:", err);
+    return res.status(200).json({
+      success: true,
+      data: [],
+    });
   }
 };

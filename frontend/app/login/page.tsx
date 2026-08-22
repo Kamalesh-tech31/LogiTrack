@@ -4,6 +4,7 @@ import { useState } from "react";
 import { BriefcaseBusiness, Truck, User, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import { PasswordInput } from "@/components/common/PasswordInput";
 
 export default function LoginPage() {
@@ -11,6 +12,7 @@ export default function LoginPage() {
   const [selectedRole, setSelectedRole] = useState("Business Owner");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const roles = [
     {
@@ -28,6 +30,16 @@ export default function LoginPage() {
   ];
 
   const handleLogin = async () => {
+    if (!email.trim()) {
+      toast.error("Please enter your email.");
+      return;
+    }
+    if (!password) {
+      toast.error("Please enter your password.");
+      return;
+    }
+
+    setLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: "POST",
@@ -35,7 +47,7 @@ export default function LoginPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email,
+          email: email.trim(),
           password,
           role: selectedRole,
         }),
@@ -43,12 +55,13 @@ export default function LoginPage() {
 
       const data = await res.json();
       console.log("LOGIN RESPONSE:", data);
-      console.log(data);
 
-      if (res.ok) {
+      if (res.ok && data?.token && data?.user) {
         localStorage.setItem("token", data.token);
         localStorage.setItem("userName", data.user.fullName);
         localStorage.setItem("userId", data.user._id);
+
+        toast.success(`Welcome back, ${data.user.fullName}!`);
 
         if (selectedRole === "Business Owner") {
           router.push("/owner");
@@ -58,11 +71,13 @@ export default function LoginPage() {
           router.push("/delivery/dashboard");
         }
       } else {
-        alert(data.message);
+        toast.error(data?.message || "Invalid email, password, or role.");
       }
     } catch (error) {
-      console.log(error);
-      alert("Server Error");
+      console.error("Login fetch error:", error);
+      toast.error("Unable to connect to the backend server. Please ensure the backend is running on port 5000.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -81,7 +96,7 @@ export default function LoginPage() {
         </div>
 
         {/* Form */}
-        <form className="space-y-6">
+        <form className="space-y-6" suppressHydrationWarning>
           {/* Email */}
           <div>
             <label className="block text-sm mb-2 text-gray-300">Email</label>
@@ -91,6 +106,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="admin@logitrack.com"
+              suppressHydrationWarning
               className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl px-4 py-4 outline-none text-white placeholder:text-gray-500 focus:border-[#7F1D1D] focus:ring-2 focus:ring-[#7F1D1D]/30 transition-all"
             />
           </div>
@@ -103,6 +119,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
+              suppressHydrationWarning
               className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl px-4 py-4 outline-none text-white placeholder:text-gray-500 focus:border-[#7F1D1D] focus:ring-2 focus:ring-[#7F1D1D]/30 transition-all"
             />
           </div>
@@ -120,6 +137,7 @@ export default function LoginPage() {
                     type="button"
                     key={role.name}
                     onClick={() => setSelectedRole(role.name)}
+                    suppressHydrationWarning
                     className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all duration-300
                       ${
                         active
@@ -153,9 +171,11 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={handleLogin}
-            className="w-full bg-[#7F1D1D] hover:bg-[#991B1B] transition-all duration-300 rounded-2xl py-4 flex items-center justify-center gap-2 text-white font-semibold text-lg"
+            disabled={loading}
+            suppressHydrationWarning
+            className="w-full bg-[#7F1D1D] hover:bg-[#991B1B] transition-all duration-300 rounded-2xl py-4 flex items-center justify-center gap-2 text-white font-semibold text-lg disabled:opacity-60"
           >
-            Sign In
+            {loading ? "Signing In..." : "Sign In"}
             <ArrowRight size={18} />
           </button>
 

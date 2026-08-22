@@ -48,6 +48,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         type={type}
+        suppressHydrationWarning
         className={cn(
           "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl font-medium transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-70",
           buttonVariants[variant],

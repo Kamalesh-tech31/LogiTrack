@@ -3,47 +3,45 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
-import DeliveryCard from "@/components/delivery/DeliveryCard";
 import type {
   DeliveryRecord,
   DeliveryStatus,
 } from "@/components/delivery/deliveryData";
 import {
+  acceptDelivery,
+  completeDelivery,
   fetchDeliveries,
   updateDeliveryStatus,
-  acceptDelivery,
-  saveLocationUpdate,
 } from "@/lib/api";
 
-const statusOptions: Partial<Record<DeliveryStatus, DeliveryStatus[]>> = {
-  Pending: ["Out for Delivery", "Failed Attempt"],
-  pending: ["Out for Delivery", "Failed Attempt"],
-  Assigned: ["Out for Delivery", "Failed Attempt"],
-  assigned: ["Out for Delivery", "Failed Attempt"],
-  "Out for Delivery": ["Delivered", "Failed Attempt"],
-  "out-for-delivery": ["Delivered", "Failed Attempt"],
-  Shipped: ["Delivered", "Failed Attempt"],
-  shipped: ["Delivered", "Failed Attempt"],
-  Delivered: [],
-  delivered: [],
-  "Failed Attempt": ["Returned"],
-  "failed-attempt": ["Returned"],
+const statusOptions: Record<DeliveryStatus, DeliveryStatus[]> = {
+  Assigned: ["Picked Up", "Out for Delivery", "Delayed", "Failed"],
+  "Picked Up": ["Out for Delivery", "Delayed", "Failed"],
+  "Out for Delivery": ["Completed", "Delayed", "Failed"],
+  Delayed: ["Out for Delivery", "Failed"],
+  Failed: ["Returned"],
+  Completed: [],
   Returned: [],
-  returned: [],
 };
 
-function toTitleCase(s?: string) {
-  if (!s) return "";
-  return s
-    .split(/[- ]+/)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+const toTitleCase = (value: string) => {
+  if (!value) return "";
+  return value
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
-}
+};
 
 export default function DeliveriesPage() {
   const [deliveries, setDeliveries] = useState<DeliveryRecord[]>([]);
   const [selectedStatuses, setSelectedStatuses] = useState<
     Record<string, DeliveryStatus>
+  >({});
+  const [completionPhotos, setCompletionPhotos] = useState<
+    Record<string, File | null>
+  >({});
+  const [completionPreviews, setCompletionPreviews] = useState<
+    Record<string, string | null>
   >({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -96,13 +94,13 @@ export default function DeliveriesPage() {
 
   const activeCount = deliveries.filter((item) => {
     const s = String(item.status || "").toLowerCase();
-    return !["completed", "delivered", "returned"].includes(s);
+    return !["completed", "delivered", "returned", "cancelled"].includes(s);
   }).length;
 
   const hasActiveAssignedOrder = deliveries.some((delivery) => {
     const s = String(delivery.status || "").toLowerCase();
     return (
-      !["completed", "delivered", "returned"].includes(s) &&
+      !["completed", "delivered", "returned", "cancelled"].includes(s) &&
       isAssignedToCurrentUser(delivery)
     );
   });
@@ -129,150 +127,103 @@ export default function DeliveriesPage() {
       );
       setSelectedStatuses((prev) => ({
         ...prev,
-        [id]: updatedDelivery.status as DeliveryStatus,
+        [id]: updatedDelivery.status,
       }));
-
-      toast.success(`${current.customer} updated to ${nextStatus}`);
+      toast.success(
+        `Updated ${updatedDelivery.orderId || updatedDelivery.id} to ${updatedDelivery.status}`,
+      );
     } catch (err) {
       toast.error(
-        err instanceof Error
-          ? err.message
-          : "Unable to update delivery status.",
+        err instanceof Error ? err.message : "Failed to update delivery status",
       );
     }
   };
 
   const handleAccept = async (id: string) => {
-    const item = deliveries.find((d) => d.id === id);
-    if (!item) return;
     try {
-      const accepted = await acceptDelivery(id);
-      setDeliveries((prev) => prev.map((p) => (p.id === id ? accepted : p)));
-      toast.success("Delivery accepted. Capturing your current location...");
-
-      if (!navigator.geolocation) {
-        toast.error(
-          "Geolocation is not supported by your browser. Please allow location access.",
-        );
-        return;
-      }
-
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const lat = position.coords.latitude;
-          const lon = position.coords.longitude;
-          const displayName = `Driver location ${lat.toFixed(6)}, ${lon.toFixed(6)}`;
-          const formattedAddress = displayName;
-
-          try {
-            await saveLocationUpdate({
-              deliveryId: accepted.id,
-              latitude: lat,
-              longitude: lon,
-              source: "browser",
-              displayName,
-              formattedAddress,
-              city: "Unknown city",
-              state: "Unknown state",
-              country: "Unknown country",
-              postalCode: "N/A",
-              timestamp: new Date().toLocaleString(),
-            });
-            toast.success(
-              "Driver current location saved for customer tracking.",
-            );
-          } catch (updateError) {
-            console.error("Unable to save driver location:", updateError);
-            toast.error(
-              updateError instanceof Error
-                ? updateError.message
-                : "Unable to save current location.",
-            );
-          }
-        },
-        (error) => {
-          toast.error(`Unable to capture current location: ${error.message}`);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-        },
+      const updatedDelivery = await acceptDelivery(id);
+      setDeliveries((prev) =>
+        prev.map((item) => (item.id === id ? updatedDelivery : item)),
+      );
+      setSelectedStatuses((prev) => ({
+        ...prev,
+        [id]: updatedDelivery.status,
+      }));
+      toast.success(
+        `Claimed delivery ${updatedDelivery.orderId || updatedDelivery.id}`,
       );
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Unable to accept delivery.",
+        err instanceof Error ? err.message : "Failed to claim delivery",
       );
     }
   };
 
-  const [completionPhotos, setCompletionPhotos] = useState<
-    Record<string, string>
-  >({});
-
-  const [completionPreviews, setCompletionPreviews] = useState<
-    Record<string, string>
-  >({});
-
   const handlePhotoChange = (id: string, file?: File) => {
-    if (!file) return;
+    if (!file) {
+      setCompletionPhotos((prev) => ({ ...prev, [id]: null }));
+      setCompletionPreviews((prev) => ({ ...prev, [id]: null }));
+      return;
+    }
+
+    setCompletionPhotos((prev) => ({ ...prev, [id]: file }));
     const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result;
-      if (typeof result !== "string") return;
-      setCompletionPhotos((prev) => ({ ...prev, [id]: result }));
-      setCompletionPreviews((prev) => ({ ...prev, [id]: result }));
+    reader.onloadend = () => {
+      setCompletionPreviews((prev) => ({
+        ...prev,
+        [id]: reader.result as string,
+      }));
     };
     reader.readAsDataURL(file);
   };
 
   const handleComplete = async (id: string) => {
-    const photo = completionPhotos[id];
-    if (!photo) {
-      toast.error("Please upload a completion photo before marking completed.");
-      return;
-    }
-
     try {
-      const updated = await updateDeliveryStatus(id, "completed", photo);
-      setDeliveries((prev) => prev.map((d) => (d.id === id ? updated : d)));
-      // keep the UI select in sync so it doesn't revert after completion
+      const photo = completionPhotos[id] || undefined;
+      const updatedDelivery = await completeDelivery(id, photo);
+      setDeliveries((prev) =>
+        prev.map((item) => (item.id === id ? updatedDelivery : item)),
+      );
       setSelectedStatuses((prev) => ({
         ...prev,
-        [id]: updated.status as DeliveryStatus,
+        [id]: updatedDelivery.status,
       }));
-      toast.success("Delivery marked completed.");
+      setCompletionPhotos((prev) => ({ ...prev, [id]: null }));
+      setCompletionPreviews((prev) => ({ ...prev, [id]: null }));
+      toast.success(
+        `Completed delivery ${updatedDelivery.orderId || updatedDelivery.id}`,
+      );
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Unable to complete delivery.",
+        err instanceof Error ? err.message : "Failed to complete delivery",
       );
     }
   };
 
   return (
-    <div className="p-4 md:p-6">
+    <div className="p-4 md:p-6 space-y-6 max-w-7xl">
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.3em] text-[#A1A1AA]">
-            Delivery operations
+          <p className="text-xs uppercase font-semibold tracking-wider text-neutral-400">
+            Delivery Operations
           </p>
-          <h1 className="text-3xl font-bold text-white mt-2">
-            Assigned deliveries
+          <h1 className="text-3xl font-bold text-white tracking-tight mt-1">
+            Assigned Deliveries
           </h1>
-          <p className="text-[#D5D5D5] mt-3 max-w-2xl">
-            Use the status update panel to move each shipment through the
-            premium delivery lifecycle and keep the route book current.
+          <p className="text-sm text-neutral-400 mt-1.5 max-w-2xl">
+            Claim available deliveries, manage active shipments, and record proof of delivery.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 min-w-70">
-          <div className="rounded-2xl border border-[#27272A] bg-[#1A1A1A] p-4">
-            <p className="text-sm text-[#A1A1AA]">Active</p>
-            <p className="text-2xl font-bold text-white mt-2">{activeCount}</p>
+        <div className="grid grid-cols-2 gap-3 min-w-64">
+          <div className="rounded-2xl border border-neutral-800 bg-[#111111] p-4 shadow-sm">
+            <p className="text-xs text-neutral-400">Active Shipments</p>
+            <p className="text-2xl font-bold text-white mt-1.5">{activeCount}</p>
           </div>
 
-          <div className="rounded-2xl border border-[#27272A] bg-[#1A1A1A] p-4">
-            <p className="text-sm text-[#A1A1AA]">Completed</p>
-            <p className="text-2xl font-bold text-white mt-2">
+          <div className="rounded-2xl border border-neutral-800 bg-[#111111] p-4 shadow-sm">
+            <p className="text-xs text-neutral-400">Completed</p>
+            <p className="text-2xl font-bold text-emerald-400 mt-1.5">
               {completedCount}
             </p>
           </div>
@@ -280,15 +231,15 @@ export default function DeliveriesPage() {
       </div>
 
       {isLoading ? (
-        <div className="mt-8 rounded-2xl border border-[#27272A] bg-[#1A1A1A] p-6 text-white">
-          Loading deliveries from the backend...
+        <div className="rounded-2xl border border-neutral-800 bg-[#111111] p-12 text-center text-neutral-400 text-sm">
+          Loading deliveries from backend...
         </div>
       ) : error ? (
-        <div className="mt-8 rounded-2xl border border-[#27272A] bg-[#1A1A1A] p-6 text-[#F5D0D0]">
+        <div className="rounded-2xl border border-red-900/50 bg-red-950/20 p-6 text-red-300 text-sm">
           {error}
         </div>
       ) : (
-        <div className="mt-8 grid gap-5 xl:grid-cols-2">
+        <div className="grid gap-5 xl:grid-cols-2">
           {deliveries.map((delivery) => {
             const options =
               statusOptions[delivery.status as unknown as DeliveryStatus] ||
@@ -302,62 +253,66 @@ export default function DeliveriesPage() {
             return (
               <div
                 key={delivery.id}
-                className="bg-linear-to-br from-[#0b0b0b] to-[#0f0f13] border border-[#27272A] rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-shadow duration-200"
+                className="bg-[#111111] border border-neutral-800 rounded-3xl p-6 shadow-md hover:border-neutral-700 transition-all duration-200"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <div className="flex items-center gap-3">
-                      <div className="px-3 py-1 rounded-lg bg-[#1F2937] text-xs text-[#E5E7EB] font-medium">
+                    <div className="flex items-center gap-2.5">
+                      <div className="px-2.5 py-1 rounded-lg bg-neutral-800 text-xs font-mono text-white font-medium">
                         {delivery.orderId || delivery.id}
                       </div>
-                      <h3 className="text-lg font-semibold text-white">
+                      <h3 className="text-base font-semibold text-white">
                         {delivery.customer}
                       </h3>
                     </div>
 
-                    <p className="text-sm text-[#9CA3AF] mt-2 max-w-xl">
+                    <p className="text-xs text-neutral-400 mt-2.5 max-w-xl leading-relaxed">
                       {delivery.address}
                     </p>
                     {/* Show product name if available */}
                     {delivery.raw?.items?.length > 0 && (
-                      <p className="text-sm text-[#D1D5DB] mt-2">
-                        Product:{" "}
-                        {delivery.raw.items[0].product?.name ||
-                          delivery.raw.items[0].product}
+                      <p className="text-xs text-neutral-300 mt-2 font-medium">
+                        Item:{" "}
+                        <span className="text-white">
+                          {delivery.raw.items[0].product?.name ||
+                            delivery.raw.items[0].product}
+                        </span>
                       </p>
                     )}
                   </div>
 
-                  <div className="text-right">
-                    <span className="inline-block bg-[#0B1220] text-xs text-[#C7D2FE] px-3 py-1 rounded-full">
+                  <div className="text-right shrink-0">
+                    <span className="inline-block bg-neutral-800 text-xs text-neutral-200 px-3 py-1 rounded-full font-medium">
                       {toTitleCase(delivery.status)}
                     </span>
-                    <div className="text-sm text-[#9CA3AF] mt-2">
+                    <div className="text-xs text-neutral-400 mt-1.5">
                       ETA: {delivery.eta || "--"}
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="rounded-xl border border-[#27272A] bg-[#0E0E10] p-4">
-                    <p className="text-sm text-[#A1A1AA]">Priority</p>
-                    <p className="text-white font-semibold mt-2">
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-neutral-800/80 bg-[#161616] p-3">
+                    <p className="text-[11px] text-neutral-400">Priority</p>
+                    <p className="text-xs text-white font-semibold mt-1">
                       {delivery.priority || "Normal"}
                     </p>
                   </div>
 
-                  <div className="rounded-xl border border-[#27272A] bg-[#0E0E10] p-4">
-                    <p className="text-sm text-[#A1A1AA]">Last updated</p>
-                    <p className="text-white font-semibold mt-2">
+                  <div className="rounded-xl border border-neutral-800/80 bg-[#161616] p-3">
+                    <p className="text-[11px] text-neutral-400">Last Updated</p>
+                    <p className="text-xs text-white font-semibold mt-1">
                       {delivery.lastUpdated || "-"}
                     </p>
                   </div>
                 </div>
 
-                <div className="mt-6 rounded-xl border border-[#27272A] bg-[#111111] p-4">
-                  <p className="text-sm text-[#A1A1AA]">Status update</p>
+                <div className="mt-5 rounded-2xl border border-neutral-800/80 bg-[#161616] p-4.5">
+                  <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3">
+                    Shipment Action
+                  </p>
 
-                  <div className="mt-3 flex flex-col sm:flex-row gap-3 items-center">
+                  <div className="flex flex-col sm:flex-row gap-3 items-center">
                     <select
                       aria-label="Select delivery status"
                       value={selectedStatuses[delivery.id]}
@@ -367,7 +322,7 @@ export default function DeliveriesPage() {
                           [delivery.id]: event.target.value as DeliveryStatus,
                         }))
                       }
-                      className="flex-1 bg-[#0B0B0B] border border-[#27272A] text-white rounded-2xl px-4 py-3 outline-none"
+                      className="flex-1 w-full bg-[#111111] border border-neutral-800 text-xs text-white rounded-xl px-3.5 h-11 outline-none focus:border-[#7F1D1D]"
                     >
                       {options && options.length > 0 ? (
                         options.map((option) => (
@@ -382,23 +337,27 @@ export default function DeliveriesPage() {
                       )}
                     </select>
 
-                    <div className="flex flex-col gap-3">
+                    <div className="w-full sm:w-auto flex flex-col gap-2">
                       {!delivery.raw?.assignedAgent && (
                         <button
                           onClick={() => void handleAccept(delivery.id)}
                           disabled={hasActiveAssignedOrder}
-                          className={`rounded-full px-5 py-3 text-white font-semibold shadow transition ${hasActiveAssignedOrder ? "bg-slate-600 cursor-not-allowed" : "bg-green-500 hover:brightness-105"}`}
+                          className={`h-11 px-5 rounded-xl text-xs font-semibold text-white shadow-sm transition-all cursor-pointer ${
+                            hasActiveAssignedOrder
+                              ? "bg-neutral-800 text-neutral-500 cursor-not-allowed border border-neutral-700"
+                              : "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-950/40"
+                          }`}
                         >
                           {hasActiveAssignedOrder
-                            ? "Claim disabled until current delivery completes"
+                            ? "Claim Disabled (Active Trip Exists)"
                             : "Claim & Accept"}
                         </button>
                       )}
 
                       {delivery.raw?.assignedAgent && assignedToMe && (
-                        <div className="space-y-3">
-                          <label className="block text-sm text-[#A1A1AA]">
-                            Upload completion photo
+                        <div className="space-y-3 w-full">
+                          <label className="block text-xs text-neutral-400">
+                            Upload Proof of Delivery
                           </label>
                           <input
                             type="file"
@@ -410,34 +369,28 @@ export default function DeliveriesPage() {
                                 event.target.files?.[0],
                               )
                             }
-                            className="w-full rounded-2xl border border-[#27272A] bg-[#0B0B0B] px-4 py-3 text-sm text-white"
+                            className="w-full rounded-xl border border-neutral-800 bg-[#111111] px-3 py-2 text-xs text-white file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:bg-neutral-800 file:text-white"
                           />
                           {completionPreviews[delivery.id] ? (
                             <img
-                              src={completionPreviews[delivery.id]}
+                              src={completionPreviews[delivery.id]!}
                               alt="Completion preview"
-                              className="h-32 w-full rounded-2xl object-cover"
+                              className="h-28 w-full rounded-xl object-cover border border-neutral-800"
                             />
                           ) : null}
 
                           {delivery.status !== "completed" && (
                             <button
                               onClick={() => void handleComplete(delivery.id)}
-                              className="rounded-full bg-indigo-600 px-5 py-3 text-white font-semibold shadow hover:brightness-105 transition"
+                              className="w-full h-11 rounded-xl bg-[#7F1D1D] hover:bg-[#991B1B] px-5 text-xs text-white font-semibold shadow-md shadow-red-950/40 transition-all cursor-pointer"
                             >
-                              Complete
+                              Confirm Delivery Complete
                             </button>
                           )}
                         </div>
                       )}
-
-                      {/* Save button removed to prevent accidental status overrides */}
                     </div>
                   </div>
-
-                  <p className="text-sm text-[#D5D5D5] mt-3">
-                    Last sync: {delivery.lastUpdated}
-                  </p>
                 </div>
               </div>
             );
