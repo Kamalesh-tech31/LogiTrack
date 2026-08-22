@@ -428,11 +428,12 @@ export async function fetchEarnings(): Promise<EarningsResponse> {
 export async function updateDeliveryStatus(
   id: string,
   status: string,
-  completionOtp?: string,
+  otp?: string,
+  completionPhoto?: string,
 ): Promise<DeliveryRecord> {
   return apiRequest<DeliveryRecord>(`/api/deliveries/${id}/status`, {
     method: "PATCH",
-    body: JSON.stringify({ status, completionOtp }),
+    body: JSON.stringify({ status, otp, completionPhoto }),
   });
 }
 

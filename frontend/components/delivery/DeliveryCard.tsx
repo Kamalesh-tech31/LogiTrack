@@ -15,6 +15,7 @@ import {
   AlertCircle,
   CheckCircle2,
   ChevronRight,
+  ShieldCheck,
 } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 
@@ -37,7 +38,7 @@ interface Props {
   onAccept?: (id: string) => Promise<void>;
   onRequestOtp?: (id: string) => Promise<void>;
   onVerifyOtp?: (id: string, otp: string) => Promise<void>;
-  onStatusUpdate?: (id: string, status: string) => Promise<void>;
+  onStatusUpdate?: (id: string, status: string, otp?: string) => Promise<void>;
 }
 
 function formatDisplayId(rawId: string) {
@@ -55,9 +56,9 @@ function formatDisplayId(rawId: string) {
 
 const STEP_DEFINITIONS = [
   { step: 1, label: "Claimed", shortLabel: "Claim" },
-  { step: 2, label: "Verify Customer", shortLabel: "Verify" },
-  { step: 3, label: "Accept & Dispatch", shortLabel: "Dispatch" },
-  { step: 4, label: "Out for Delivery", shortLabel: "Transit" },
+  { step: 2, label: "Accepted", shortLabel: "Accept" },
+  { step: 3, label: "In Transit", shortLabel: "Transit" },
+  { step: 4, label: "Out for Delivery", shortLabel: "Out" },
   { step: 5, label: "Delivered", shortLabel: "Delivered" },
 ];
 
@@ -84,6 +85,7 @@ const DeliveryCard = ({
 }: Props) => {
   const [copied, setCopied] = useState(false);
   const [otpInput, setOtpInput] = useState("");
+  const [otpRequested, setOtpRequested] = useState(hasActiveOtp);
   const [loadingAction, setLoadingAction] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
@@ -93,9 +95,10 @@ const DeliveryCard = ({
   const isAssigned = normalizedStatus === "assigned";
   const isShipped = normalizedStatus === "shipped";
   const isOutForDelivery = normalizedStatus === "out-for-delivery";
-  const isDelivered = normalizedStatus === "delivered" || normalizedStatus === "completed";
+  const isDelivered =
+    normalizedStatus === "delivered" || normalizedStatus === "completed";
 
-  // Determine current active step (1 to 5) and progress line width
+  // Calculate 5-Step Stepper state and progress bar
   let currentStep = 1;
   let progressPercent = 0;
 
@@ -103,21 +106,20 @@ const DeliveryCard = ({
     currentStep = 5;
     progressPercent = 100;
   } else if (isOutForDelivery) {
-    currentStep = 5; // Awaiting final delivery handoff confirmation
+    currentStep = 5; // Out for Delivery done, awaiting final doorstep OTP handoff
     progressPercent = 80;
   } else if (isShipped) {
-    currentStep = 4; // Out for Delivery / In Transit
+    currentStep = 4; // In Transit, next is Out for Delivery
     progressPercent = 60;
-  } else if (isAssigned && customerVerified) {
-    currentStep = 3; // Accept & Dispatch
-    progressPercent = 40;
-  } else if (isAssigned && !customerVerified) {
-    currentStep = 2; // Verify Customer OTP
+  } else if (isAssigned) {
+    currentStep = 2; // Claimed, next is Accept
     progressPercent = 20;
   } else {
-    currentStep = 1;
+    currentStep = 1; // Available / Unassigned
     progressPercent = 0;
   }
+
+  const isAcceptedOrBeyond = isShipped || isOutForDelivery || isDelivered;
 
   const handleCopyId = () => {
     const fullId = orderId || id;
@@ -134,9 +136,24 @@ const DeliveryCard = ({
     setActionSuccess(null);
     try {
       await onClaim(id);
-      setActionSuccess("Order claimed! Verification OTP dispatched.");
+      setActionSuccess("Order claimed! Move to My Deliveries to accept.");
     } catch (err: any) {
       setActionError(err?.message || "Failed to claim delivery.");
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
+  const handleAcceptClick = async () => {
+    if (!onAccept) return;
+    setLoadingAction(true);
+    setActionError(null);
+    setActionSuccess(null);
+    try {
+      await onAccept(id);
+      setActionSuccess("Order accepted! Full address & contact unlocked.");
+    } catch (err: any) {
+      setActionError(err?.message || "Failed to accept order.");
     } finally {
       setLoadingAction(false);
     }
@@ -149,7 +166,8 @@ const DeliveryCard = ({
     setActionSuccess(null);
     try {
       await onRequestOtp(id);
-      setActionSuccess("New OTP sent to customer email.");
+      setOtpRequested(true);
+      setActionSuccess("OTP dispatched to customer email!");
       setTimeout(() => setActionSuccess(null), 4000);
     } catch (err: any) {
       setActionError(err?.message || "Failed to generate OTP.");
@@ -158,31 +176,25 @@ const DeliveryCard = ({
     }
   };
 
-  const handleVerifyOtpClick = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!onVerifyOtp || !otpInput.trim()) return;
+  const handleCompleteDeliveryClick = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!otpInput.trim()) {
+      setActionError("Please enter the 6-digit OTP provided by the customer.");
+      return;
+    }
     setLoadingAction(true);
     setActionError(null);
     setActionSuccess(null);
     try {
-      await onVerifyOtp(id, otpInput.trim());
-      setActionSuccess("Customer verified successfully!");
+      if (onStatusUpdate) {
+        await onStatusUpdate(id, "delivered", otpInput.trim());
+      } else if (onVerifyOtp) {
+        await onVerifyOtp(id, otpInput.trim());
+      }
+      setActionSuccess("Delivery verified & completed successfully!");
       setOtpInput("");
     } catch (err: any) {
-      setActionError(err?.message || "Invalid verification OTP.");
-    } finally {
-      setLoadingAction(false);
-    }
-  };
-
-  const handleAcceptClick = async () => {
-    if (!onAccept) return;
-    setLoadingAction(true);
-    setActionError(null);
-    try {
-      await onAccept(id);
-    } catch (err: any) {
-      setActionError(err?.message || "Failed to accept order.");
+      setActionError(err?.message || "Invalid OTP. Please check with customer.");
     } finally {
       setLoadingAction(false);
     }
@@ -204,13 +216,13 @@ const DeliveryCard = ({
   return (
     <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl p-5 hover:border-[#F97316]/50 transition-all duration-200 shadow-sm flex flex-col justify-between space-y-4">
       <div>
-        {/* Persistent 5-Step Progress Tracker for Active Deliveries */}
+        {/* Persistent 5-Step Stepper for My Deliveries */}
         {isMyDelivery && (
           <div className="pb-4 mb-4 border-b border-[#2A2B30]/70">
             <div className="relative flex items-center justify-between">
-              {/* Background Connecting Line */}
+              {/* Background Connecting Bar */}
               <div className="absolute top-2.5 left-3 right-3 h-[2px] bg-[#2A2B30] z-0" />
-              {/* Active Progress Fill */}
+              {/* Active Gradient Fill Line */}
               <div
                 className="absolute top-2.5 left-3 h-[2px] bg-gradient-to-r from-emerald-500 via-[#F97316] to-[#F97316] z-0 transition-all duration-500 ease-out"
                 style={{ width: `calc(${progressPercent}% * 0.92)` }}
@@ -227,7 +239,7 @@ const DeliveryCard = ({
                     key={s.step}
                     className="relative z-10 flex flex-col items-center group cursor-default"
                   >
-                    {/* Step Circle Node */}
+                    {/* Node Circle */}
                     <div
                       className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all duration-300 ${
                         isStepCompleted
@@ -282,16 +294,17 @@ const DeliveryCard = ({
               </button>
             </div>
 
+            {/* Security Indicator Pill */}
             <div className="flex items-center gap-2 mt-1.5">
-              {!customerVerified && !isDelivered ? (
+              {!isAcceptedOrBeyond ? (
                 <span className="inline-flex items-center gap-1 text-[10px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-full">
                   <Lock size={10} />
-                  <span>Masked Data (OTP Pending)</span>
+                  <span>Masked Data (Accept to Unlock)</span>
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-full">
                   <Unlock size={10} />
-                  <span>Customer Verified</span>
+                  <span>Customer Details Unlocked</span>
                 </span>
               )}
             </div>
@@ -359,40 +372,44 @@ const DeliveryCard = ({
           </div>
         )}
 
-        {/* Stage 2 OTP Verification Sub-Card (When Claimed but not yet Verified) */}
-        {isMyDelivery && isAssigned && !customerVerified && (
-          <div className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3.5 space-y-3">
+        {/* Stage 4: Out for Delivery Doorstep OTP Handover Module */}
+        {isMyDelivery && isOutForDelivery && (
+          <div className="mt-4 rounded-2xl border border-[#F97316]/40 bg-[#F97316]/5 p-3.5 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-xs font-bold text-white">
-                <KeyRound size={13} className="text-[#F97316]" />
-                <span>Customer Delivery OTP</span>
+                <ShieldCheck size={14} className="text-[#F97316]" />
+                <span>Doorstep OTP Verification</span>
               </div>
               <button
                 type="button"
                 onClick={handleRequestOtpClick}
                 disabled={loadingAction}
-                className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#FDBA74] hover:text-[#F97316] transition cursor-pointer"
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#FDBA74] hover:text-[#F97316] transition cursor-pointer"
               >
                 <Send size={10} />
-                <span>Resend OTP</span>
+                <span>{otpRequested ? "Resend OTP" : "Request OTP"}</span>
               </button>
             </div>
 
-            <form onSubmit={handleVerifyOtpClick} className="flex gap-2">
+            <p className="text-[11px] text-[#A1A1AA] leading-relaxed">
+              Ask customer for their 6-digit delivery passcode to confirm handoff.
+            </p>
+
+            <form onSubmit={handleCompleteDeliveryClick} className="flex gap-2">
               <input
                 type="text"
                 maxLength={6}
-                placeholder="6-digit code"
+                placeholder="6-digit PIN"
                 value={otpInput}
                 onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ""))}
-                className="flex-1 px-3 py-1.5 bg-[#111214] border border-[#2A2B30] rounded-xl text-xs font-mono text-white placeholder-[#A1A1AA]/50 focus:border-[#F97316]/60 focus:outline-none transition tracking-widest text-center"
+                className="flex-1 px-3 py-2 bg-[#111214] border border-[#2A2B30] rounded-xl text-xs font-mono text-white placeholder-[#A1A1AA]/50 focus:border-[#F97316]/60 focus:outline-none transition tracking-widest text-center"
               />
               <button
                 type="submit"
                 disabled={loadingAction || otpInput.length < 6}
-                className="px-4 py-1.5 rounded-xl bg-[#F97316] hover:bg-[#EA580C] text-xs font-bold text-white transition disabled:opacity-40 cursor-pointer shadow-[0_0_10px_rgba(249,115,22,0.25)]"
+                className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-xs font-bold text-white transition disabled:opacity-40 cursor-pointer shadow-[0_0_12px_rgba(16,185,129,0.3)]"
               >
-                {loadingAction ? "..." : "Verify"}
+                {loadingAction ? "Verifying..." : "Confirm & Deliver"}
               </button>
             </form>
           </div>
@@ -401,7 +418,7 @@ const DeliveryCard = ({
 
       {/* Action Triggers Bar */}
       <div className="pt-3 border-t border-[#2A2B30]/60 flex items-center justify-between gap-3">
-        {/* Stage 1: Claim Action */}
+        {/* Stage 1: Claim Action (Available to Claim tab) */}
         {isClaimable && (
           <button
             type="button"
@@ -414,55 +431,29 @@ const DeliveryCard = ({
           </button>
         )}
 
-        {/* Stage 2 & 3: My Deliveries Workflow */}
+        {/* Stage 2: Accept Action (Directly enabled on claimed orders) */}
         {isMyDelivery && isAssigned && (
-          <div className="w-full flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleAcceptClick}
-              disabled={!customerVerified || loadingAction}
-              className={`flex-1 py-2 px-4 rounded-2xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                customerVerified
-                  ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-[0_0_12px_rgba(52,211,153,0.3)]"
-                  : "bg-[#111214] border border-[#2A2B30] text-[#A1A1AA] cursor-not-allowed opacity-60"
-              }`}
-            >
-              <span>{customerVerified ? "Accept & Start Dispatch" : "Accept (Verify OTP First)"}</span>
-              <ChevronRight size={14} />
-            </button>
-          </div>
-        )}
-
-        {/* Stage 4: In Transit / Active Route Actions */}
-        {isMyDelivery && isShipped && (
-          <div className="w-full flex gap-2">
-            <button
-              type="button"
-              onClick={() => handleStatusClick("out-for-delivery")}
-              disabled={loadingAction}
-              className="flex-1 py-2 px-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-xs font-bold text-white transition cursor-pointer"
-            >
-              Out for Delivery
-            </button>
-            <button
-              type="button"
-              onClick={() => handleStatusClick("delivered")}
-              disabled={loadingAction}
-              className="flex-1 py-2 px-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-xs font-bold text-white transition cursor-pointer"
-            >
-              Mark Delivered
-            </button>
-          </div>
-        )}
-
-        {isMyDelivery && isOutForDelivery && (
           <button
             type="button"
-            onClick={() => handleStatusClick("delivered")}
+            onClick={handleAcceptClick}
             disabled={loadingAction}
-            className="w-full py-2.5 px-4 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-xs font-bold text-white transition shadow-[0_0_12px_rgba(52,211,153,0.3)] cursor-pointer"
+            className="w-full py-2.5 px-4 rounded-2xl bg-[#F97316] hover:bg-[#EA580C] text-xs font-bold text-white transition shadow-[0_0_12px_rgba(249,115,22,0.3)] cursor-pointer flex items-center justify-center gap-1.5"
           >
-            Confirm Final Delivery
+            <span>Accept & Start Dispatch</span>
+            <ChevronRight size={14} />
+          </button>
+        )}
+
+        {/* Stage 3: Shipped / In Transit -> Advance to Out for Delivery */}
+        {isMyDelivery && isShipped && (
+          <button
+            type="button"
+            onClick={() => handleStatusClick("out-for-delivery")}
+            disabled={loadingAction}
+            className="w-full py-2.5 px-4 rounded-2xl bg-amber-500 hover:bg-amber-600 text-xs font-bold text-white transition shadow-[0_0_12px_rgba(245,158,11,0.3)] cursor-pointer flex items-center justify-center gap-1.5"
+          >
+            <span>Mark Out for Delivery</span>
+            <ChevronRight size={14} />
           </button>
         )}
       </div>

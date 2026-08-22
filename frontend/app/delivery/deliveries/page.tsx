@@ -94,15 +94,23 @@ export default function DeliveriesPage() {
       toast.success("Delivery accepted! Status updated to Shipped.");
       await loadDeliveries();
     } catch (err: any) {
-      toast.error(err?.message || "Customer OTP verification required before accepting.");
+      toast.error(err?.message || "Unable to accept delivery.");
       throw err;
     }
   };
 
-  const handleStatusUpdate = async (id: string, status: string) => {
+  const handleStatusUpdate = async (
+    id: string,
+    status: string,
+    otp?: string,
+  ) => {
     try {
-      await updateDeliveryStatus(id, status);
-      toast.success(`Delivery status updated to ${status}.`);
+      await updateDeliveryStatus(id, status, otp);
+      if (status === "delivered") {
+        toast.success("Delivery verified & completed successfully!");
+      } else {
+        toast.success(`Delivery status updated to ${status}.`);
+      }
       await loadDeliveries();
     } catch (err: any) {
       toast.error(err?.message || "Failed to update status.");

@@ -93,10 +93,17 @@ function mapOrderToRecord(o, requester = null) {
 
   // Masking policy:
   // Customers and Owners always see full address and phone.
-  // Delivery agent sees full address and phone ONLY after customerVerified === true.
-  // Before verification, agent sees masked address and masked phone.
+  // Delivery agent sees full address and phone once the order is ACCEPTED (shipped, out-for-delivery, delivered).
+  // Before acceptance (unassigned or claimed), agent sees masked address and phone.
+  const isAcceptedOrBeyond = [
+    "shipped",
+    "out-for-delivery",
+    "completed",
+    "delivered",
+  ].includes(o.status);
+
   const canSeeFullData =
-    isCustomer || isOwner || (isAssignedAgent && isCustomerVerified);
+    isCustomer || isOwner || (isAssignedAgent && isAcceptedOrBeyond);
 
   let rawPhone =
     o.customerId?.phone || o.customerId?.phoneNumber || o.customerPhone || "";
@@ -122,7 +129,7 @@ function mapOrderToRecord(o, requester = null) {
 
   if (!canSeeFullData) {
     const safeCity = addr.city || "Destination Area";
-    addressStr = `•••••••• (Verify OTP to view), ${safeCity}`;
+    addressStr = `•••••••• (Accept order to view), ${safeCity}`;
   }
 
   let agent = null;
@@ -296,13 +303,6 @@ const claimOrder = async (req, res, next) => {
 
     await createOrderEventNotifications(order, "claimed");
 
-    // Automatically generate and dispatch delivery verification OTP to customer
-    try {
-      await deliveryOtpService.generateDeliveryOtp(order._id, user);
-    } catch (otpErr) {
-      console.warn("Auto OTP generation on claim:", otpErr.message);
-    }
-
     const populated = await Order.findById(order._id)
       .populate("customerId", "fullName email phone phoneNumber")
       .populate("assignedAgent", "fullName email role")
@@ -311,8 +311,7 @@ const claimOrder = async (req, res, next) => {
     res.json({
       success: true,
       data: mapOrderToRecord(populated, user),
-      message:
-        "Order claimed successfully. Verification OTP dispatched to customer.",
+      message: "Order claimed successfully. Accept to start dispatch.",
     });
   } catch (err) {
     next(err);
@@ -363,7 +362,7 @@ const assignOrder = async (req, res, next) => {
   }
 };
 
-// POST /api/deliveries/orders/:orderId/accept (agent accepts verified order -> Shipped)
+// POST /api/deliveries/orders/:orderId/accept (agent accepts assigned order -> Shipped, unlocks full details)
 const acceptOrder = async (req, res, next) => {
   try {
     const user = req.user;
@@ -401,13 +400,6 @@ const acceptOrder = async (req, res, next) => {
       return res.status(403).json({ message: "Order not assigned to you" });
     }
 
-    if (!order.customerVerified) {
-      return res.status(403).json({
-        message:
-          "Customer OTP verification required before accepting delivery.",
-      });
-    }
-
     order.status = "shipped";
     order.shippedAt = new Date();
     await order.save();
@@ -420,7 +412,11 @@ const acceptOrder = async (req, res, next) => {
       .populate("assignedAgent", "fullName email role")
       .populate("items.product", "name");
 
-    res.json({ success: true, data: mapOrderToRecord(populated, user) });
+    res.json({
+      success: true,
+      data: mapOrderToRecord(populated, user),
+      message: "Order accepted. Full customer contact and address unlocked.",
+    });
   } catch (err) {
     next(err);
   }
@@ -431,7 +427,7 @@ const updateDeliveryStatus = async (req, res, next) => {
   try {
     const user = req.user;
     const { id } = req.params;
-    const { status, completionPhoto } = req.body;
+    const { status, otp, completionPhoto } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id))
       return res.status(400).json({ message: "Invalid order id" });
@@ -456,6 +452,7 @@ const updateDeliveryStatus = async (req, res, next) => {
       "pending",
       "assigned",
       "shipped",
+      "out-for-delivery",
       "completed",
       "delivered",
       "cancelled",
@@ -464,7 +461,21 @@ const updateDeliveryStatus = async (req, res, next) => {
       return res.status(400).json({ message: "Invalid status" });
     }
 
+    // Gating for Final Handover / Delivery Completion
     if (status === "completed" || status === "delivered") {
+      if (user && user.role === "Delivery Agent") {
+        if (!order.customerVerified) {
+          if (!otp) {
+            return res.status(400).json({
+              message:
+                "Customer delivery OTP verification is required to complete delivery.",
+            });
+          }
+          // Verify submitted OTP
+          await deliveryOtpService.verifyDeliveryOtp(order._id, otp, user);
+        }
+      }
+
       if (completionPhoto) {
         order.completionPhoto = completionPhoto;
       }
@@ -472,7 +483,7 @@ const updateDeliveryStatus = async (req, res, next) => {
     }
 
     if (status) order.status = status;
-    if (status === "shipped") order.shippedAt = new Date();
+    if (status === "shipped" && !order.shippedAt) order.shippedAt = new Date();
     await order.save();
 
     if (status) {
@@ -485,6 +496,11 @@ const updateDeliveryStatus = async (req, res, next) => {
       .populate("items.product", "name");
     res.json({ success: true, data: mapOrderToRecord(populated, user) });
   } catch (err) {
+    if (err.statusCode) {
+      return res
+        .status(err.statusCode)
+        .json({ success: false, message: err.message });
+    }
     next(err);
   }
 };
