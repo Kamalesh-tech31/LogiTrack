@@ -158,43 +158,47 @@ const approveUser = async (req, res) => {
             });
         }
 
-        await transporter.sendMail({
-            from: "LogiTrack <logitrack862@gmail.com>",
-            to: user.email,
-            subject: "LogiTrack Account Approved",
-            html: `
-                <div style="font-family: Arial, sans-serif; background:#0b0b0b; color:#ffffff; padding:32px;">
-                    <div style="max-width:560px; margin:0 auto; background:#111111; border:1px solid #27272a; border-radius:24px; padding:32px;">
-                        <h1 style="margin:0 0 16px; font-size:32px;">
-                            Logi<span style="color:#7F1D1D;">Track</span>
-                        </h1>
-        
-                        <h2 style="color:#22c55e;">
-                            Account Approved ✅
-                        </h2>
-        
-                        <p>
-                            Dear ${user.fullName},
-                        </p>
-        
-                        <p>
-                            Your LogiTrack account has been verified and approved by the administrator.
-                        </p>
-        
-                        <p>
-                            You can now log in and access your dashboard.
-                        </p>
-        
-                        <br>
-        
-                        <p>
-                            Regards,<br>
-                            LogiTrack Team
-                        </p>
+        try {
+            await transporter.sendMail({
+                from: "LogiTrack <logitrack862@gmail.com>",
+                to: user.email,
+                subject: "LogiTrack Account Approved",
+                html: `
+                    <div style="font-family: Arial, sans-serif; background:#0b0b0b; color:#ffffff; padding:32px;">
+                        <div style="max-width:560px; margin:0 auto; background:#111111; border:1px solid #27272a; border-radius:24px; padding:32px;">
+                            <h1 style="margin:0 0 16px; font-size:32px;">
+                                Logi<span style="color:#7F1D1D;">Track</span>
+                            </h1>
+            
+                            <h2 style="color:#22c55e;">
+                                Account Approved ✅
+                            </h2>
+            
+                            <p>
+                                Dear ${user.fullName},
+                            </p>
+            
+                            <p>
+                                Your LogiTrack account has been verified and approved by the administrator.
+                            </p>
+            
+                            <p>
+                                You can now log in and access your dashboard.
+                            </p>
+            
+                            <br>
+            
+                            <p>
+                                Regards,<br>
+                                LogiTrack Team
+                            </p>
+                        </div>
                     </div>
-                </div>
-            `,
-        });
+                `,
+            });
+        } catch (emailError) {
+            console.warn("Approval notification email could not be sent:", emailError.message);
+        }
 
         res.status(200).json({
             message: "User approved successfully",
@@ -264,124 +268,122 @@ const rejectUser = async (req, res) => {
 
 
 
-        await transporter.sendMail({
-            from: "LogiTrack <logitrack862@gmail.com>",
-            to: user.email,
-            subject: "LogiTrack Account Rejected",
-            html: `
-            <div style="font-family: Arial, sans-serif; background:#0b0b0b; color:#ffffff; padding:32px;">
-                <div style="max-width:560px; margin:0 auto; background:#111111; border:1px solid #27272a; border-radius:24px; padding:32px;">
-            
-                    <h1 style="margin:0 0 16px; font-size:32px;">
-                        Logi<span style="color:#7F1D1D;">Track</span>
-                    </h1>
-            
-                    <h2 style="color:#ef4444;">
-                        Account Rejected ❌
-                    </h2>
-            
-                    <p>Dear ${user.fullName},</p>
-            
-                    <p>
-                        Your registration request has been rejected by the administrator.
-                    </p>
-            
-                    <hr>
-            
-                    <h3>Document Verification Status</h3>
-            
-                    ${user.documents.gstCertificate.path
-                    ?
-                    `
+        try {
+            await transporter.sendMail({
+                from: "LogiTrack <logitrack862@gmail.com>",
+                to: user.email,
+                subject: "LogiTrack Account Rejected",
+                html: `
+                <div style="font-family: Arial, sans-serif; background:#0b0b0b; color:#ffffff; padding:32px;">
+                    <div style="max-width:560px; margin:0 auto; background:#111111; border:1px solid #27272a; border-radius:24px; padding:32px;">
+                
+                        <h1 style="margin:0 0 16px; font-size:32px;">
+                            Logi<span style="color:#7F1D1D;">Track</span>
+                        </h1>
+                
+                        <h2 style="color:#ef4444;">
+                            Account Rejected ❌
+                        </h2>
+                
+                        <p>Dear ${user.fullName},</p>
+                
                         <p>
-                            <b>GST Certificate</b><br>
-                            Status : ${user.documents.gstCertificate.status}<br>
-                            ${user.documents.gstCertificate.status === "rejected"
-                        ? `Reason : ${user.documents.gstCertificate.rejectionReason}`
+                            Your registration request has been rejected by the administrator.
+                        </p>
+                
+                        <hr>
+                
+                        <h3>Document Verification Status</h3>
+                
+                        ${user.documents.gstCertificate.path
+                        ?
+                        `
+                            <p>
+                                <b>GST Certificate</b><br>
+                                Status : ${user.documents.gstCertificate.status}<br>
+                                ${user.documents.gstCertificate.status === "rejected"
+                            ? `Reason : ${user.documents.gstCertificate.rejectionReason}`
+                            : ""
+                        }
+                            </p>
+                            `
                         : ""
                     }
-                        </p>
+                
+                        ${user.documents.shopLicense.path
+                        ?
                         `
-                    : ""
-                }
-            
-                    ${user.documents.shopLicense.path
-                    ?
-                    `
-                        <p>
-                            <b>Shop License</b><br>
-                            Status : ${user.documents.shopLicense.status}<br>
-                            ${user.documents.shopLicense.status === "rejected"
-                        ? `Reason : ${user.documents.shopLicense.rejectionReason}`
+                            <p>
+                                <b>Shop License</b><br>
+                                Status : ${user.documents.shopLicense.status}<br>
+                                ${user.documents.shopLicense.status === "rejected"
+                            ? `Reason : ${user.documents.shopLicense.rejectionReason}`
+                            : ""
+                        }
+                            </p>
+                            `
                         : ""
                     }
-                        </p>
+                
+                        ${user.documents.aadhaar.path
+                        ?
                         `
-                    : ""
-                }
-            
-                    ${user.documents.aadhaar.path
-                    ?
-                    `
-                        <p>
-                            <b>Aadhaar Card</b><br>
-                            Status : ${user.documents.aadhaar.status}<br>
-                            ${user.documents.aadhaar.status === "rejected"
-                        ? `Reason : ${user.documents.aadhaar.rejectionReason}`
+                            <p>
+                                <b>Aadhaar Card</b><br>
+                                Status : ${user.documents.aadhaar.status}<br>
+                                ${user.documents.aadhaar.status === "rejected"
+                            ? `Reason : ${user.documents.aadhaar.rejectionReason}`
+                            : ""
+                        }
+                            </p>
+                            `
                         : ""
                     }
-                        </p>
+                
+                        ${user.documents.drivingLicense.path
+                        ?
                         `
-                    : ""
-                }
-            
-                    ${user.documents.drivingLicense.path
-                    ?
-                    `
-                        <p>
-                            <b>Driving License</b><br>
-                            Status : ${user.documents.drivingLicense.status}<br>
-                            ${user.documents.drivingLicense.status === "rejected"
-                        ? `Reason : ${user.documents.drivingLicense.rejectionReason}`
+                            <p>
+                                <b>Driving License</b><br>
+                                Status : ${user.documents.drivingLicense.status}<br>
+                                ${user.documents.drivingLicense.status === "rejected"
+                            ? `Reason : ${user.documents.drivingLicense.rejectionReason}`
+                            : ""
+                        }
+                            </p>
+                            `
                         : ""
                     }
+                
+                        <hr>
+                
+                        <h3 style="color:#ef4444;">
+                            Main Rejection Reason
+                        </h3>
+                
+                        <p>
+                            ${user.applicationRejectionReason}
                         </p>
-                        `
-                    : ""
-                }
-            
-                    <hr>
-            
-                    <h3 style="color:#ef4444;">
-                        Main Rejection Reason
-                    </h3>
-            
-                    <p>
-                        ${user.applicationRejectionReason}
-                    </p>
-            
-                    <br>
-            
-                    <p>
-                        Please review the rejected documents and register again with corrected information.
-                    </p>
-            
-                    <br>
-            
-                    <p>
-                        Regards,<br>
-                        LogiTrack Team
-                    </p>
-            
+                
+                        <br>
+                
+                        <p>
+                            Please review the rejected documents and register again with corrected information.
+                        </p>
+                
+                        <br>
+                
+                        <p>
+                            Regards,<br>
+                            LogiTrack Team
+                        </p>
+                
+                    </div>
                 </div>
-            </div>
-            `,
-        });
-
-        if (!user) {
-            return res.status(404).json({
-                message: "User not found",
+                `,
             });
+        } catch (emailError) {
+            console.warn("Rejection notification email could not be sent:", emailError.message);
         }
 
         res.status(200).json({

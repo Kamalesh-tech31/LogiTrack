@@ -1,46 +1,41 @@
 "use client";
 
-import { Bell, Search, UserCircle2 } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 
-export default function AdminNavbar() {
-    return (
-        <header className="flex items-center justify-between border-b border-[#27272A] bg-[#111111] px-8 py-5">
+interface AdminNavbarProps {
+  onLogout?: () => void;
+}
 
-            {/* Search Bar */}
-            <div className="flex items-center gap-3 rounded-2xl border border-[#27272A] bg-[#1A1A1A] px-4 py-3 w-[400px]">
-                <Search className="text-gray-400" size={18} />
-                <input
-                    type="text"
-                    placeholder="Search users..."
-                    className="bg-transparent outline-none text-white w-full"
-                />
-            </div>
+export default function AdminNavbar({ onLogout }: AdminNavbarProps) {
+  return (
+    <header className="h-20 bg-[#111111] border-b border-neutral-900 px-8 flex items-center justify-between shrink-0">
+      {/* Title / Badge */}
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-2xl bg-[#7F1D1D]/20 border border-[#7F1D1D]/50 flex items-center justify-center text-[#EF4444]">
+          <ShieldCheck size={22} />
+        </div>
+        <div>
+          <h2 className="text-white font-semibold text-base leading-tight">
+            Admin Verification Console
+          </h2>
+          <p className="text-neutral-500 text-xs mt-0.5">
+            LogiTrack Compliance & KYC Center
+          </p>
+        </div>
+      </div>
 
-            {/* Right Side */}
-            <div className="flex items-center gap-6">
-
-                <button className="relative">
-                    <Bell className="text-gray-300" size={24} />
-                    <span className="absolute -top-2 -right-2 bg-[#7F1D1D] text-xs px-2 rounded-full text-white">
-                        0
-                    </span>
-                </button>
-
-                <div className="flex items-center gap-3">
-                    <UserCircle2 size={40} className="text-[#7F1D1D]" />
-
-                    <div>
-                        <h3 className="text-white font-semibold">
-                            Administrator
-                        </h3>
-
-                        <p className="text-gray-400 text-sm">
-                            LogiTrack Admin
-                        </p>
-                    </div>
-                </div>
-
-            </div>
-        </header>
-    );
+      {/* Right Side - Administrator Profile */}
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 bg-[#0B0B0B] border border-neutral-800 px-4 py-2 rounded-2xl">
+          <div className="w-10 h-10 rounded-2xl bg-[#7F1D1D] flex items-center justify-center text-white font-bold text-sm shadow-[0_0_12px_rgba(127,29,29,0.5)]">
+            AD
+          </div>
+          <div>
+            <h3 className="text-white text-sm font-medium">Administrator</h3>
+            <p className="text-neutral-500 text-xs">Super Admin</p>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
 }

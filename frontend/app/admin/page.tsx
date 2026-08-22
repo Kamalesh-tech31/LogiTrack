@@ -1,192 +1,191 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-import AdminNavbar from "@/components/admin/AdminNavbar";
-import AdminSidebar from "@/components/admin/AdminSidebar";
+import toast from "react-hot-toast";
+import { Clock3, RefreshCw, CheckCircle2, FileCheck } from "lucide-react";
 import StatsCards from "@/components/admin/StatsCards";
 import PendingUserCard from "@/components/admin/PendingUserCard";
+import {
+  fetchAdminStats,
+  fetchAdminPendingUsers,
+  approveAdminUser,
+  rejectAdminUser,
+  updateAdminDocumentStatus,
+  type AdminStats,
+  type AdminUser,
+} from "@/lib/api";
 
 export default function AdminPage() {
-    const [users, setUsers] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [stats, setStats] = useState({
-        totalUsers: 0,
-        pendingUsers: 0,
-        approvedUsers: 0,
-        rejectedUsers: 0,
-    });
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [stats, setStats] = useState<AdminStats>({
+    totalUsers: 0,
+    pendingUsers: 0,
+    approvedUsers: 0,
+    rejectedUsers: 0,
+  });
 
-    async function loadUsers() {
-        try {
-            const response = await fetch(
-                "http://localhost:5000/api/admin/pending"
-            );
+  async function loadData() {
+    try {
+      const [pendingUsersData, statsData] = await Promise.all([
+        fetchAdminPendingUsers(),
+        fetchAdminStats(),
+      ]);
 
-            const data = await response.json();
-
-            setUsers(data);
-
-            const statsResponse = await fetch(
-                "http://localhost:5000/api/admin/stats"
-            );
-
-            const statsData = await statsResponse.json();
-
-            setStats(statsData);
-
-        } catch (error) {
-            console.error(error);
+      setUsers(Array.isArray(pendingUsersData) ? pendingUsersData : []);
+      setStats(
+        statsData || {
+          totalUsers: 0,
+          pendingUsers: 0,
+          approvedUsers: 0,
+          rejectedUsers: 0,
         }
-
-        setLoading(false);
+      );
+    } catch (error: any) {
+      console.error("Admin loadData error:", error);
+      toast.error(error?.message || "Failed to load dashboard data");
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
     }
+  }
 
-    useEffect(() => {
-        loadUsers();
-    }, []);
+  useEffect(() => {
+    loadData();
+  }, []);
 
-    async function approveUser(id: string) {
-        await fetch(
-            `http://localhost:5000/api/admin/approve/${id}`,
-            {
-                method: "PATCH",
-            }
-        );
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    loadData();
+  };
 
-        loadUsers();
+  async function handleApproveUser(id: string) {
+    try {
+      const res = await approveAdminUser(id);
+      toast.success(res.message || "User approved successfully!");
+      loadData();
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to approve user.");
     }
+  }
 
-    async function rejectUser(id: string) {
-        await fetch(
-            `http://localhost:5000/api/admin/reject/${id}`,
-            {
-                method: "PATCH",
-            }
-        );
-
-        loadUsers();
+  async function handleRejectUser(id: string, reason: string) {
+    try {
+      const res = await rejectAdminUser(id, reason);
+      toast.success(res.message || "User registration rejected.");
+      loadData();
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to reject user.");
     }
+  }
 
-    if (loading) {
-        return (
-            <main className="min-h-screen bg-[#0B0B0B] text-white flex items-center justify-center">
-                Loading...
-            </main>
-        );
+  async function handleUpdateDocument(
+    userId: string,
+    documentName: "aadhaar" | "drivingLicense" | "gstCertificate" | "shopLicense",
+    status: "approved" | "rejected",
+    rejectionReason?: string
+  ) {
+    try {
+      const res = await updateAdminDocumentStatus(
+        userId,
+        documentName,
+        status,
+        rejectionReason
+      );
+      toast.success(res.message || `Document marked as ${status}.`);
+      loadData();
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to update document status.");
     }
+  }
 
-    async function updateDocument(
-        userId: string,
-        documentName: string,
-        status: "approved" | "rejected"
-    ) {
-        let rejectionReason = "";
-
-        if (status === "rejected") {
-            rejectionReason = prompt("Enter rejection reason") || "";
-
-            if (!rejectionReason) return;
-        }
-
-        const response = await fetch(
-            `http://localhost:5000/api/admin/${userId}/document`,
-            {
-                method: "PATCH",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    documentName,
-                    status,
-                    rejectionReason,
-                }),
-            }
-        );
-
-        const data = await response.json();
-
-        alert(data.message);
-
-        loadUsers();
-    }
-
+  if (loading) {
     return (
-        <main className="min-h-screen bg-[#0B0B0B] text-white flex">
-
-            {/* Sidebar */}
-            <AdminSidebar />
-
-            {/* Main Area */}
-            <div className="flex-1">
-
-                {/* Top Navbar */}
-                <AdminNavbar />
-
-                <div className="p-8">
-
-                    {/* Dashboard Header */}
-                    <div className="mb-8">
-                        <h1 className="text-5xl font-bold">
-                            Admin Dashboard
-                        </h1>
-
-                        <p className="text-gray-400 mt-2">
-                            Review and manage all pending registrations.
-                        </p>
-                    </div>
-
-                    {/* Stats */}
-                    <StatsCards
-                        totalUsers={stats.totalUsers}
-                        pendingUsers={stats.pendingUsers}
-                        approvedUsers={stats.approvedUsers}
-                        rejectedUsers={stats.rejectedUsers}
-                    />
-
-                    {/* Pending Users */}
-                    <div className="mt-10">
-
-                        <h2 className="text-3xl font-bold mb-8">
-                            Pending Users
-                        </h2>
-
-                        {users.length === 0 ? (
-                            <div className="rounded-3xl border border-[#27272A] bg-[#111111] p-12 text-center">
-                                <h2 className="text-2xl text-gray-300">
-                                    No Pending Users
-                                </h2>
-
-                                <p className="text-gray-500 mt-3">
-                                    All registrations have been processed.
-                                </p>
-                            </div>
-                        ) : (
-                            <div className="space-y-8">
-                                {users.map((user) => (
-                                    <PendingUserCard
-                                        key={user._id}
-                                        user={user}
-                                        onApprove={() =>
-                                            approveUser(user._id)
-                                        }
-                                        onReject={() =>
-                                            rejectUser(user._id)
-                                        }
-                                        onDocumentUpdate={(documentName, status) =>
-                                            updateDocument(
-                                                user._id,
-                                                documentName,
-                                                status
-                                            )
-                                        }
-                                />
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </main>
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
+        <div className="w-10 h-10 border-2 border-[#7F1D1D] border-t-transparent rounded-full animate-spin" />
+        <p className="text-neutral-500 text-sm">Loading admin dashboard...</p>
+      </div>
     );
+  }
+
+  return (
+    <div className="space-y-10">
+      {/* Header Area */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-bold text-white tracking-tight">
+            Admin Overview
+          </h1>
+          <p className="text-neutral-400 text-sm mt-1.5">
+            Monitor registration metrics, review pending KYC applications, and manage permissions.
+          </p>
+        </div>
+
+        <button
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="self-start sm:self-auto inline-flex items-center gap-2 px-4 py-2.5 bg-[#16131A] hover:bg-[#221c27] text-neutral-300 hover:text-white border border-neutral-800 rounded-2xl text-xs font-medium transition cursor-pointer disabled:opacity-50"
+        >
+          <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
+          <span>Refresh Data</span>
+        </button>
+      </div>
+
+      {/* Metric Tiles */}
+      <StatsCards
+        totalUsers={stats.totalUsers}
+        pendingUsers={stats.pendingUsers}
+        approvedUsers={stats.approvedUsers}
+        rejectedUsers={stats.rejectedUsers}
+      />
+
+      {/* Pending Verifications Queue */}
+      <div className="space-y-6 pt-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center text-yellow-400">
+              <Clock3 size={18} />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-white">
+                Pending KYC Applications
+              </h2>
+              <p className="text-neutral-500 text-xs mt-0.5">
+                {users.length} account{users.length === 1 ? "" : "s"} waiting for manual document verification
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {users.length === 0 ? (
+          <div className="rounded-3xl border border-neutral-900 bg-[#111111] p-12 text-center shadow-lg">
+            <div className="w-16 h-16 rounded-2xl bg-green-500/10 border border-green-500/30 flex items-center justify-center text-green-400 mx-auto mb-4">
+              <CheckCircle2 size={32} />
+            </div>
+            <h3 className="text-xl font-semibold text-white">
+              All Registrations Processed
+            </h3>
+            <p className="text-neutral-500 text-sm mt-2 max-w-md mx-auto">
+              There are no accounts currently pending KYC verification. New business owner and delivery agent submissions will appear here.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {users.map((user) => (
+              <PendingUserCard
+                key={user._id}
+                user={user}
+                onApprove={() => handleApproveUser(user._id)}
+                onReject={(reason) => handleRejectUser(user._id, reason)}
+                onDocumentUpdate={(documentName, status, reason) =>
+                  handleUpdateDocument(user._id, documentName, status, reason)
+                }
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }

@@ -1,4 +1,5 @@
 const express = require("express");
+const authenticateAdmin = require("../middleware/authenticateAdmin");
 
 const {
     getPendingUsers,
@@ -11,6 +12,9 @@ const {
 } = require("../controllers/adminController");
 
 const router = express.Router();
+
+// Protect all admin routes with admin authorization
+router.use(authenticateAdmin);
 
 router.get("/pending", getPendingUsers);
 

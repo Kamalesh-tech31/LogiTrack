@@ -91,8 +91,8 @@ function getApiBaseUrl() {
 async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const token =
     typeof window !== "undefined" ? localStorage.getItem("token") : null;
-
-  console.log("TOKEN:", token);
+  const adminKey =
+    typeof window !== "undefined" ? sessionStorage.getItem("admin_auth") || "aswinabi1" : "aswinabi1";
 
   const response = await fetch(`${getApiBaseUrl()}${path}`, {
     ...init,
@@ -100,6 +100,7 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
     headers: {
       "Content-Type": "application/json",
       Authorization: token ? `Bearer ${token}` : "",
+      "x-admin-key": adminKey,
       ...(init?.headers || {}),
     },
   });
@@ -472,3 +473,86 @@ export async function fetchCustomerAnalyticsSummary(): Promise<CustomerAnalytics
     "/api/customer/analytics/summary",
   );
 }
+
+/* =========================
+   Admin APIs
+========================= */
+
+export interface AdminStats {
+  totalUsers: number;
+  pendingUsers: number;
+  approvedUsers: number;
+  rejectedUsers: number;
+}
+
+export interface AdminDocument {
+  path: string;
+  status: "pending" | "approved" | "rejected";
+  rejectionReason: string;
+}
+
+export interface AdminUser {
+  _id: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  role: string;
+  status: "pending" | "approved" | "rejected";
+  applicationRejectionReason?: string;
+  businessName?: string;
+  gstNumber?: string;
+  businessAddress?: string;
+  documents: {
+    aadhaar: AdminDocument;
+    drivingLicense: AdminDocument;
+    gstCertificate: AdminDocument;
+    shopLicense: AdminDocument;
+  };
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export async function fetchAdminStats(): Promise<AdminStats> {
+  return apiRequest<AdminStats>("/api/admin/stats");
+}
+
+export async function fetchAdminPendingUsers(): Promise<AdminUser[]> {
+  return apiRequest<AdminUser[]>("/api/admin/pending");
+}
+
+export async function fetchAdminApprovedUsers(): Promise<AdminUser[]> {
+  return apiRequest<AdminUser[]>("/api/admin/approved");
+}
+
+export async function fetchAdminRejectedUsers(): Promise<AdminUser[]> {
+  return apiRequest<AdminUser[]>("/api/admin/rejected");
+}
+
+export async function approveAdminUser(id: string): Promise<{ message: string; user: AdminUser }> {
+  return apiRequest<{ message: string; user: AdminUser }>(`/api/admin/approve/${id}`, {
+    method: "PATCH",
+  });
+}
+
+export async function rejectAdminUser(
+  id: string,
+  rejectionReason: string,
+): Promise<{ message: string; user: AdminUser }> {
+  return apiRequest<{ message: string; user: AdminUser }>(`/api/admin/reject/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ rejectionReason }),
+  });
+}
+
+export async function updateAdminDocumentStatus(
+  userId: string,
+  documentName: "aadhaar" | "drivingLicense" | "gstCertificate" | "shopLicense",
+  status: "approved" | "rejected",
+  rejectionReason?: string,
+): Promise<{ message: string; user: AdminUser }> {
+  return apiRequest<{ message: string; user: AdminUser }>(`/api/admin/${userId}/document`, {
+    method: "PATCH",
+    body: JSON.stringify({ documentName, status, rejectionReason: rejectionReason || "" }),
+  });
+}
+
