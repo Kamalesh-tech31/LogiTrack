@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-// notifications are shown in Topbar; removed local bell
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { Package, Truck, Check, Copy, AlertCircle, ShieldCheck } from "lucide-react";
 
-import DeliveryCard from "@/components/delivery/DeliveryCard";
 import type {
   DeliveryRecord,
   DeliveryStatus,
@@ -15,13 +14,13 @@ import {
   acceptDelivery,
   saveLocationUpdate,
   resendDeliveryOtp,
-  // notifications handled by Topbar
 } from "@/lib/api";
 import {
   InputOTP,
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
+import StatusBadge from "@/components/delivery/StatusBadge";
 
 const statusOptions: Partial<Record<DeliveryStatus, DeliveryStatus[]>> = {
   Pending: ["Out for Delivery"],
@@ -48,6 +47,19 @@ function toTitleCase(s?: string) {
     .join(" ");
 }
 
+function formatDisplayId(rawId: string) {
+  if (!rawId) return "#ORD";
+  if (rawId.startsWith("ORD-")) {
+    const parts = rawId.split("-");
+    const last = parts[parts.length - 1];
+    return `#${last.slice(-4)}`;
+  }
+  if (rawId.length > 8) {
+    return `#${rawId.slice(-4).toUpperCase()}`;
+  }
+  return `#${rawId}`;
+}
+
 export default function DeliveriesPage() {
   const [deliveries, setDeliveries] = useState<DeliveryRecord[]>([]);
   const [selectedStatuses, setSelectedStatuses] = useState<
@@ -55,7 +67,7 @@ export default function DeliveriesPage() {
   >({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // notifications handled by Topbar
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -92,8 +104,6 @@ export default function DeliveriesPage() {
     };
   }, []);
 
-  // notification logic removed — Topbar displays notifications
-
   const isAssignedToCurrentUser = (delivery: DeliveryRecord) => {
     if (typeof window === "undefined") return false;
     const currentUserId = localStorage.getItem("userId");
@@ -123,34 +133,11 @@ export default function DeliveriesPage() {
     return s === "completed" || s === "delivered";
   }).length;
 
-  const handleUpdateStatus = async (id: string) => {
-    const current = deliveries.find((item) => item.id === id);
-    const nextStatus = selectedStatuses[id];
-
-    if (!current || !nextStatus || nextStatus === current.status) {
-      toast.error("Select a valid status change before saving.");
-      return;
-    }
-
-    try {
-      const updatedDelivery = await updateDeliveryStatus(id, nextStatus);
-
-      setDeliveries((prev) =>
-        prev.map((item) => (item.id === id ? updatedDelivery : item)),
-      );
-      setSelectedStatuses((prev) => ({
-        ...prev,
-        [id]: updatedDelivery.status as DeliveryStatus,
-      }));
-
-      toast.success(`${current.customer} updated to ${nextStatus}`);
-    } catch (err) {
-      toast.error(
-        err instanceof Error
-          ? err.message
-          : "Unable to update delivery status.",
-      );
-    }
+  const handleCopyId = (id: string) => {
+    if (!id) return;
+    void navigator.clipboard.writeText(id);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
   const handleAccept = async (id: string) => {
@@ -159,7 +146,7 @@ export default function DeliveriesPage() {
     try {
       const accepted = await acceptDelivery(id);
       setDeliveries((prev) => prev.map((p) => (p.id === id ? accepted : p)));
-      toast.success("Delivery accepted. Capturing your current location...");
+      toast.success("Delivery accepted. Capturing current location...");
 
       if (!navigator.geolocation) {
         toast.error(
@@ -190,7 +177,7 @@ export default function DeliveriesPage() {
               timestamp: new Date().toLocaleString(),
             });
             toast.success(
-              "Driver current location saved for customer tracking.",
+              "Driver location saved for customer tracking.",
             );
           } catch (updateError) {
             console.error("Unable to save driver location:", updateError);
@@ -221,7 +208,6 @@ export default function DeliveriesPage() {
   );
 
   const handleOtpChange = (id: string, otp: string) => {
-    // normalize non-digit characters and limit to 6
     const normalized = otp.replace(/\D/g, "").slice(0, 6);
     setCompletionOtps((prev) => ({ ...prev, [id]: normalized }));
   };
@@ -240,7 +226,7 @@ export default function DeliveriesPage() {
         ...prev,
         [id]: updated.status as DeliveryStatus,
       }));
-      toast.success("Delivery marked completed.");
+      toast.success("Delivery marked completed successfully!");
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Unable to complete delivery.",
@@ -249,254 +235,222 @@ export default function DeliveriesPage() {
   };
 
   return (
-    <div className="p-4 md:p-6">
-      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+    <div className="space-y-8 max-w-7xl mx-auto">
+      {/* Header & Quick Stat Counters */}
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.3em] text-[#A1A1AA]">
-            Delivery operations
+          <p className="text-[11px] uppercase tracking-[0.25em] text-[#A1A1AA] font-mono">
+            Dispatch Queue
           </p>
-          <h1 className="text-3xl font-bold text-white mt-2">
-            Assigned deliveries
+          <h1 className="text-3xl font-extrabold text-white font-display tracking-tight mt-1">
+            Assigned Deliveries
           </h1>
-          <p className="text-[#D5D5D5] mt-3 max-w-2xl">
-            Use the status update panel to move each shipment through the
-            premium delivery lifecycle and keep the route book current.
+          <p className="text-[#A1A1AA] mt-1.5 text-sm max-w-2xl leading-relaxed">
+            Manage your shipment queue, claim available orders, and execute OTP-verified handovers.
           </p>
         </div>
 
-        {/* Notifications moved to Topbar component */}
-
-        <div className="grid grid-cols-2 gap-3 min-w-70">
-          <div className="rounded-2xl border border-[#2A2B30] bg-[#1A1B1E] p-4">
-            <p className="text-sm text-[#A1A1AA]">Active</p>
-            <p className="text-2xl font-bold text-white mt-2">{activeCount}</p>
+        <div className="flex items-center gap-3">
+          <div className="rounded-2xl border border-[#2A2B30] bg-[#1A1B1E] px-4 py-2.5 flex items-center gap-3">
+            <span className="flex h-2 w-2 rounded-full bg-[#F97316] animate-pulse" />
+            <span className="text-xs text-[#A1A1AA]">Active:</span>
+            <span className="text-sm font-bold text-white">{activeCount}</span>
           </div>
 
-          <div className="rounded-2xl border border-[#2A2B30] bg-[#1A1B1E] p-4">
-            <p className="text-sm text-[#A1A1AA]">Completed</p>
-            <p className="text-2xl font-bold text-white mt-2">
-              {completedCount}
-            </p>
+          <div className="rounded-2xl border border-[#2A2B30] bg-[#1A1B1E] px-4 py-2.5 flex items-center gap-3">
+            <span className="flex h-2 w-2 rounded-full bg-emerald-400" />
+            <span className="text-xs text-[#A1A1AA]">Delivered:</span>
+            <span className="text-sm font-bold text-white">{completedCount}</span>
           </div>
         </div>
       </div>
 
       {isLoading ? (
-        <div className="mt-8 rounded-2xl border border-[#2A2B30] bg-[#1A1B1E] p-6 text-white">
-          Loading deliveries from the backend...
+        <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-12 text-center text-[#A1A1AA]">
+          <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-[#111214] border border-[#2A2B30] text-[#F97316] mb-3 animate-pulse">
+            <Package size={20} />
+          </div>
+          <p className="text-sm font-medium text-white">Loading assigned deliveries...</p>
         </div>
       ) : error ? (
-        <div className="mt-8 rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-red-300">
+        <div className="rounded-3xl border border-red-500/30 bg-red-500/10 p-6 text-red-300">
           {error}
         </div>
+      ) : deliveries.length === 0 ? (
+        <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-16 text-center">
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#111214] border border-[#2A2B30] text-[#A1A1AA] mb-3">
+            <Package size={24} />
+          </div>
+          <h3 className="text-base font-bold text-white">No Deliveries Available</h3>
+          <p className="text-xs text-[#A1A1AA] mt-1 max-w-sm mx-auto">
+            There are currently no active deliveries in your dispatch queue. New assignments will appear here automatically.
+          </p>
+        </div>
       ) : (
-        <div className="mt-8 grid gap-5 xl:grid-cols-2">
+        <div className="grid gap-6 xl:grid-cols-2">
           {deliveries.map((delivery) => {
-            const options =
-              statusOptions[delivery.status as unknown as DeliveryStatus] ||
-              statusOptions[
-                toTitleCase(delivery.status) as unknown as DeliveryStatus
-              ] ||
-              [];
-
+            const rawId = delivery.orderId || delivery.id;
+            const displayId = formatDisplayId(rawId);
+            const isCopied = copiedId === rawId;
             const assignedToMe = isAssignedToCurrentUser(delivery);
 
             return (
               <div
                 key={delivery.id}
-                className="bg-[#1A1B1E] border border-[#2A2B30] rounded-2xl p-6 shadow-lg hover:border-[#F97316]/50 transition-all duration-200"
+                className="bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl p-6 shadow-sm hover:border-[#F97316]/50 transition-all duration-200 flex flex-col justify-between"
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-3">
-                      <div className="px-3 py-1 rounded-lg bg-[#111214] border border-[#2A2B30] text-xs text-[#E5E7EB] font-medium">
-                        {delivery.orderId || delivery.id}
-                      </div>
-                      <h3 className="text-lg font-semibold text-white">
-                        {delivery.customer}
-                      </h3>
-                    </div>
-
-                    <p className="text-sm text-[#A1A1AA] mt-2 max-w-xl">
-                      {delivery.address}
-                    </p>
-                    {/* Show product name if available */}
-                    {delivery.raw?.items?.length > 0 && (
-                      <p className="text-sm text-neutral-300 mt-2">
-                        Product:{" "}
-                        {delivery.raw.items[0].product?.name ||
-                          delivery.raw.items[0].product}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="text-right">
-                    <span className="inline-block bg-[#111214] border border-[#2A2B30] text-xs text-[#FDBA74] px-3 py-1 rounded-full">
-                      {toTitleCase(delivery.status)}
-                    </span>
-                    <div className="text-sm text-[#A1A1AA] mt-2">
-                      ETA: {delivery.eta || "--"}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="rounded-xl border border-[#2A2B30] bg-[#111214] p-4">
-                    <p className="text-sm text-[#A1A1AA]">Priority</p>
-                    <p className="text-white font-semibold mt-2">
-                      {delivery.priority || "Normal"}
-                    </p>
-                  </div>
-
-                  <div className="rounded-xl border border-[#2A2B30] bg-[#111214] p-4">
-                    <p className="text-sm text-[#A1A1AA]">Last updated</p>
-                    <p className="text-white font-semibold mt-2">
-                      {delivery.lastUpdated || "-"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-6 rounded-xl border border-[#2A2B30] bg-[#111214] p-4">
-                  <p className="text-sm text-[#A1A1AA]">Status update</p>
-
-                  <div className="mt-3 flex flex-col sm:flex-row gap-3 items-center">
-                    <select
-                      aria-label="Select delivery status"
-                      value={selectedStatuses[delivery.id]}
-                      onChange={(event) =>
-                        setSelectedStatuses((prev) => ({
-                          ...prev,
-                          [delivery.id]: event.target.value as DeliveryStatus,
-                        }))
-                      }
-                      className="flex-1 bg-[#1A1B1E] border border-[#2A2B30] text-white rounded-2xl px-4 py-3 outline-none focus:border-[#F97316]"
-                    >
-                      {options && options.length > 0 ? (
-                        options.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))
-                      ) : (
-                        <option value={delivery.status}>
-                          {delivery.status}
-                        </option>
-                      )}
-                    </select>
-
-                    <div className="flex flex-col gap-3">
-                      {!delivery.raw?.assignedAgent && (
+                <div>
+                  {/* Card Header: Customer + Clean ID + Status */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-base font-bold text-white font-display">
+                          {delivery.customer || "Customer"}
+                        </h3>
                         <button
-                          onClick={() => void handleAccept(delivery.id)}
-                          disabled={hasActiveAssignedOrder}
-                          className={`rounded-full px-5 py-3 text-white font-semibold shadow transition ${hasActiveAssignedOrder ? "bg-slate-600 cursor-not-allowed" : "bg-[#22C55E] hover:bg-[#16A34A]"}`}
+                          type="button"
+                          onClick={() => handleCopyId(rawId)}
+                          title={`Copy full ID: ${rawId}`}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#111214] border border-[#2A2B30] text-[10px] font-mono text-[#A1A1AA] hover:text-[#F97316] hover:border-[#F97316]/40 transition cursor-pointer"
                         >
-                          {hasActiveAssignedOrder
-                            ? "Claim disabled until current delivery completes"
-                            : "Claim & Accept"}
+                          <span>{displayId}</span>
+                          {isCopied ? <Check size={10} className="text-green-400" /> : <Copy size={10} />}
                         </button>
+                      </div>
+
+                      <p className="text-xs text-[#A1A1AA] mt-1 max-w-md line-clamp-1">
+                        {delivery.address}
+                      </p>
+
+                      {delivery.raw?.items?.length > 0 && (
+                        <p className="text-xs text-[#FDBA74] mt-1 font-medium">
+                          Item: {delivery.raw.items[0].product?.name || delivery.raw.items[0].product}
+                        </p>
                       )}
+                    </div>
 
-                      {delivery.raw?.assignedAgent && assignedToMe && (
-                        <div className="space-y-3">
-                          <div>
-                            <p className="block text-sm text-[#A1A1AA] mb-2">
-                              Delivery OTP
-                            </p>
-                            <p className="text-xs text-[#A1A1AA] mb-3">
-                              Enter the 6-digit code sent to the customer
-                            </p>
-                          </div>
-
-                          <div className="mt-3">
-                            <div className="inline-block rounded-2xl bg-[#1A1B1E] border border-[#2A2B30] p-4">
-                              <InputOTP
-                                value={completionOtps[delivery.id] || ""}
-                                onChange={(val: string) =>
-                                  handleOtpChange(delivery.id, val)
-                                }
-                                maxLength={6}
-                                containerClassName="gap-3"
-                                className="bg-transparent text-white"
-                              >
-                                <InputOTPGroup>
-                                  <InputOTPSlot index={0} />
-                                  <InputOTPSlot index={1} />
-                                  <InputOTPSlot index={2} />
-                                  <InputOTPSlot index={3} />
-                                  <InputOTPSlot index={4} />
-                                  <InputOTPSlot index={5} />
-                                </InputOTPGroup>
-                              </InputOTP>
-                            </div>
-                          </div>
-
-                          <div className="flex gap-3 mt-4">
-                            <button
-                              onClick={() => {
-                                setCompletionOtps((prev) => ({
-                                  ...prev,
-                                  [delivery.id]: "",
-                                }));
-                              }}
-                              className="flex-1 px-4 py-2.5 rounded-lg bg-[#1A1B1E] border border-[#2A2B30] text-[#A1A1AA] hover:text-white transition font-medium text-sm cursor-pointer"
-                              type="button"
-                            >
-                              Clear
-                            </button>
-
-                            <button
-                              onClick={async () => {
-                                try {
-                                  await resendDeliveryOtp(delivery.id);
-                                  setCompletionOtps((prev) => ({
-                                    ...prev,
-                                    [delivery.id]: "",
-                                  }));
-                                  toast.success(
-                                    "OTP resent to customer email.",
-                                  );
-                                } catch (err) {
-                                  toast.error(
-                                    err instanceof Error
-                                      ? err.message
-                                      : "Unable to resend OTP.",
-                                  );
-                                }
-                              }}
-                              className="flex-1 px-4 py-2.5 rounded-lg bg-[#1A1B1E] border border-[#2A2B30] text-[#FDBA74] hover:text-white transition font-medium text-sm cursor-pointer"
-                              type="button"
-                            >
-                              Resend OTP
-                            </button>
-                          </div>
-
-                          {delivery.status !== "completed" && (
-                            <button
-                              onClick={() => void handleComplete(delivery.id)}
-                              className="rounded-full bg-[#F97316] hover:bg-[#EA580C] px-5 py-3 text-white font-semibold shadow transition cursor-pointer shadow-[0_0_12px_rgba(249,115,22,0.3)]"
-                            >
-                              Complete
-                            </button>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Save button removed to prevent accidental status overrides */}
+                    <div className="text-right shrink-0">
+                      <StatusBadge status={delivery.status} />
+                      <p className="text-[11px] text-[#A1A1AA] mt-1">
+                        ETA: <span className="text-[#F4F4F5] font-semibold">{delivery.eta || "--"}</span>
+                      </p>
                     </div>
                   </div>
 
-                  <p className="text-sm text-[#A1A1AA] mt-3">
-                    Last sync: {delivery.lastUpdated}
-                  </p>
+                  {/* Priority & Update Timestamps */}
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    <div className="rounded-2xl border border-[#2A2B30] bg-[#111214] p-3.5">
+                      <p className="text-[11px] uppercase tracking-wider text-[#A1A1AA] font-semibold">Priority Tier</p>
+                      <p className="text-white text-sm font-bold mt-1">{delivery.priority || "Standard"}</p>
+                    </div>
+                    <div className="rounded-2xl border border-[#2A2B30] bg-[#111214] p-3.5">
+                      <p className="text-[11px] uppercase tracking-wider text-[#A1A1AA] font-semibold">Last Synced</p>
+                      <p className="text-white text-sm font-medium mt-1 truncate">{delivery.lastUpdated || "--"}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status Actions & OTP Handover */}
+                <div className="mt-5 pt-4 border-t border-[#2A2B30]/60 space-y-4">
+                  {/* Claim Button */}
+                  {!delivery.raw?.assignedAgent && (
+                    <div>
+                      <button
+                        onClick={() => void handleAccept(delivery.id)}
+                        disabled={hasActiveAssignedOrder}
+                        className={`w-full rounded-2xl py-3 px-4 text-xs font-bold text-white transition flex items-center justify-center gap-2 ${
+                          hasActiveAssignedOrder
+                            ? "bg-[#111214] border border-[#2A2B30] text-[#A1A1AA] cursor-not-allowed"
+                            : "bg-[#22C55E] hover:bg-[#16A34A] shadow-[0_0_15px_rgba(34,197,94,0.3)] cursor-pointer"
+                        }`}
+                      >
+                        <Truck size={14} />
+                        <span>
+                          {hasActiveAssignedOrder
+                            ? "Complete active shipment to claim next order"
+                            : "Claim & Accept Shipment"}
+                        </span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* OTP Handover Module for Assigned Agent */}
+                  {delivery.raw?.assignedAgent && assignedToMe && (
+                    <div className="rounded-2xl border border-[#F97316]/30 bg-[#111214] p-4 space-y-3">
+                      <div className="flex items-center gap-2 text-xs font-bold text-[#FDBA74]">
+                        <ShieldCheck size={14} className="text-[#F97316]" />
+                        <span>OTP Verification Handover</span>
+                      </div>
+                      <p className="text-[11px] text-[#A1A1AA]">
+                        Enter the 6-digit cryptographic PIN provided by the recipient to finalize handoff.
+                      </p>
+
+                      <div className="pt-1">
+                        <InputOTP
+                          value={completionOtps[delivery.id] || ""}
+                          onChange={(val: string) => handleOtpChange(delivery.id, val)}
+                          maxLength={6}
+                          containerClassName="gap-2 justify-center"
+                          className="bg-transparent text-white"
+                        >
+                          <InputOTPGroup>
+                            <InputOTPSlot index={0} />
+                            <InputOTPSlot index={1} />
+                            <InputOTPSlot index={2} />
+                            <InputOTPSlot index={3} />
+                            <InputOTPSlot index={4} />
+                            <InputOTPSlot index={5} />
+                          </InputOTPGroup>
+                        </InputOTP>
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setCompletionOtps((prev) => ({ ...prev, [delivery.id]: "" }))}
+                          className="flex-1 py-2 rounded-xl bg-[#1A1B1E] border border-[#2A2B30] text-[#A1A1AA] hover:text-white text-xs font-semibold transition cursor-pointer"
+                        >
+                          Clear
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              await resendDeliveryOtp(delivery.id);
+                              setCompletionOtps((prev) => ({ ...prev, [delivery.id]: "" }));
+                              toast.success("OTP resent to customer email.");
+                            } catch (err) {
+                              toast.error(err instanceof Error ? err.message : "Unable to resend OTP.");
+                            }
+                          }}
+                          className="flex-1 py-2 rounded-xl bg-[#1A1B1E] border border-[#2A2B30] text-[#FDBA74] hover:text-white text-xs font-semibold transition cursor-pointer"
+                        >
+                          Resend OTP
+                        </button>
+                        {delivery.status !== "completed" && (
+                          <button
+                            type="button"
+                            onClick={() => void handleComplete(delivery.id)}
+                            className="flex-1 py-2 rounded-xl bg-[#F97316] hover:bg-[#EA580C] text-white text-xs font-bold shadow-[0_0_12px_rgba(249,115,22,0.3)] transition cursor-pointer"
+                          >
+                            Complete Handover
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Footer sync */}
+                  <div className="flex items-center justify-between text-[11px] text-[#A1A1AA] pt-1">
+                    <span>Status: <strong className="text-[#F4F4F5]">{toTitleCase(delivery.status)}</strong></span>
+                    <span>Synced: {delivery.lastUpdated || "Live"}</span>
+                  </div>
                 </div>
               </div>
             );
           })}
         </div>
       )}
-
-      {/* Notification modal removed; Topbar provides notification details */}
     </div>
   );
 }

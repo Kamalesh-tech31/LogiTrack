@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { MapPin, Navigation, Compass, Radio, Map, RotateCcw } from "lucide-react";
 
 import type { DeliveryRecord } from "@/components/delivery/deliveryData";
 import { DeliveryMap } from "@/components/customer/delivery-map";
@@ -86,7 +87,6 @@ export default function TrackingPage() {
 
     async function loadActiveRoute() {
       try {
-        // Get the dashboard which includes active deliveries assigned to this agent
         const data = await fetchDashboard();
 
         if (isMounted) {
@@ -155,8 +155,8 @@ export default function TrackingPage() {
 
       const route = data.routes[0];
       setRouteInfo({
-        distance: Math.round((route.distance / 1000) * 10) / 10, // km
-        duration: Math.round(route.duration / 60), // minutes
+        distance: Math.round((route.distance / 1000) * 10) / 10,
+        duration: Math.round(route.duration / 60),
         polyline: route.geometry || "",
       });
     } catch (error) {
@@ -236,7 +236,6 @@ export default function TrackingPage() {
 
       setShowMap(true);
 
-      // Calculate route if customer has coordinates
       if (
         activeRoute.latitude &&
         activeRoute.longitude &&
@@ -319,7 +318,7 @@ export default function TrackingPage() {
         setLatitude(lat.toFixed(6));
         setLongitude(lon.toFixed(6));
         toast.success(
-          "Current location coordinates loaded. Click 'Update location' to see the map.",
+          "Current location coordinates loaded. Click 'Preview Route' to update map.",
         );
       },
       () => {
@@ -333,125 +332,80 @@ export default function TrackingPage() {
     );
   };
 
-  const mapUrl = locationDetails
-    ? `https://www.openstreetmap.org/?mlat=${locationDetails.latitude}&mlon=${locationDetails.longitude}#map=15/${locationDetails.latitude}/${locationDetails.longitude}`
-    : "https://www.openstreetmap.org/";
-
   const mapBbox = locationDetails
     ? `${Math.min(locationDetails.longitude, activeRoute?.longitude || locationDetails.longitude) - 0.02},${Math.min(locationDetails.latitude, activeRoute?.latitude || locationDetails.latitude) - 0.02},${Math.max(locationDetails.longitude, activeRoute?.longitude || locationDetails.longitude) + 0.02},${Math.max(locationDetails.latitude, activeRoute?.latitude || locationDetails.latitude) + 0.02}`
     : null;
 
   return (
-    <div className="p-4 md:p-6">
-      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+    <div className="space-y-8 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.3em] text-[#A1A1AA]">
-            GPS / live location
+          <p className="text-[11px] uppercase tracking-[0.25em] text-[#A1A1AA] font-mono">
+            Telemetry Stream
           </p>
-          <h1 className="text-3xl font-bold text-white mt-2">
-            Live location update UI
+          <h1 className="text-3xl font-extrabold text-white font-display tracking-tight mt-1">
+            Live GPS & Route Telemetry
           </h1>
-          <p className="text-[#D5D5D5] mt-3 max-w-2xl">
-            Convert coordinates into location details instantly, sync the
-            customer route, and keep all delivery updates aligned with the live
-            operational view.
+          <p className="text-[#A1A1AA] mt-1.5 text-sm max-w-2xl leading-relaxed">
+            Synchronize real-time driver coordinates with the customer live tracking map and compute turn-by-turn routes.
           </p>
         </div>
 
-        <div className="rounded-2xl border border-[#2A2B30] bg-[#1A1B1E] px-4 py-3">
-          <p className="text-sm text-[#A1A1AA]">Active route</p>
-          <p className="text-lg font-semibold text-white mt-1">
-            {activeRoute?.customer || "No active route available"}
-          </p>
+        <div className="rounded-2xl border border-[#2A2B30] bg-[#1A1B1E] px-4 py-2.5 flex items-center gap-3">
+          <span className="flex h-2 w-2 rounded-full bg-[#F97316] animate-pulse" />
+          <span className="text-xs text-[#A1A1AA]">Active Target:</span>
+          <span className="text-xs font-bold text-white truncate max-w-44">
+            {activeRoute?.customer || "No Active Target"}
+          </span>
         </div>
       </div>
 
-      <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-2xl p-5 mt-8 shadow-sm">
-        <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-2xl bg-[#111214] border border-[#2A2B30] p-5">
-            <div className="flex items-center justify-between gap-4">
+      {/* Main Grid: Map View + Telemetry Console */}
+      <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
+        {/* Left Column: Interactive Map Preview */}
+        <div className="rounded-3xl bg-[#1A1B1E] border border-[#2A2B30] p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between pb-4 border-b border-[#2A2B30]/60">
               <div>
-                <p className="text-sm text-[#A1A1AA]">Map preview</p>
-                <h2 className="text-xl font-semibold text-white mt-1">
-                  {locationDetails
-                    ? "Resolved location"
-                    : "Enter coordinates to preview"}
+                <h2 className="text-lg font-bold text-white font-display">
+                  Live Navigation Map
                 </h2>
+                <p className="text-xs text-[#A1A1AA] mt-0.5">
+                  {locationDetails
+                    ? `Resolved: ${locationDetails.city}, ${locationDetails.state}`
+                    : "Awaiting coordinate telemetry"}
+                </p>
               </div>
 
-              <span className="text-sm text-[#A1A1AA]">
-                {locationDetails
-                  ? `Source: ${locationDetails.source}`
-                  : "Awaiting input"}
-              </span>
+              {locationDetails && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#F97316]/10 text-[#FDBA74] border border-[#F97316]/30">
+                  <Radio size={12} className="animate-pulse text-[#F97316]" />
+                  <span>GPS Active</span>
+                </span>
+              )}
             </div>
 
-            <div className="mt-4 rounded-2xl border border-[#2A2B30] bg-[#1A1B1E] p-4 min-h-100 flex flex-col">
+            {/* Map Box or Styled Empty Radar State */}
+            <div className="mt-5 rounded-2xl border border-[#2A2B30] bg-[#111214] overflow-hidden min-h-[380px] flex flex-col items-center justify-center relative">
               {showMap && locationDetails ? (
-                <>
-                  <div className="mb-4">
-                    <div>
-                      <p className="text-sm text-[#A1A1AA]">
-                        Delivery Person Location
-                      </p>
-                      <p className="text-white text-lg font-semibold mt-2">
-                        {locationDetails.displayName}
-                      </p>
-                      <p className="text-[#A1A1AA] mt-1">
-                        {locationDetails.formattedAddress}
-                      </p>
-                    </div>
-
-                    {activeRoute && (
-                      <div className="bg-[#111214] border border-[#2A2B30] rounded-xl p-3 mt-3">
-                        <p className="text-sm text-[#A1A1AA]">
-                          Customer Delivery Address
-                        </p>
-                        <p className="text-white font-semibold mt-2">
-                          {activeRoute.address ||
-                            "Customer address not available"}
-                        </p>
+                <div className="w-full h-full flex flex-col">
+                  {/* Route Summary Pill if Available */}
+                  {activeRoute && routeInfo && (
+                    <div className="p-3 bg-[#1A1B1E]/90 backdrop-blur-md border-b border-[#2A2B30] flex items-center justify-around text-xs">
+                      <div>
+                        <span className="text-[#A1A1AA]">Est. Distance:</span>{" "}
+                        <strong className="text-[#F97316] font-bold">{routeInfo.distance} km</strong>
                       </div>
-                    )}
-
-                    {activeRoute && routeInfo && (
-                      <div className="bg-[#111214] border border-[#2A2B30] rounded-xl p-3 mt-3">
-                        <p className="text-sm text-[#A1A1AA]">Route summary</p>
-                        <div className="grid grid-cols-2 gap-3 mt-3">
-                          <div className="rounded-lg bg-[#1A1B1E] p-3 border border-[#2A2B30]">
-                            <p className="text-[#A1A1AA] text-xs">Distance</p>
-                            <p className="text-[#F97316] font-bold text-lg mt-1">
-                              {routeInfo.distance} km
-                            </p>
-                          </div>
-                          <div className="rounded-lg bg-[#1A1B1E] p-3 border border-[#2A2B30]">
-                            <p className="text-[#A1A1AA] text-xs">Est. Time</p>
-                            <p className="text-[#F97316] font-bold text-lg mt-1">
-                              {routeInfo.duration} min
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-3 text-sm mt-3">
-                      <div className="rounded-xl border border-[#2A2B30] bg-[#111214] p-3">
-                        <p className="text-[#A1A1AA]">Latitude</p>
-                        <p className="text-white font-semibold mt-2">
-                          {locationDetails.latitude.toFixed(6)}
-                        </p>
-                      </div>
-
-                      <div className="rounded-xl border border-[#2A2B30] bg-[#111214] p-3">
-                        <p className="text-[#A1A1AA]">Longitude</p>
-                        <p className="text-white font-semibold mt-2">
-                          {locationDetails.longitude.toFixed(6)}
-                        </p>
+                      <div className="h-3 w-px bg-[#2A2B30]" />
+                      <div>
+                        <span className="text-[#A1A1AA]">Duration:</span>{" "}
+                        <strong className="text-[#F97316] font-bold">{routeInfo.duration} mins</strong>
                       </div>
                     </div>
-                  </div>
+                  )}
 
-                  <div className="flex-1 rounded-xl border border-[#2A2B30] overflow-hidden">
+                  <div className="flex-1 w-full min-h-[340px]">
                     {deliveryMapRoute ? (
                       <DeliveryMap route={deliveryMapRoute} />
                     ) : (
@@ -464,80 +418,131 @@ export default function TrackingPage() {
                             ? `https://www.openstreetmap.org/export/embed.html?bbox=${mapBbox}&layer=mapnik&marker=${locationDetails.latitude},${locationDetails.longitude}`
                             : `https://www.openstreetmap.org/export/embed.html?bbox=${locationDetails.longitude - 0.01},${locationDetails.latitude - 0.01},${locationDetails.longitude + 0.01}&layer=mapnik&marker=${locationDetails.latitude},${locationDetails.longitude}`
                         }
-                        className="min-h-75"
+                        className="w-full h-full min-h-[340px]"
                         title="Route Map"
                       />
                     )}
                   </div>
-                </>
+                </div>
               ) : (
-                <div className="flex h-full items-center justify-center text-center px-4">
-                  <p className="text-[#A1A1AA] text-lg">
-                    Coordinates will show the map and location details here once
-                    you resolve them.
+                <div className="text-center p-8 max-w-sm mx-auto space-y-3">
+                  <div className="relative inline-flex items-center justify-center">
+                    <div className="w-16 h-16 rounded-full bg-[#F97316]/10 border border-[#F97316]/30 flex items-center justify-center text-[#F97316] animate-pulse">
+                      <Compass size={28} />
+                    </div>
+                  </div>
+                  <h3 className="text-sm font-bold text-white">Awaiting Telemetry Stream</h3>
+                  <p className="text-xs text-[#A1A1AA] leading-relaxed">
+                    Capture your device coordinates or input custom latitude/longitude to stream real-time telemetry to the customer map.
                   </p>
                 </div>
               )}
             </div>
           </div>
 
-          <div className="space-y-4">
+          {/* Location Summary Strip */}
+          {locationDetails && (
+            <div className="mt-4 pt-3 border-t border-[#2A2B30]/60 flex flex-wrap items-center justify-between text-xs text-[#A1A1AA] gap-2">
+              <div className="flex items-center gap-1.5 text-white">
+                <MapPin size={13} className="text-[#F97316]" />
+                <span className="truncate max-w-md">{locationDetails.formattedAddress}</span>
+              </div>
+              <span className="font-mono text-[11px] text-[#A1A1AA]">{locationDetails.timestamp}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Right Column: Coordinate Input & Telemetry Controls */}
+        <div className="space-y-6">
+          <div className="rounded-3xl bg-[#1A1B1E] border border-[#2A2B30] p-6 shadow-sm space-y-5">
             <div>
-              <label className="text-sm text-[#A1A1AA]">Your Location</label>
-              <div className="mt-2 bg-[#111214] border border-[#2A2B30] rounded-2xl p-3 text-white">
-                <p className="text-xs text-[#F4F4F5]">
-                  Lat: {latitude || "-- "} | Lon: {longitude || "-- "}
-                </p>
+              <h2 className="text-lg font-bold text-white font-display">
+                GPS Position Input
+              </h2>
+              <p className="text-xs text-[#A1A1AA] mt-0.5">
+                Set manual coordinates or trigger device geolocation
+              </p>
+            </div>
+
+            {/* Inputs */}
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-[#A1A1AA] uppercase tracking-wider mb-1.5">
+                  Latitude
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 12.971598"
+                  value={latitude}
+                  onChange={(e) => setLatitude(e.target.value)}
+                  className="w-full bg-[#111214] border border-[#2A2B30] focus:border-[#F97316] rounded-2xl px-4 py-3 text-xs text-white outline-none transition font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#A1A1AA] uppercase tracking-wider mb-1.5">
+                  Longitude
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 77.594566"
+                  value={longitude}
+                  onChange={(e) => setLongitude(e.target.value)}
+                  className="w-full bg-[#111214] border border-[#2A2B30] focus:border-[#F97316] rounded-2xl px-4 py-3 text-xs text-white outline-none transition font-mono"
+                />
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-3 pt-2">
+            {/* Action Buttons */}
+            <div className="space-y-2.5 pt-1">
               <button
+                type="button"
                 onClick={handleUseCurrentLocation}
                 disabled={isLoading}
-                className="bg-[#F97316] hover:bg-[#EA580C] text-white font-semibold px-4 py-2 rounded-xl transition cursor-pointer shadow-[0_0_12px_rgba(249,115,22,0.3)] disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 rounded-2xl bg-[#F97316] hover:bg-[#EA580C] py-3 px-4 text-xs font-bold text-white shadow-[0_0_15px_rgba(249,115,22,0.3)] transition cursor-pointer disabled:opacity-50"
               >
-                {isLoading ? "Getting location..." : "Use current location"}
+                <Navigation size={14} />
+                <span>{isLoading ? "Locating Device..." : "Use Current GPS"}</span>
               </button>
 
-              <button
-                onClick={() => void handleUpdateLocation()}
-                disabled={isLoading || !latitude || !longitude}
-                className="bg-[#F97316] hover:bg-[#EA580C] text-white font-semibold px-4 py-2 rounded-xl transition cursor-pointer shadow-[0_0_12px_rgba(249,115,22,0.3)] disabled:opacity-50"
-              >
-                Map
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => void handleUpdateLocation()}
+                  disabled={isLoading || !latitude || !longitude}
+                  className="flex-1 flex items-center justify-center gap-1.5 rounded-2xl bg-[#111214] border border-[#2A2B30] hover:border-[#F97316]/50 py-2.5 text-xs font-semibold text-white transition cursor-pointer disabled:opacity-40"
+                >
+                  <Map size={13} />
+                  <span>Preview Route</span>
+                </button>
 
-              <button
-                onClick={() => {
-                  setLatitude("");
-                  setLongitude("");
-                  setLocationDetails(null);
-                  setShowMap(false);
-                  setRouteInfo(null);
-                }}
-                className="bg-transparent border border-[#2A2B30] hover:bg-[#111214] text-white px-4 py-2 rounded-xl cursor-pointer transition"
-              >
-                Clear
-              </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLatitude("");
+                    setLongitude("");
+                    setLocationDetails(null);
+                    setShowMap(false);
+                    setRouteInfo(null);
+                  }}
+                  className="px-3 rounded-2xl bg-[#111214] border border-[#2A2B30] hover:border-red-500/40 text-[#A1A1AA] hover:text-white text-xs transition cursor-pointer"
+                  title="Clear telemetry"
+                >
+                  <RotateCcw size={13} />
+                </button>
+              </div>
             </div>
 
-            <div className="bg-[#111214] border border-[#2A2B30] rounded-2xl p-4">
-              <p className="text-sm text-[#A1A1AA]">Live status</p>
-              <p className="text-white font-semibold mt-2">
-                {locationDetails?.formattedAddress || "Awaiting GPS input"}
-              </p>
-              <p className="text-sm text-[#A1A1AA] mt-3">
-                Order: {activeRoute?.customer || "No active order"}
-              </p>
-              <p className="text-sm text-[#A1A1AA]">
-                Destination: {activeRoute?.address || "No address"}
-              </p>
-              <p className="text-sm text-[#A1A1AA] mt-2">
-                Last resolved:{" "}
-                {locationDetails?.timestamp || "No location resolved yet"}
-              </p>
-            </div>
+            {/* Target Delivery Spec Card */}
+            {activeRoute && (
+              <div className="rounded-2xl border border-[#2A2B30] bg-[#111214] p-4 space-y-1.5">
+                <p className="text-[11px] uppercase font-semibold tracking-wider text-[#A1A1AA]">
+                  Target Destination
+                </p>
+                <p className="text-sm font-bold text-white">{activeRoute.customer}</p>
+                <p className="text-xs text-[#A1A1AA] line-clamp-2">{activeRoute.address}</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Activity, BarChart3, CalendarDays, IndianRupee, ShoppingBag, Truck, CheckCircle2, Clock3 } from "lucide-react";
+import { Activity, IndianRupee, ShoppingBag, Truck, CheckCircle2, Clock3, AlertCircle } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -17,10 +17,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchCustomerAnalyticsSummary, type CustomerAnalyticsSummary } from "@/lib/api";
 
-const colors = ["#F97316", "#60A5FA", "#34D399", "#FBBF24", "#A78BFA", "#EA580C"];
+const colors = ["#F97316", "#38BDF8", "#34D399", "#FBBF24", "#A78BFA", "#EA580C"];
 
 const statusLabels: Record<string, string> = {
   pending: "Pending",
@@ -102,130 +101,145 @@ export default function CustomerAnalyticsPage() {
         label: "Total Orders",
         value: summary?.totalOrders ?? 0,
         icon: ShoppingBag,
-        accent: "from-[#F97316]/20 to-[#F97316]/5",
+        accent: "text-[#F97316]",
+        subtext: "All lifetime purchases",
       },
       {
         label: "Pending Orders",
         value: summary?.pendingOrders ?? 0,
         icon: Clock3,
-        accent: "from-amber-500/20 to-amber-500/5",
+        accent: "text-amber-400",
+        subtext: "Awaiting dispatch",
       },
       {
         label: "Shipped Orders",
         value: summary?.shippedOrders ?? 0,
         icon: Truck,
-        accent: "from-cyan-500/20 to-cyan-500/5",
+        accent: "text-blue-400",
+        subtext: "In active transit",
       },
       {
         label: "Delivered Orders",
         value: summary?.deliveredOrders ?? 0,
         icon: CheckCircle2,
-        accent: "from-emerald-500/20 to-emerald-500/5",
+        accent: "text-emerald-400",
+        subtext: "Fulfilled handoffs",
       },
       {
         label: "Completed Orders",
         value: summary?.completedOrders ?? 0,
         icon: Activity,
-        accent: "from-violet-500/20 to-violet-500/5",
+        accent: "text-[#FDBA74]",
+        subtext: "Settled transactions",
       },
       {
         label: "Total Spending",
         value: `₹${currencyFormatter.format(summary?.totalSpending ?? 0)}`,
         icon: IndianRupee,
-        accent: "from-[#F97316]/20 to-[#F97316]/5",
+        accent: "text-[#F97316]",
+        subtext: "Cumulative expenditure",
       },
     ],
     [summary],
   );
 
   return (
-    <div className="space-y-6 p-2 md:p-4">
-      <div className="flex flex-col gap-4 rounded-[2rem] border border-[#2A2B30] bg-[linear-gradient(135deg,rgba(249,115,22,0.15),rgba(26,27,30,0.95)_60%)] p-6 md:p-8 lg:flex-row lg:items-end lg:justify-between shadow-sm">
-        <div className="max-w-3xl space-y-3">
-          <p className="text-xs uppercase tracking-[0.3em] text-[#A1A1AA]">
-            Customer analytics
+    <div className="space-y-8 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-[11px] font-mono font-semibold uppercase tracking-[0.25em] text-[#A1A1AA]">
+            Spending Intelligence
           </p>
-          <h1 className="text-3xl font-bold text-white md:text-4xl">
-            Analytics Dashboard
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white font-display tracking-tight mt-1">
+            Customer Analytics
           </h1>
-          <p className="text-sm text-[#A1A1AA] md:text-base">
-            Real order activity, spend, and status trends across your account,
-            refreshed automatically.
+          <p className="text-xs sm:text-sm text-[#A1A1AA] mt-1 max-w-2xl leading-relaxed">
+            Track order history, review cumulative expenditure, and analyze fulfillment metrics.
           </p>
         </div>
-        <div className="rounded-2xl border border-[#2A2B30] bg-[#111214] px-4 py-3 text-sm text-[#A1A1AA]">
-          <p className="text-xs uppercase tracking-[0.25em] text-[#A1A1AA]">
-            Last updated
-          </p>
-          <p className="mt-1 text-white font-medium">
-            {lastUpdated
-              ? lastUpdated.toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
-              : "Waiting for data"}
-          </p>
+
+        <div className="flex items-center gap-2 rounded-2xl border border-[#2A2B30] bg-[#1A1B1E] px-4 py-2 text-xs text-[#A1A1AA] font-mono self-start sm:self-auto">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span>
+            Updated: {lastUpdated ? lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--:--"}
+          </span>
         </div>
       </div>
 
       {loading ? (
-        <div className="rounded-2xl border border-[#2A2B30] bg-[#1A1B1E] p-6 text-white">
-          Loading analytics...
+        <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-16 text-center text-xs text-[#A1A1AA]">
+          Loading customer analytics...
         </div>
       ) : error ? (
-        <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-red-300">
-          {error}
+        <div className="rounded-3xl border border-red-500/30 bg-red-500/10 p-8 text-center space-y-2">
+          <AlertCircle size={24} className="mx-auto text-red-400" />
+          <p className="text-sm font-bold text-white">Unable to load analytics</p>
+          <p className="text-xs text-red-300">{error}</p>
         </div>
       ) : summary ? (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {/* Unified 6 Stat Cards (No random rainbow gradients) */}
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {statCards.map((item) => {
               const Icon = item.icon;
 
               return (
-                <Card
+                <div
                   key={item.label}
-                  className="overflow-hidden border border-[#2A2B30] bg-[#1A1B1E] shadow-sm hover:border-[#F97316] transition-all"
+                  className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-6 shadow-sm hover:border-[#F97316]/50 transition-all duration-200 flex flex-col justify-between"
                 >
-                  <CardContent
-                    className={`relative p-5 bg-gradient-to-br ${item.accent}`}
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-sm text-[#A1A1AA]">{item.label}</p>
-                        <p className="mt-2 text-3xl font-bold text-white">
-                          {item.value}
-                        </p>
-                      </div>
-                      <div className="rounded-2xl border border-[#2A2B30] bg-[#111214] p-3 text-[#F97316]">
-                        <Icon size={20} />
+                  <div>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[11px] uppercase tracking-wider font-semibold text-[#A1A1AA]">
+                        {item.label}
+                      </p>
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-2xl border border-[#2A2B30] bg-[#111214] ${item.accent}`}>
+                        <Icon size={18} />
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
+
+                    <p className="mt-2 text-2xl sm:text-3xl font-extrabold text-white font-display tracking-tight">
+                      {item.value}
+                    </p>
+                  </div>
+
+                  <p className="mt-3 text-xs text-[#A1A1AA]/80 border-t border-[#2A2B30]/60 pt-3">
+                    {item.subtext}
+                  </p>
+                </div>
               );
             })}
           </div>
 
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.9fr)]">
-            <Card className="border border-[#2A2B30] bg-[#1A1B1E] shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-white">Monthly Orders Trend</CardTitle>
-              </CardHeader>
-              <CardContent className="h-80">
+          {/* Charts Section */}
+          <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+            {/* Monthly Orders Line Chart */}
+            <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-6 shadow-sm flex flex-col justify-between">
+              <div className="pb-4 border-b border-[#2A2B30]/60">
+                <h2 className="text-base font-bold text-white font-display">
+                  Monthly Orders Trend
+                </h2>
+                <p className="text-xs text-[#A1A1AA] mt-0.5">
+                  Volume of orders placed month over month
+                </p>
+              </div>
+
+              <div className="h-72 mt-4">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={monthlyOrders}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#2A2B30" />
-                    <XAxis dataKey="month" stroke="#A1A1AA" />
-                    <YAxis stroke="#A1A1AA" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#2A2B30" opacity={0.6} />
+                    <XAxis dataKey="month" stroke="#A1A1AA" fontSize={11} />
+                    <YAxis stroke="#A1A1AA" fontSize={11} />
                     <Tooltip
                       contentStyle={{
                         background: "#111214",
                         border: "1px solid #2A2B30",
                         borderRadius: 16,
                         color: "#fff",
+                        fontSize: 12,
                       }}
-                      labelStyle={{ color: "#FFFFFF" }}
+                      labelStyle={{ color: "#FFFFFF", fontWeight: "bold" }}
                     />
                     <Line
                       type="monotone"
@@ -233,30 +247,39 @@ export default function CustomerAnalyticsPage() {
                       stroke="#F97316"
                       strokeWidth={3}
                       dot={{ r: 4, fill: "#F97316" }}
+                      activeDot={{ r: 6, fill: "#FDBA74" }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card className="border border-[#2A2B30] bg-[#1A1B1E] shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-white">Monthly Spending Analysis</CardTitle>
-              </CardHeader>
-              <CardContent className="h-80">
+            {/* Monthly Spending Bar Chart */}
+            <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-6 shadow-sm flex flex-col justify-between">
+              <div className="pb-4 border-b border-[#2A2B30]/60">
+                <h2 className="text-base font-bold text-white font-display">
+                  Monthly Spending Analysis
+                </h2>
+                <p className="text-xs text-[#A1A1AA] mt-0.5">
+                  Total rupees expended per billing period
+                </p>
+              </div>
+
+              <div className="h-72 mt-4">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={monthlyOrders}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#2A2B30" />
-                    <XAxis dataKey="month" stroke="#A1A1AA" />
-                    <YAxis stroke="#A1A1AA" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#2A2B30" opacity={0.6} />
+                    <XAxis dataKey="month" stroke="#A1A1AA" fontSize={11} />
+                    <YAxis stroke="#A1A1AA" fontSize={11} />
                     <Tooltip
                       contentStyle={{
                         background: "#111214",
                         border: "1px solid #2A2B30",
                         borderRadius: 16,
                         color: "#fff",
+                        fontSize: 12,
                       }}
-                      labelStyle={{ color: "#FFFFFF" }}
+                      labelStyle={{ color: "#FFFFFF", fontWeight: "bold" }}
                       formatter={(value) => [
                         `₹${currencyFormatter.format(Number(value))}`,
                         "Spending",
@@ -269,24 +292,31 @@ export default function CustomerAnalyticsPage() {
                     />
                   </BarChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
 
-          <Card className="border border-[#2A2B30] bg-[#1A1B1E] shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-white">Order Status Distribution</CardTitle>
-            </CardHeader>
-            <CardContent className="h-96">
+          {/* Status Distribution Pie Chart */}
+          <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-6 shadow-sm">
+            <div className="pb-4 border-b border-[#2A2B30]/60">
+              <h2 className="text-base font-bold text-white font-display">
+                Order Status Distribution
+              </h2>
+              <p className="text-xs text-[#A1A1AA] mt-0.5">
+                Proportional breakdown of lifetime order statuses
+              </p>
+            </div>
+
+            <div className="h-80 mt-4">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={statusDistribution}
                     dataKey="value"
                     nameKey="name"
-                    innerRadius={75}
-                    outerRadius={130}
-                    paddingAngle={2}
+                    innerRadius={70}
+                    outerRadius={110}
+                    paddingAngle={3}
                   >
                     {statusDistribution.map((entry, index) => (
                       <Cell
@@ -295,20 +325,21 @@ export default function CustomerAnalyticsPage() {
                       />
                     ))}
                   </Pie>
-                  <Legend wrapperStyle={{ color: "#A1A1AA" }} />
+                  <Legend wrapperStyle={{ color: "#A1A1AA", fontSize: 12 }} />
                   <Tooltip
                     contentStyle={{
                       background: "#111214",
                       border: "1px solid #2A2B30",
                       borderRadius: 16,
                       color: "#fff",
+                      fontSize: 12,
                     }}
                     labelStyle={{ color: "#FFFFFF" }}
                   />
                 </PieChart>
               </ResponsiveContainer>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </>
       ) : null}
     </div>

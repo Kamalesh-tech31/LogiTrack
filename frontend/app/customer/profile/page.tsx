@@ -2,12 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { fetchCurrentUser, updateCurrentPassword, updateCurrentUser } from "@/lib/api";
 import { AccountDeletionDialog } from "@/components/common/account-deletion-dialog";
 import { useLogout } from "@/lib/logout";
+import { User, Lock, ArrowLeft, LogOut, CheckCircle2, AlertCircle } from "lucide-react";
 
 export default function CustomerProfilePage() {
   const router = useRouter();
@@ -30,7 +28,7 @@ export default function CustomerProfilePage() {
   });
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -50,7 +48,7 @@ export default function CustomerProfilePage() {
         });
       } catch {
         if (isMounted) {
-          setMessage("Unable to load profile data.");
+          setMessage({ text: "Unable to load profile data.", type: "error" });
         }
       }
     };
@@ -81,9 +79,12 @@ export default function CustomerProfilePage() {
         email: current.email,
         role: current.role,
       }));
-      setMessage("Profile updated successfully.");
+      setMessage({ text: "Profile details updated successfully.", type: "success" });
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to update profile.");
+      setMessage({
+        text: error instanceof Error ? error.message : "Unable to update profile.",
+        type: "error",
+      });
     } finally {
       setSavingProfile(false);
     }
@@ -97,132 +98,247 @@ export default function CustomerProfilePage() {
     try {
       await updateCurrentPassword(passwordForm);
       setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
-      setMessage("Password updated successfully.");
+      setMessage({ text: "Password changed successfully.", type: "success" });
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to update password.");
+      setMessage({
+        text: error instanceof Error ? error.message : "Unable to update password.",
+        type: "error",
+      });
     } finally {
       setSavingPassword(false);
     }
   };
 
   return (
-    <div className="space-y-6 p-2 md:p-4">
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.7fr)]">
-        <Card className="border border-[#2A2B30] bg-[#1A1B1E]">
-          <CardContent className="flex flex-col gap-6 p-6 md:p-8 lg:flex-row lg:items-start lg:justify-between">
-            <div className="space-y-4">
-              <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-[#A1A1AA]">Account</p>
-                <h1 className="mt-2 text-3xl font-bold text-white">Profile</h1>
-                <p className="mt-2 max-w-2xl text-sm text-[#A1A1AA]">
-                  Manage your profile, security, and account session from one place.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap gap-3 text-sm text-[#A1A1AA]">
-                <span className="rounded-full border border-[#2A2B30] bg-[#111214] px-3 py-1 text-white">{profile.role || "Customer"}</span>
-                <span className="rounded-full border border-[#2A2B30] bg-[#111214] px-3 py-1 text-white">{profile.email || "No email loaded"}</span>
-                <span className="rounded-full border border-[#2A2B30] bg-[#111214] px-3 py-1 text-white">{profile.phone || "No phone added"}</span>
-              </div>
-            </div>
-
-            <div className="flex w-full flex-col gap-3 sm:w-auto sm:min-w-56">
-              <Button
-                variant="outline"
-                onClick={() => profileSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                className="justify-start rounded-2xl border-[#2A2B30] bg-[#111214] text-white hover:bg-[#1A1B1E]"
-              >
-                Profile
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => securitySectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                className="justify-start rounded-2xl border-[#2A2B30] bg-[#111214] text-white hover:bg-[#1A1B1E]"
-              >
-                Settings
-              </Button>
-              <AccountDeletionDialog
-                roleLabel="Customer"
-                buttonClassName="w-full justify-start rounded-2xl border-red-900/40 bg-red-950/20 text-red-300 hover:bg-red-950/40 hover:text-white"
-              />
-              <Button onClick={logout} className="w-full justify-start rounded-2xl bg-[#111214] border border-[#2A2B30] hover:border-red-600/60 text-[#A1A1AA] hover:text-red-400 transition cursor-pointer">
-                Logout
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border border-[#2A2B30] bg-[#1A1B1E]">
-          <CardHeader>
-            <CardTitle className="text-white">Session overview</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 text-sm text-[#A1A1AA]">
-            <p>This page contains the full customer account menu, so the dashboard header stays clean and direct.</p>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-              <div className="rounded-2xl border border-[#2A2B30] bg-[#111214] p-4">
-                <p className="text-xs uppercase tracking-[0.25em] text-[#A1A1AA]">Status</p>
-                <p className="mt-2 text-white">Signed in</p>
-              </div>
-              <div className="rounded-2xl border border-[#2A2B30] bg-[#111214] p-4">
-                <p className="text-xs uppercase tracking-[0.25em] text-[#A1A1AA]">Profile</p>
-                <p className="mt-2 text-white">Editable account details</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+    <div className="space-y-8 max-w-7xl mx-auto">
+      {/* Header */}
+      <div>
+        <p className="text-[11px] font-mono font-semibold uppercase tracking-[0.25em] text-[#A1A1AA]">
+          Account Preferences
+        </p>
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-white font-display tracking-tight mt-1">
+          Account Profile
+        </h1>
+        <p className="text-xs sm:text-sm text-[#A1A1AA] mt-1 max-w-2xl leading-relaxed">
+          Manage your personal information, delivery contacts, and account security.
+        </p>
       </div>
 
-      {message && <div className="rounded-2xl border border-[#2A2B30] bg-[#1A1B1E] p-4 text-sm text-neutral-200">{message}</div>}
+      {/* Account Identity Card */}
+      <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-6 sm:p-8 shadow-sm flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center gap-4">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#F97316]/15 border border-[#F97316]/30 text-[#F97316] text-xl font-bold font-display shadow-[0_0_20px_rgba(249,115,22,0.2)]">
+            {profile.fullName ? profile.fullName[0].toUpperCase() : "C"}
+          </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.7fr)]">
-        <Card ref={profileSectionRef} className="border border-[#2A2B30] bg-[#1A1B1E]">
-          <CardHeader>
-            <CardTitle className="text-white">Account details</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form className="space-y-4" onSubmit={handleProfileSubmit}>
-              <div className="grid gap-4 md:grid-cols-2">
-                <Input placeholder="Full name" value={profile.fullName} onChange={(event) => setProfile((current) => ({ ...current, fullName: event.target.value }))} />
-                <Input placeholder="Email" value={profile.email} disabled className="opacity-80" />
-                <Input placeholder="Phone" value={profile.phone} onChange={(event) => setProfile((current) => ({ ...current, phone: event.target.value }))} />
-                <Input placeholder="Role" value={profile.role} disabled className="opacity-80" />
-              </div>
-              <Input placeholder="Business name" value={profile.businessName} onChange={(event) => setProfile((current) => ({ ...current, businessName: event.target.value }))} />
-              <Input placeholder="GST number" value={profile.gstNumber} onChange={(event) => setProfile((current) => ({ ...current, gstNumber: event.target.value }))} />
-              <Input placeholder="Business address" value={profile.businessAddress} onChange={(event) => setProfile((current) => ({ ...current, businessAddress: event.target.value }))} />
-              <Button type="submit" disabled={savingProfile} className="rounded-2xl bg-[#F97316] hover:bg-[#EA580C] text-white font-medium cursor-pointer shadow-[0_0_12px_rgba(249,115,22,0.3)]">
-                {savingProfile ? "Saving..." : "Save profile"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card ref={securitySectionRef} className="border border-[#2A2B30] bg-[#1A1B1E]">
-          <CardHeader>
-            <CardTitle className="text-white">Settings & security</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-5">
-              <div className="rounded-2xl border border-[#2A2B30] bg-[#111214] p-4 text-sm text-[#A1A1AA]">
-                Update your password below. These controls stay on the profile page so the dashboard header does not need a dropdown.
-              </div>
-              <form className="space-y-4" onSubmit={handlePasswordSubmit}>
-                <Input placeholder="Current password" type="password" value={passwordForm.currentPassword} onChange={(event) => setPasswordForm((current) => ({ ...current, currentPassword: event.target.value }))} />
-                <Input placeholder="New password" type="password" value={passwordForm.newPassword} onChange={(event) => setPasswordForm((current) => ({ ...current, newPassword: event.target.value }))} />
-                <Input placeholder="Confirm password" type="password" value={passwordForm.confirmPassword} onChange={(event) => setPasswordForm((current) => ({ ...current, confirmPassword: event.target.value }))} />
-                <Button type="submit" disabled={savingPassword} className="rounded-2xl bg-[#F97316] hover:bg-[#EA580C] text-white font-medium cursor-pointer shadow-[0_0_12px_rgba(249,115,22,0.3)]">
-                  {savingPassword ? "Updating..." : "Update password"}
-                </Button>
-              </form>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-bold text-white font-display">
+                {profile.fullName || "Customer Account"}
+              </h2>
+              <span className="rounded-full bg-[#111214] border border-[#2A2B30] px-2.5 py-0.5 text-[10px] font-mono text-[#FDBA74]">
+                {profile.role || "Customer"}
+              </span>
             </div>
-          </CardContent>
-        </Card>
+            <p className="text-xs text-[#A1A1AA] mt-1">
+              {profile.email || "No email on record"}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2.5">
+          <button
+            type="button"
+            onClick={() => profileSectionRef.current?.scrollIntoView({ behavior: "smooth" })}
+            className="px-4 py-2 rounded-2xl border border-[#2A2B30] bg-[#111214] text-xs font-semibold text-white hover:border-[#F97316]/40 transition cursor-pointer"
+          >
+            Edit Profile
+          </button>
+          <button
+            type="button"
+            onClick={() => securitySectionRef.current?.scrollIntoView({ behavior: "smooth" })}
+            className="px-4 py-2 rounded-2xl border border-[#2A2B30] bg-[#111214] text-xs font-semibold text-white hover:border-[#F97316]/40 transition cursor-pointer"
+          >
+            Password & Security
+          </button>
+          <button
+            type="button"
+            onClick={logout}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-2xl border border-[#2A2B30] bg-[#111214] text-xs font-semibold text-[#A1A1AA] hover:text-red-400 hover:border-red-500/40 transition cursor-pointer"
+          >
+            <LogOut size={13} />
+            <span>Sign Out</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Status Message Banner */}
+      {message && (
+        <div
+          className={`flex items-center gap-2 rounded-2xl border p-4 text-xs font-medium ${
+            message.type === "success"
+              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+              : "border-red-500/30 bg-red-500/10 text-red-300"
+          }`}
+        >
+          {message.type === "success" ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+          <span>{message.text}</span>
+        </div>
+      )}
+
+      {/* Forms Grid */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Personal & Contact Details */}
+        <div ref={profileSectionRef} className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-2 pb-4 border-b border-[#2A2B30]/60">
+              <User size={16} className="text-[#F97316]" />
+              <h2 className="text-base font-bold text-white font-display">Personal Details</h2>
+            </div>
+
+            <form onSubmit={handleProfileSubmit} className="space-y-4 mt-4">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold text-[#A1A1AA] uppercase tracking-wider">Full Name</label>
+                <input
+                  type="text"
+                  placeholder="Your full name"
+                  value={profile.fullName}
+                  onChange={(e) => setProfile((c) => ({ ...c, fullName: e.target.value }))}
+                  className="w-full px-3.5 py-2.5 bg-[#111214] border border-[#2A2B30] rounded-xl text-xs text-white placeholder-[#A1A1AA]/50 focus:border-[#F97316]/60 focus:outline-none transition"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold text-[#A1A1AA] uppercase tracking-wider">Email Address</label>
+                  <input
+                    type="email"
+                    value={profile.email}
+                    disabled
+                    className="w-full px-3.5 py-2.5 bg-[#111214]/60 border border-[#2A2B30]/60 rounded-xl text-xs text-[#A1A1AA] cursor-not-allowed opacity-80"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold text-[#A1A1AA] uppercase tracking-wider">Phone Number</label>
+                  <input
+                    type="text"
+                    placeholder="Contact phone"
+                    value={profile.phone}
+                    onChange={(e) => setProfile((c) => ({ ...c, phone: e.target.value }))}
+                    className="w-full px-3.5 py-2.5 bg-[#111214] border border-[#2A2B30] rounded-xl text-xs text-white placeholder-[#A1A1AA]/50 focus:border-[#F97316]/60 focus:outline-none transition"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold text-[#A1A1AA] uppercase tracking-wider">Business / Company Name</label>
+                <input
+                  type="text"
+                  placeholder="Optional company name"
+                  value={profile.businessName}
+                  onChange={(e) => setProfile((c) => ({ ...c, businessName: e.target.value }))}
+                  className="w-full px-3.5 py-2.5 bg-[#111214] border border-[#2A2B30] rounded-xl text-xs text-white placeholder-[#A1A1AA]/50 focus:border-[#F97316]/60 focus:outline-none transition"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold text-[#A1A1AA] uppercase tracking-wider">Default Delivery Address</label>
+                <textarea
+                  rows={3}
+                  placeholder="Street, City, Postal Code"
+                  value={profile.businessAddress}
+                  onChange={(e) => setProfile((c) => ({ ...c, businessAddress: e.target.value }))}
+                  className="w-full px-3.5 py-2.5 bg-[#111214] border border-[#2A2B30] rounded-xl text-xs text-white placeholder-[#A1A1AA]/50 focus:border-[#F97316]/60 focus:outline-none transition resize-none"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={savingProfile}
+                className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#F97316] hover:bg-[#EA580C] text-xs font-bold text-white transition shadow-[0_0_12px_rgba(249,115,22,0.3)] cursor-pointer disabled:opacity-50"
+              >
+                {savingProfile ? "Saving Changes..." : "Save Details"}
+              </button>
+            </form>
+          </div>
+        </div>
+
+        {/* Password & Account Security */}
+        <div ref={securitySectionRef} className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-2 pb-4 border-b border-[#2A2B30]/60">
+              <Lock size={16} className="text-[#F97316]" />
+              <h2 className="text-base font-bold text-white font-display">Password & Security</h2>
+            </div>
+
+            <form onSubmit={handlePasswordSubmit} className="space-y-4 mt-4">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold text-[#A1A1AA] uppercase tracking-wider">Current Password</label>
+                <input
+                  type="password"
+                  placeholder="Enter current password"
+                  value={passwordForm.currentPassword}
+                  onChange={(e) => setPasswordForm((c) => ({ ...c, currentPassword: e.target.value }))}
+                  className="w-full px-3.5 py-2.5 bg-[#111214] border border-[#2A2B30] rounded-xl text-xs text-white placeholder-[#A1A1AA]/50 focus:border-[#F97316]/60 focus:outline-none transition"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold text-[#A1A1AA] uppercase tracking-wider">New Password</label>
+                <input
+                  type="password"
+                  placeholder="Enter new password"
+                  value={passwordForm.newPassword}
+                  onChange={(e) => setPasswordForm((c) => ({ ...c, newPassword: e.target.value }))}
+                  className="w-full px-3.5 py-2.5 bg-[#111214] border border-[#2A2B30] rounded-xl text-xs text-white placeholder-[#A1A1AA]/50 focus:border-[#F97316]/60 focus:outline-none transition"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold text-[#A1A1AA] uppercase tracking-wider">Confirm New Password</label>
+                <input
+                  type="password"
+                  placeholder="Confirm new password"
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) => setPasswordForm((c) => ({ ...c, confirmPassword: e.target.value }))}
+                  className="w-full px-3.5 py-2.5 bg-[#111214] border border-[#2A2B30] rounded-xl text-xs text-white placeholder-[#A1A1AA]/50 focus:border-[#F97316]/60 focus:outline-none transition"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={savingPassword}
+                className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#F97316] hover:bg-[#EA580C] text-xs font-bold text-white transition shadow-[0_0_12px_rgba(249,115,22,0.3)] cursor-pointer disabled:opacity-50"
+              >
+                {savingPassword ? "Updating..." : "Update Password"}
+              </button>
+            </form>
+          </div>
+
+          <div className="pt-6 border-t border-[#2A2B30]/60 mt-6 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-white">Danger Zone</p>
+              <p className="text-[11px] text-[#A1A1AA]">Permanently remove your account and order history.</p>
+            </div>
+
+            <AccountDeletionDialog
+              roleLabel="Customer"
+              buttonClassName="text-xs text-red-400 hover:text-red-300 hover:bg-red-950/30 border border-red-900/40 rounded-xl px-3 py-1.5 transition"
+            />
+          </div>
+        </div>
       </div>
 
       <div className="flex justify-end">
-        <Button variant="outline" onClick={() => router.push("/customer/orders")} className="rounded-2xl border-[#2A2B30] bg-[#1A1B1E] text-white hover:bg-[#111214] transition cursor-pointer">
-          Back to orders
-        </Button>
+        <button
+          type="button"
+          onClick={() => router.push("/customer/orders")}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[#2A2B30] bg-[#1A1B1E] text-xs text-[#A1A1AA] hover:text-white transition cursor-pointer"
+        >
+          <ArrowLeft size={13} />
+          <span>Back to Orders</span>
+        </button>
       </div>
     </div>
   );

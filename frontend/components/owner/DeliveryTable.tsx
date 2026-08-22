@@ -1,69 +1,61 @@
+"use client";
+
+import { useState } from "react";
+import { Copy, Check, PackageCheck } from "lucide-react";
 import type { DeliveryItem } from "@/lib/api";
 
 interface DeliveryTableProps {
   deliveries: DeliveryItem[];
 }
 
-function getStatusBadge(status?: string) {
-  const normalized = String(status || "").toLowerCase();
-  switch (normalized) {
-    case "completed":
-    case "delivered":
-      return "bg-green-500/10 text-green-400 border-green-500/20";
-    case "in_transit":
-    case "in-transit":
-    case "out for delivery":
-    case "out_for_delivery":
-      return "bg-[#F97316]/10 text-[#FDBA74] border-[#F97316]/20";
-    case "assigned":
-      return "bg-yellow-500/10 text-yellow-400 border-yellow-500/20";
-    case "pending":
-      return "bg-amber-500/10 text-amber-400 border-amber-500/20";
-    case "failed":
-    case "returned":
-    case "cancelled":
-      return "bg-red-500/10 text-red-400 border-red-500/20";
-    default:
-      return "bg-neutral-800 text-[#A1A1AA] border-neutral-700";
+function formatDisplayId(rawId: string | null | undefined) {
+  if (!rawId) return "--";
+  if (rawId.startsWith("ORD-")) {
+    const parts = rawId.split("-");
+    const last = parts[parts.length - 1];
+    return `#${last.slice(-4)}`;
   }
-}
-
-function getStatusColor(status?: string) {
-  const normalized = String(status || "").toLowerCase();
-  switch (normalized) {
-    case "completed":
-    case "delivered":
-      return "text-green-400";
-    case "in_transit":
-    case "in-transit":
-    case "out for delivery":
-    case "out_for_delivery":
-      return "text-[#F97316]";
-    case "assigned":
-      return "text-yellow-400";
-    case "pending":
-      return "text-amber-400";
-    case "failed":
-    case "returned":
-    case "cancelled":
-      return "text-red-400";
-    default:
-      return "text-gray-400";
+  if (rawId.length > 8) {
+    return `#${rawId.slice(-4).toUpperCase()}`;
   }
+  return `#${rawId}`;
 }
 
 export default function DeliveryTable({ deliveries }: DeliveryTableProps) {
-  return (
-    <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl p-6 shadow-lg">
-      <h2 className="text-2xl font-bold text-white mb-6">Delivery Orders</h2>
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
-      <div className="space-y-4">
+  const handleCopyId = (id: string) => {
+    void navigator.clipboard.writeText(id);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  return (
+    <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl p-6 shadow-sm space-y-4">
+      <div className="flex items-center justify-between pb-4 border-b border-[#2A2B30]/60">
+        <div>
+          <h2 className="text-lg font-bold text-white font-display">Delivery Dispatches</h2>
+          <p className="text-xs text-[#A1A1AA] mt-0.5">Live tracking records and destination logs</p>
+        </div>
+        <span className="text-xs text-[#A1A1AA] font-mono">
+          <span className="text-white font-bold">{deliveries.length}</span> Records
+        </span>
+      </div>
+
+      <div className="space-y-3">
         {deliveries.length > 0 ? (
           deliveries.map((delivery) => {
             const orderObj = delivery.order ?? {
               orderId: delivery.orderId ?? delivery.id ?? "",
               customerName: delivery.customer ?? "",
             };
+            const rawId = String(orderObj.orderId || delivery.id || "");
+            const displayId = formatDisplayId(rawId);
+            const isCopied = copiedId === rawId;
+            const status = (delivery.status || "pending").toLowerCase();
+            const isDelivered = status === "delivered" || status === "completed";
+            const isInTransit = status === "in_transit" || status === "out for delivery";
+
             return (
               <div
                 key={String(
@@ -72,34 +64,60 @@ export default function DeliveryTable({ deliveries }: DeliveryTableProps) {
                     orderObj.orderId ??
                     `${Math.random()}`,
                 )}
-                className="flex items-center justify-between p-4 rounded-2xl bg-[#111214] border border-[#2A2B30]"
+                className="flex items-center justify-between p-4 rounded-2xl bg-[#111214] border border-[#2A2B30] hover:border-[#2A2B30]/90 transition"
               >
                 <div>
-                  <h3 className="text-white font-semibold">
-                    {orderObj.orderId}
-                  </h3>
-                  <p className="text-[#A1A1AA] text-sm">
-                    {orderObj.customerName}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleCopyId(rawId)}
+                      title={`Copy full ID: ${rawId}`}
+                      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-[#1A1B1E] border border-[#2A2B30] text-[11px] font-mono text-[#A1A1AA] hover:text-[#F97316] hover:border-[#F97316]/40 transition cursor-pointer"
+                    >
+                      <span>{displayId}</span>
+                      {isCopied ? <Check size={10} className="text-green-400" /> : <Copy size={10} />}
+                    </button>
+                    <span className="text-xs font-bold text-white font-display">
+                      {orderObj.customerName || "Customer"}
+                    </span>
+                  </div>
                 </div>
 
-                <div className="text-right">
+                <div className="text-right flex items-center gap-3">
                   <span
-                    className={`inline-block px-3 py-1 rounded-full text-xs font-medium border ${getStatusBadge(
-                      delivery.status,
-                    )}`}
+                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${
+                      isDelivered
+                        ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
+                        : isInTransit
+                          ? "bg-[#F97316]/10 text-[#FDBA74] border border-[#F97316]/30"
+                          : "bg-amber-500/10 text-amber-400 border border-amber-500/30"
+                    }`}
                   >
-                    {delivery.status || "Pending"}
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        isDelivered
+                          ? "bg-emerald-400"
+                          : isInTransit
+                            ? "bg-[#F97316] animate-pulse"
+                            : "bg-amber-400 animate-pulse"
+                      }`}
+                    />
+                    <span className="capitalize">{status}</span>
                   </span>
-                  <p className="text-xs text-[#A1A1AA] mt-1">
-                    ETA: {delivery.eta || "--"}
-                  </p>
+
+                  <span className="text-[11px] text-[#A1A1AA] font-mono hidden sm:inline-block">
+                    ETA: {delivery.eta || "Standard"}
+                  </span>
                 </div>
               </div>
             );
           })
         ) : (
-          <p className="text-[#A1A1AA] text-sm">No delivery orders found.</p>
+          <div className="p-8 text-center text-xs text-[#A1A1AA] space-y-2">
+            <PackageCheck size={24} className="mx-auto text-[#A1A1AA]/40" />
+            <p className="text-sm font-bold text-white">No delivery orders on record</p>
+            <p className="text-xs text-[#A1A1AA]">When orders are dispatched, live tracking entries will populate here.</p>
+          </div>
         )}
       </div>
     </div>

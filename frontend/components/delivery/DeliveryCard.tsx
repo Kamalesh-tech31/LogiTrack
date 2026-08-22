@@ -1,5 +1,7 @@
-import { Clock3, MapPin, Phone, Truck } from "lucide-react";
+"use client";
 
+import { useState } from "react";
+import { Clock3, MapPin, Phone, Truck, Copy, Check } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 
 interface Props {
@@ -14,6 +16,19 @@ interface Props {
   lastUpdated: string;
 }
 
+function formatDisplayId(rawId: string) {
+  if (!rawId) return "#ORD";
+  if (rawId.startsWith("ORD-")) {
+    const parts = rawId.split("-");
+    const last = parts[parts.length - 1];
+    return `#${last.slice(-4)}`;
+  }
+  if (rawId.length > 8) {
+    return `#${rawId.slice(-4).toUpperCase()}`;
+  }
+  return `#${rawId}`;
+}
+
 const DeliveryCard = ({
   id,
   customer,
@@ -25,56 +40,88 @@ const DeliveryCard = ({
   location,
   lastUpdated,
 }: Props) => {
-  return (
-    <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-2xl p-5 hover:border-[#F97316]/60 transition-all duration-200 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.2em] text-[#A1A1AA]">
-            {id}
-          </p>
+  const [copied, setCopied] = useState(false);
+  const displayId = formatDisplayId(id);
 
-          <h3 className="text-lg font-semibold text-white mt-2">{customer}</h3>
-          <p className="text-sm text-[#A1A1AA] mt-2">{address}</p>
+  const handleCopyId = () => {
+    if (!id) return;
+    void navigator.clipboard.writeText(id);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl p-5 hover:border-[#F97316]/50 transition-all duration-200 shadow-sm">
+      {/* Header: Customer Name & Status */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <h3 className="text-base font-bold text-white font-display">
+              {customer || "Valued Customer"}
+            </h3>
+            {/* Elegant Small ID Badge with copy */}
+            <button
+              type="button"
+              onClick={handleCopyId}
+              title={`Copy full ID: ${id}`}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#111214] border border-[#2A2B30] text-[11px] font-mono text-[#A1A1AA] hover:text-[#F97316] hover:border-[#F97316]/40 transition cursor-pointer"
+            >
+              <span>{displayId}</span>
+              {copied ? <Check size={11} className="text-green-400" /> : <Copy size={11} />}
+            </button>
+          </div>
+
+          <p className="text-xs text-[#A1A1AA] mt-1.5 line-clamp-1 max-w-md">
+            {address}
+          </p>
         </div>
 
         <StatusBadge status={status} />
       </div>
 
+      {/* Meta Chips Grid with Standardized 3-Tier Typography */}
       <div className="mt-4 grid grid-cols-2 gap-3">
-        <div className="rounded-xl border border-[#2A2B30] bg-[#111214] p-3">
-          <p className="text-[11px] uppercase tracking-[0.2em] text-[#A1A1AA]">
-            Priority
+        <div className="rounded-2xl border border-[#2A2B30] bg-[#111214] p-3.5">
+          <p className="text-[11px] uppercase tracking-wider text-[#A1A1AA] font-semibold">
+            Priority Tier
           </p>
-          <p className="text-white font-semibold mt-2">{priority}</p>
+          <p className="text-white text-sm font-bold mt-1">
+            {priority || "Standard"}
+          </p>
         </div>
 
-        <div className="rounded-xl border border-[#2A2B30] bg-[#111214] p-3">
-          <p className="text-[11px] uppercase tracking-[0.2em] text-[#A1A1AA]">
-            ETA
+        <div className="rounded-2xl border border-[#2A2B30] bg-[#111214] p-3.5">
+          <p className="text-[11px] uppercase tracking-wider text-[#A1A1AA] font-semibold">
+            Estimated Arrival
           </p>
-          <p className="text-white font-semibold mt-2">{eta}</p>
+          <p className="text-[#FDBA74] text-sm font-bold mt-1">
+            {eta || "In Transit"}
+          </p>
         </div>
       </div>
 
-      <div className="mt-4 space-y-3 text-sm text-[#A1A1AA]">
-        <div className="flex items-center gap-2">
-          <MapPin size={16} className="text-[#F97316]" />
-          <span className="text-[#F4F4F5]">{location}</span>
-        </div>
+      {/* Details List */}
+      <div className="mt-4 pt-3.5 border-t border-[#2A2B30]/60 space-y-2.5 text-xs text-[#A1A1AA]">
+        {location && (
+          <div className="flex items-center gap-2">
+            <MapPin size={14} className="text-[#F97316] shrink-0" />
+            <span className="text-[#F4F4F5] truncate font-medium">{location}</span>
+          </div>
+        )}
 
-        <div className="flex items-center gap-2">
-          <Clock3 size={16} className="text-[#F97316]" />
-          <span className="text-[#F4F4F5]">Last updated: {lastUpdated}</span>
-        </div>
+        {contact && (
+          <div className="flex items-center gap-2">
+            <Phone size={14} className="text-[#F97316] shrink-0" />
+            <span className="text-[#F4F4F5] font-medium">{contact}</span>
+          </div>
+        )}
 
-        <div className="flex items-center gap-2">
-          <Phone size={16} className="text-[#F97316]" />
-          <span className="text-[#F4F4F5]">{contact}</span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Truck size={16} className="text-[#F97316]" />
-          <span className="text-[#F4F4F5]">Live route sync enabled</span>
+        <div className="flex items-center justify-between text-xs text-[#A1A1AA] pt-1">
+          <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
+            <Truck size={14} />
+            <span>Telemetry Linked</span>
+          </span>
+          {lastUpdated && <span className="font-mono text-[11px]">Sync: {lastUpdated}</span>}
         </div>
       </div>
     </div>

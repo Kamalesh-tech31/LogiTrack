@@ -7,17 +7,18 @@ export default function DeliveryLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative flex min-h-screen overflow-hidden bg-[#050505] text-white">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(239,68,68,0.16),transparent_20%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.16),transparent_30%)]" />
+    <div className="relative flex h-screen w-screen overflow-hidden bg-[#111214] text-[#F4F4F5] font-sans selection:bg-[#F97316]/30">
+      {/* Subtle Ambient Orange Glow */}
+      <div className="pointer-events-none absolute top-0 right-0 w-[600px] h-[350px] bg-[#F97316]/8 rounded-full blur-[140px] z-0" />
+      <div className="pointer-events-none absolute bottom-0 left-64 w-[500px] h-[300px] bg-[#FDBA74]/5 rounded-full blur-[120px] z-0" />
 
-      {/* Sidebar */}
+      {/* Fixed Stationary Sidebar */}
       <Sidebar />
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      {/* Main Content Area (Independent Scroll Container) */}
+      <div className="flex-1 flex flex-col h-screen min-w-0 overflow-hidden relative z-10">
         <Navbar />
-
-        <main className="relative p-6">{children}</main>
+        <main className="relative flex-1 overflow-y-auto p-6 md:p-8">{children}</main>
       </div>
     </div>
   );

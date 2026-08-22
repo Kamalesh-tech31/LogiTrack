@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from "react";
 import DeliveryMap from "@/components/owner/DeliveryMap";
-import AgentCard from "@/components/owner/AgentCard";
 import DeliveryTable from "@/components/owner/DeliveryTable";
-import { Truck, User, PackageCheck, Clock3 } from "lucide-react";
+import { Truck, Users, PackageCheck, Clock3, AlertCircle } from "lucide-react";
 import { fetchOwnerDeliveries, fetchOwnerDeliveryAgents } from "@/lib/api";
 
 interface Tracking {
@@ -51,12 +50,6 @@ interface Delivery {
   estimatedDelivery?: string;
 }
 
-interface ApiResponse {
-  success: boolean;
-  count: number;
-  data: Delivery[];
-}
-
 export default function DeliveryPage() {
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [deliveryAgents, setDeliveryAgents] = useState<DeliveryAgent[]>([]);
@@ -69,7 +62,6 @@ export default function DeliveryPage() {
       setError(null);
 
       try {
-        // Fetch active, completed and delivered deliveries for owner
         const [activeDeliveries, completedList, deliveredList, agentsData] =
           await Promise.all([
             fetchOwnerDeliveries({ owner: true }),
@@ -101,23 +93,17 @@ export default function DeliveryPage() {
     fetchData();
   }, []);
 
-  // Calculate stats
   const totalDeliveries = deliveries.length;
-
   const uniqueAgents = Array.from(
     new Map<string, DeliveryAgent>([
-      ...deliveryAgents.map(
-        (agent) => [agent._id, agent] as [string, DeliveryAgent],
-      ),
+      ...deliveryAgents.map((agent) => [agent._id, agent] as [string, DeliveryAgent]),
       ...deliveries
         .filter((d) => d.agent)
         .map((d) => [d.agent!._id, d.agent!] as [string, DeliveryAgent]),
     ]).values(),
   );
-  // Active agents: number of known agents
-  const activeAgents = uniqueAgents.length;
 
-  // Pending orders: any non-terminal status
+  const activeAgents = uniqueAgents.length;
   const terminalStatuses = [
     "completed",
     "delivered",
@@ -128,126 +114,146 @@ export default function DeliveryPage() {
   const pendingOrders = deliveries.filter(
     (d) => !terminalStatuses.includes((d.status || "").toLowerCase()),
   ).length;
-
-  // Delivered includes 'completed' and 'delivered'
   const deliveredCount = deliveries.filter((d) =>
     ["completed", "delivered"].includes((d.status || "").toLowerCase()),
   ).length;
   const successRate =
     deliveries.length > 0
       ? Math.round((deliveredCount / deliveries.length) * 100)
-      : 0;
+      : 100;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-7xl mx-auto">
+      {/* Header */}
       <div>
-        <h1 className="text-5xl font-bold text-white">Delivery Management</h1>
-        <p className="text-gray-400 mt-3 text-lg">
-          Track agents, deliveries, and optimized routes
+        <p className="text-[11px] font-mono font-semibold uppercase tracking-[0.25em] text-[#A1A1AA]">
+          Fleet Dispatch
+        </p>
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-white font-display tracking-tight mt-1">
+          Delivery Operations
+        </h1>
+        <p className="text-xs sm:text-sm text-[#A1A1AA] mt-1 max-w-2xl leading-relaxed">
+          Supervise field couriers, monitor fulfillment telemetry, and manage optimized route assignments.
         </p>
       </div>
 
-      {loading && <p className="text-gray-400">Loading deliveries...</p>}
-      {error && <p className="text-red-400">Error: {error}</p>}
+      {loading && (
+        <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-8 text-center text-xs text-[#A1A1AA]">
+          Loading delivery telemetry...
+        </div>
+      )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-        <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl p-6 shadow-lg">
+      {error && (
+        <div className="rounded-3xl border border-red-500/30 bg-red-500/10 p-6 text-center space-y-2">
+          <AlertCircle size={24} className="mx-auto text-red-400" />
+          <p className="text-sm font-bold text-white">Error loading deliveries</p>
+          <p className="text-xs text-red-300">{error}</p>
+        </div>
+      )}
+
+      {/* 4 Metric Tiles */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-5 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[#A1A1AA]">Total Deliveries</p>
-              <h2 className="text-5xl font-bold mt-4 text-white">
-                {totalDeliveries}
-              </h2>
-            </div>
-            <div className="w-16 h-16 rounded-2xl bg-[#F97316]/15 border border-[#F97316]/40 flex items-center justify-center">
-              <Truck className="text-[#F97316]" size={30} />
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-[#A1A1AA]">Total Deliveries</p>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#111214] border border-[#2A2B30] text-[#F97316]">
+              <Truck size={16} />
             </div>
           </div>
+          <p className="mt-2 text-2xl sm:text-3xl font-extrabold text-white font-display">{totalDeliveries}</p>
         </div>
 
-        <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl p-6 shadow-lg">
+        <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-5 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[#A1A1AA]">Active Agents</p>
-              <h2 className="text-5xl font-bold mt-4 text-white">
-                {activeAgents}
-              </h2>
-            </div>
-            <div className="w-16 h-16 rounded-2xl bg-[#F97316]/15 border border-[#F97316]/40 flex items-center justify-center">
-              <User className="text-[#F97316]" size={30} />
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-[#A1A1AA]">Fleet Size</p>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#111214] border border-[#2A2B30] text-[#FDBA74]">
+              <Users size={16} />
             </div>
           </div>
+          <p className="mt-2 text-2xl sm:text-3xl font-extrabold text-white font-display">{activeAgents}</p>
         </div>
 
-        <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl p-6 shadow-lg">
+        <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-5 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[#A1A1AA]">Pending Orders</p>
-              <h2 className="text-5xl font-bold mt-4 text-white">
-                {pendingOrders}
-              </h2>
-            </div>
-            <div className="w-16 h-16 rounded-2xl bg-[#F97316]/15 border border-[#F97316]/40 flex items-center justify-center">
-              <Clock3 className="text-[#F97316]" size={30} />
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-[#A1A1AA]">Active Shipments</p>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#111214] border border-[#2A2B30] text-amber-400">
+              <Clock3 size={16} />
             </div>
           </div>
+          <p className="mt-2 text-2xl sm:text-3xl font-extrabold text-white font-display">{pendingOrders}</p>
         </div>
 
-        <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl p-6 shadow-lg">
+        <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-5 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[#A1A1AA]">Success Rate</p>
-              <h2 className="text-5xl font-bold mt-4 text-white">
-                {successRate}%
-              </h2>
-            </div>
-            <div className="w-16 h-16 rounded-2xl bg-[#F97316]/15 border border-[#F97316]/40 flex items-center justify-center">
-              <PackageCheck className="text-[#F97316]" size={30} />
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-[#A1A1AA]">Success Rate</p>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#111214] border border-[#2A2B30] text-emerald-400">
+              <PackageCheck size={16} />
             </div>
           </div>
+          <p className="mt-2 text-2xl sm:text-3xl font-extrabold text-white font-display">{successRate}%</p>
         </div>
       </div>
 
-      <DeliveryMap agents={uniqueAgents} />
+      {/* Redesigned Route Optimization Radar */}
+      <DeliveryMap agents={uniqueAgents} deliveries={deliveries} />
 
-      <div>
-        <div className="flex items-center justify-between mb-6">
+      {/* Delivery Agents Compact Summary */}
+      <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-6 shadow-sm space-y-4">
+        <div className="flex items-center justify-between pb-4 border-b border-[#2A2B30]/60">
           <div>
-            <h2 className="text-3xl font-bold text-white">Delivery Agents</h2>
-            <p className="text-gray-400 mt-2">Monitor active field agents</p>
+            <h2 className="text-lg font-bold text-white font-display">Field Agents</h2>
+            <p className="text-xs text-[#A1A1AA] mt-0.5">Active courier assignment statuses</p>
           </div>
+          <span className="text-xs text-[#A1A1AA] font-mono">
+            <span className="text-white font-bold">{uniqueAgents.length}</span> Drivers Registered
+          </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {uniqueAgents.length > 0 ? (
-            uniqueAgents.map((agent) => {
-              const agentDeliveries = deliveries.filter((d) => {
-                const id =
-                  d.agent && (d.agent._id || d.agent.id)
-                    ? String(d.agent._id || d.agent.id)
-                    : null;
-                return id === String(agent._id);
-              }).length;
-              const agentStatus = agent.isAvailable ? "Available" : "Active";
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {uniqueAgents.map((agent) => {
+            const agentDeliveries = deliveries.filter((d) => {
+              const id =
+                d.agent && (d.agent._id || (d.agent as any).id)
+                  ? String(d.agent._id || (d.agent as any).id)
+                  : null;
+              return id === String(agent._id);
+            }).length;
 
-              return (
-                <AgentCard
-                  key={agent._id}
-                  name={agent.name}
-                  deliveries={agentDeliveries}
-                  status={agentStatus}
-                />
-              );
-            })
-          ) : (
-            <div className="col-span-full rounded-3xl border border-[#1F1F1F] p-8 text-gray-400">
-              No delivery agents found. Register delivery users to see them
-              here.
+            return (
+              <div
+                key={agent._id}
+                className="rounded-2xl border border-[#2A2B30] bg-[#111214] p-4 flex items-center justify-between hover:border-[#2A2B30]/90 transition"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F97316]/10 border border-[#F97316]/30 text-[#F97316] font-bold text-sm">
+                    {agent.name ? agent.name[0].toUpperCase() : "A"}
+                  </div>
+                  <div>
+                    <p className="font-bold text-white text-xs truncate max-w-[130px]">{agent.name}</p>
+                    <p className="text-[10px] text-[#A1A1AA] mt-0.5 font-mono">{agent.contact || "Courier"}</p>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    <span>Available</span>
+                  </span>
+                  <p className="text-[9px] text-[#A1A1AA] mt-1 font-mono">{agentDeliveries} Today</p>
+                </div>
+              </div>
+            );
+          })}
+
+          {uniqueAgents.length === 0 && (
+            <div className="col-span-full py-8 text-center text-xs text-[#A1A1AA]">
+              No delivery agents found.
             </div>
           )}
         </div>
       </div>
 
+      {/* Delivery Records Table */}
       <DeliveryTable deliveries={deliveries} />
     </div>
   );

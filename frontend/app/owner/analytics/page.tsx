@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchAnalytics, OwnerAnalyticsData } from "@/lib/api";
 import {
   BarChart,
@@ -13,12 +12,17 @@ import {
   PieChart,
   Pie,
   Cell,
+  CartesianGrid,
 } from "recharts";
 import {
   IndianRupee,
   ShoppingCart,
   PackageCheck,
   AlertTriangle,
+  BarChart3,
+  PieChart as PieIcon,
+  TrendingUp,
+  AlertCircle,
 } from "lucide-react";
 
 export default function AnalyticsPage() {
@@ -44,7 +48,6 @@ export default function AnalyticsPage() {
     loadAnalytics();
   }, []);
 
-  // Build stock-category counts for pie chart
   const totalProducts = analytics?.totalProducts ?? 0;
   const healthyCount = analytics?.healthyCount ?? 0;
   const lowCount = analytics?.lowStockCount ?? 0;
@@ -54,22 +57,30 @@ export default function AnalyticsPage() {
     {
       name: "Healthy",
       value: healthyCount,
-      color: "#22c55e",
-      bgClass: "bg-emerald-500",
+      color: "#34D399",
+      bgClass: "bg-emerald-400",
     },
     {
       name: "Low Stock",
       value: lowCount,
-      color: "#f59e0b",
-      bgClass: "bg-amber-500",
+      color: "#FBBF24",
+      bgClass: "bg-amber-400",
     },
     {
-      name: "No Stock",
+      name: "Out of Stock",
       value: noStockCount,
-      color: "#ef4444",
-      bgClass: "bg-red-500",
+      color: "#F87171",
+      bgClass: "bg-red-400",
     },
   ];
+
+  const hasStockData = totalProducts > 0;
+  const hasRevenueData =
+    analytics && (analytics.last30Revenue > 0 || analytics.prev30Revenue > 0);
+  const hasDeliveredData =
+    analytics &&
+    (analytics.last30DeliveredOrders > 0 ||
+      analytics.prev30DeliveredOrders > 0);
 
   const summaryCards = analytics
     ? [
@@ -77,25 +88,29 @@ export default function AnalyticsPage() {
           title: "Total Revenue",
           value: `₹${analytics.totalRevenue.toLocaleString()}`,
           icon: IndianRupee,
-          iconBg: "bg-emerald-500/10 text-emerald-400",
+          accent: "text-[#F97316]",
+          footnote: "Cumulative store earnings",
         },
         {
           title: "Total Orders",
           value: analytics.totalOrders.toLocaleString(),
           icon: ShoppingCart,
-          iconBg: "bg-sky-500/10 text-sky-400",
+          accent: "text-blue-400",
+          footnote: "Lifetime order volume",
         },
         {
           title: "Delivered Orders",
           value: analytics.totalDeliveredOrders.toLocaleString(),
           icon: PackageCheck,
-          iconBg: "bg-violet-500/10 text-violet-400",
+          accent: "text-emerald-400",
+          footnote: "Completed dispatches",
         },
         {
-          title: "Low Stock Items",
+          title: "Low Stock Warnings",
           value: analytics.lowStockCount.toString(),
           icon: AlertTriangle,
-          iconBg: "bg-amber-500/10 text-amber-400",
+          accent: "text-amber-400",
+          footnote: "SKUs below minimum safety",
         },
       ]
     : [];
@@ -107,268 +122,258 @@ export default function AnalyticsPage() {
       ]
     : [];
 
-  return (
-    <div className="space-y-8 p-8">
-      {loading ? (
-        <div className="rounded-3xl border border-primary/20 bg-primary/5 p-6 text-sm text-primary">
-          Loading analytics data...
-        </div>
-      ) : error ? (
-        <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
-          {error}
-        </div>
-      ) : !analytics ? (
-        <div className="rounded-3xl border border-muted/20 bg-muted/5 p-6 text-sm text-muted-foreground">
-          No analytics data available. Please check your owner account or
-          backend connection.
-        </div>
-      ) : null}
+  const deliveryComparison = analytics
+    ? [
+        { label: "Prev 30d", value: analytics.prev30DeliveredOrders },
+        { label: "Last 30d", value: analytics.last30DeliveredOrders },
+      ]
+    : [];
 
-      {analytics ? (
+  return (
+    <div className="space-y-8 max-w-7xl mx-auto">
+      {/* Header */}
+      <div>
+        <p className="text-[11px] font-mono font-semibold uppercase tracking-[0.25em] text-[#A1A1AA]">
+          Financial & Logistics Intelligence
+        </p>
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-white font-display tracking-tight mt-1">
+          Business Analytics
+        </h1>
+        <p className="text-xs sm:text-sm text-[#A1A1AA] mt-1 max-w-2xl leading-relaxed">
+          Monitor multi-period revenue, review order fulfillment velocity, and track stock reserve health.
+        </p>
+      </div>
+
+      {loading && (
+        <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-12 text-center text-xs text-[#A1A1AA]">
+          Loading business analytics...
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-3xl border border-red-500/30 bg-red-500/10 p-6 text-center space-y-2">
+          <AlertCircle size={24} className="mx-auto text-red-400" />
+          <p className="text-sm font-bold text-white">Error loading analytics</p>
+          <p className="text-xs text-red-300">{error}</p>
+        </div>
+      )}
+
+      {analytics && (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {/* 4 Summary Cards */}
+          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
             {summaryCards.map((card) => {
               const Icon = card.icon;
               return (
-                <Card key={card.title} className="border-none shadow-sm">
-                  <CardContent className="p-5">
-                    <div className="flex items-center justify-between gap-4">
-                      <p className="text-sm text-muted-foreground">
+                <div
+                  key={card.title}
+                  className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-6 shadow-sm flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-[11px] uppercase tracking-wider font-semibold text-[#A1A1AA]">
                         {card.title}
                       </p>
-                      <div
-                        className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl ${card.iconBg}`}
-                      >
-                        <Icon className="h-5 w-5" />
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-2xl bg-[#111214] border border-[#2A2B30] ${card.accent}`}>
+                        <Icon size={18} />
                       </div>
                     </div>
-                    <p className="mt-3 text-3xl font-semibold text-white">
+
+                    <p className="mt-2 text-2xl sm:text-3xl font-extrabold text-white font-display">
                       {card.value}
                     </p>
-                  </CardContent>
-                </Card>
+                  </div>
+
+                  <p className="mt-3 text-xs text-[#A1A1AA]/80 border-t border-[#2A2B30]/60 pt-3">
+                    {card.footnote}
+                  </p>
+                </div>
               );
             })}
           </div>
 
+          {/* Charts Row */}
           <div className="grid gap-6 xl:grid-cols-3">
-            <Card className="border-none shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg">Stock Health</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col items-center gap-4 py-4">
-                  <div className="h-48 w-48">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={stockHealthData}
-                          dataKey="value"
-                          innerRadius={60}
-                          outerRadius={80}
-                          startAngle={90}
-                          endAngle={-270}
-                          paddingAngle={2}
-                        >
-                          {stockHealthData.map((entry) => (
-                            <Cell key={entry.name} fill={entry.color} />
-                          ))}
-                        </Pie>
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="text-center w-full">
-                    {totalProducts === 0 ? (
-                      <div className="text-sm text-neutral-400">
-                        No products found
-                      </div>
-                    ) : (
-                      <>
-                        <div className="mb-2 text-sm text-muted-foreground">
-                          Stock distribution
-                        </div>
-                        <div className="text-3xl font-semibold text-white">
-                          {totalProducts} product
-                          {totalProducts === 1 ? "" : "s"}
-                        </div>
-                        <div className="mt-3 flex flex-wrap justify-center gap-4">
-                          {stockHealthData.map((s) => (
-                            <div
-                              key={s.name}
-                              className="flex items-center gap-2 text-sm text-neutral-300"
-                            >
-                              <span
-                                className={`${s.bgClass} inline-block h-3 w-3 rounded-full`}
-                              />
-                              <span>
-                                {s.name}:{" "}
-                                <span className="text-white ml-1">
-                                  {s.value}
-                                </span>
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </div>
+            {/* Stock Health Donut Card */}
+            <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-6 shadow-sm flex flex-col justify-between">
+              <div className="pb-4 border-b border-[#2A2B30]/60 flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-white font-display">Stock Health</h2>
+                  <p className="text-xs text-[#A1A1AA] mt-0.5">Inventory reserve distribution</p>
                 </div>
-              </CardContent>
-            </Card>
+                <PieIcon size={16} className="text-[#F97316]" />
+              </div>
 
-            <Card className="border-none shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg">
-                  30 Day Revenue Comparison
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-80">
+              <div className="py-4 flex flex-col items-center justify-center relative min-h-[220px]">
+                {hasStockData ? (
+                  <>
+                    <div className="h-44 w-44">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={stockHealthData}
+                            dataKey="value"
+                            innerRadius={55}
+                            outerRadius={75}
+                            startAngle={90}
+                            endAngle={-270}
+                            paddingAngle={3}
+                          >
+                            {stockHealthData.map((entry) => (
+                              <Cell key={entry.name} fill={entry.color} />
+                            ))}
+                          </Pie>
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    <div className="mt-4 text-center">
+                      <p className="text-xs font-bold text-white font-display">
+                        {totalProducts} Total {totalProducts === 1 ? "Product" : "Products"}
+                      </p>
+                      <div className="mt-2.5 flex flex-wrap justify-center gap-3">
+                        {stockHealthData.map((s) => (
+                          <div key={s.name} className="flex items-center gap-1.5 text-[11px] text-[#A1A1AA]">
+                            <span className={`${s.bgClass} inline-block h-2 w-2 rounded-full`} />
+                            <span>{s.name}: <strong className="text-white">{s.value}</strong></span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center p-6 text-xs text-[#A1A1AA] space-y-1">
+                    <AlertCircle size={20} className="mx-auto text-[#A1A1AA]/50" />
+                    <p className="text-white font-semibold">No Stock Records</p>
+                    <p className="text-[11px]">Add products to generate stock distribution data.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 30 Day Revenue Comparison Bar Chart */}
+            <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-6 shadow-sm flex flex-col justify-between">
+              <div className="pb-4 border-b border-[#2A2B30]/60 flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-white font-display">30-Day Revenue</h2>
+                  <p className="text-xs text-[#A1A1AA] mt-0.5">Current vs previous period income</p>
+                </div>
+                <TrendingUp size={16} className="text-emerald-400" />
+              </div>
+
+              <div className="h-64 mt-4 relative flex items-center justify-center">
+                {hasRevenueData ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={revenueComparison}>
-                      <XAxis
-                        dataKey="label"
-                        stroke="#6b7280"
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis
-                        stroke="#6b7280"
-                        tickLine={false}
-                        axisLine={false}
-                      />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#2A2B30" opacity={0.6} />
+                      <XAxis dataKey="label" stroke="#A1A1AA" fontSize={11} tickLine={false} />
+                      <YAxis stroke="#A1A1AA" fontSize={11} tickLine={false} />
                       <Tooltip
-                        formatter={(value: number) => [
-                          `₹${value.toLocaleString()}`,
-                          "Revenue",
-                        ]}
+                        formatter={(value: number) => [`₹${value.toLocaleString()}`, "Revenue"]}
                         contentStyle={{
                           backgroundColor: "#111214",
                           border: "1px solid #2A2B30",
                           borderRadius: 16,
                           color: "#fff",
+                          fontSize: 12,
                         }}
                       />
-                      <Bar
-                        dataKey="value"
-                        fill="#F97316"
-                        radius={[12, 12, 0, 0]}
-                      />
+                      <Bar dataKey="value" fill="#F97316" radius={[8, 8, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
+                ) : (
+                  <div className="text-center p-6 text-xs text-[#A1A1AA] space-y-1">
+                    <BarChart3 size={20} className="mx-auto text-[#A1A1AA]/50" />
+                    <p className="text-white font-semibold">No Revenue Activity</p>
+                    <p className="text-[11px]">30-day comparative income will appear upon new sales.</p>
+                  </div>
+                )}
+              </div>
+            </div>
 
-            <Card className="border-none shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg">
-                  Delivered Orders Trend
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-80">
+            {/* Delivered Orders Trend */}
+            <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-6 shadow-sm flex flex-col justify-between">
+              <div className="pb-4 border-b border-[#2A2B30]/60 flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-white font-display">Fulfillment Trend</h2>
+                  <p className="text-xs text-[#A1A1AA] mt-0.5">Delivered orders comparison</p>
+                </div>
+                <PackageCheck size={16} className="text-blue-400" />
+              </div>
+
+              <div className="h-64 mt-4 relative flex items-center justify-center">
+                {hasDeliveredData ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={[
-                        {
-                          label: "Prev 30d",
-                          value: analytics.prev30DeliveredOrders,
-                        },
-                        {
-                          label: "Last 30d",
-                          value: analytics.last30DeliveredOrders,
-                        },
-                      ]}
-                    >
-                      <XAxis
-                        dataKey="label"
-                        stroke="#6b7280"
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis
-                        stroke="#6b7280"
-                        tickLine={false}
-                        axisLine={false}
-                      />
+                    <BarChart data={deliveryComparison}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#2A2B30" opacity={0.6} />
+                      <XAxis dataKey="label" stroke="#A1A1AA" fontSize={11} tickLine={false} />
+                      <YAxis stroke="#A1A1AA" fontSize={11} tickLine={false} />
                       <Tooltip
-                        formatter={(value: number) => [
-                          value.toLocaleString(),
-                          "Delivered Orders",
-                        ]}
+                        formatter={(value: number) => [value.toLocaleString(), "Delivered Orders"]}
                         contentStyle={{
                           backgroundColor: "#111214",
                           border: "1px solid #2A2B30",
                           borderRadius: 16,
                           color: "#fff",
+                          fontSize: 12,
                         }}
                       />
-                      <Bar
-                        dataKey="value"
-                        fill="#22c55e"
-                        radius={[12, 12, 0, 0]}
-                      />
+                      <Bar dataKey="value" fill="#34D399" radius={[8, 8, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
+                ) : (
+                  <div className="text-center p-6 text-xs text-[#A1A1AA] space-y-1">
+                    <PackageCheck size={20} className="mx-auto text-[#A1A1AA]/50" />
+                    <p className="text-white font-semibold">No Deliveries Recorded</p>
+                    <p className="text-[11px]">Delivered volume will track once couriers complete dispatches.</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
+          {/* Detailed Period Statistics Cards */}
           <div className="grid gap-6 xl:grid-cols-2">
-            <Card className="border-none shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg">Last 30 Days Orders</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="rounded-3xl bg-[#111214] border border-[#2A2B30] p-4">
-                  <p className="text-sm text-muted-foreground">
-                    Last 30 days total orders
-                  </p>
-                  <p className="mt-2 text-2xl font-semibold text-white">
-                    {analytics.last30Orders.toLocaleString()}
-                  </p>
-                </div>
-                <div className="rounded-3xl bg-[#111214] border border-[#2A2B30] p-4">
-                  <p className="text-sm text-muted-foreground">
-                    Last 30 days delivered
-                  </p>
-                  <p className="mt-2 text-2xl font-semibold text-white">
-                    {analytics.last30DeliveredOrders.toLocaleString()}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-6 shadow-sm space-y-4">
+              <div className="pb-3 border-b border-[#2A2B30]/60">
+                <h2 className="text-base font-bold text-white font-display">Last 30 Days Activity</h2>
+                <p className="text-xs text-[#A1A1AA]">Recent operational order counts</p>
+              </div>
 
-            <Card className="border-none shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg">
-                  Previous 30 Days Orders
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="rounded-3xl bg-[#111214] border border-[#2A2B30] p-4">
-                  <p className="text-sm text-muted-foreground">
-                    Previous 30 days total orders
-                  </p>
-                  <p className="mt-2 text-2xl font-semibold text-white">
-                    {analytics.prev30Orders.toLocaleString()}
-                  </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="rounded-2xl bg-[#111214] border border-[#2A2B30] p-4">
+                  <p className="text-[11px] uppercase tracking-wider font-semibold text-[#A1A1AA]">Total Orders</p>
+                  <p className="mt-2 text-2xl font-extrabold text-white font-display">{analytics.last30Orders.toLocaleString()}</p>
                 </div>
-                <div className="rounded-3xl bg-[#111214] border border-[#2A2B30] p-4">
-                  <p className="text-sm text-muted-foreground">
-                    Previous 30 days delivered
-                  </p>
-                  <p className="mt-2 text-2xl font-semibold text-white">
-                    {analytics.prev30DeliveredOrders.toLocaleString()}
-                  </p>
+
+                <div className="rounded-2xl bg-[#111214] border border-[#2A2B30] p-4">
+                  <p className="text-[11px] uppercase tracking-wider font-semibold text-[#A1A1AA]">Delivered</p>
+                  <p className="mt-2 text-2xl font-extrabold text-white font-display">{analytics.last30DeliveredOrders.toLocaleString()}</p>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-6 shadow-sm space-y-4">
+              <div className="pb-3 border-b border-[#2A2B30]/60">
+                <h2 className="text-base font-bold text-white font-display">Previous 30 Days Activity</h2>
+                <p className="text-xs text-[#A1A1AA]">Prior comparative benchmark period</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="rounded-2xl bg-[#111214] border border-[#2A2B30] p-4">
+                  <p className="text-[11px] uppercase tracking-wider font-semibold text-[#A1A1AA]">Total Orders</p>
+                  <p className="mt-2 text-2xl font-extrabold text-white font-display">{analytics.prev30Orders.toLocaleString()}</p>
+                </div>
+
+                <div className="rounded-2xl bg-[#111214] border border-[#2A2B30] p-4">
+                  <p className="text-[11px] uppercase tracking-wider font-semibold text-[#A1A1AA]">Delivered</p>
+                  <p className="mt-2 text-2xl font-extrabold text-white font-display">{analytics.prev30DeliveredOrders.toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
           </div>
         </>
-      ) : null}
+      )}
     </div>
   );
 }

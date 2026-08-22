@@ -6,8 +6,10 @@ import {
   AlertTriangle,
   History,
   Package,
-  RefreshCcw,
   Search,
+  CheckCircle2,
+  AlertCircle,
+  ShieldCheck,
 } from "lucide-react";
 import { fetchOwnerInventory, fetchOwnerInventoryHistory } from "@/lib/api";
 
@@ -18,13 +20,6 @@ interface InventoryProduct {
   category: string;
   stock: number;
   minStock: number;
-}
-
-interface InventoryApiResponse {
-  success: boolean;
-  count: number;
-  totalItems: number;
-  data: InventoryProduct[];
 }
 
 interface InventoryHistoryEntry {
@@ -60,7 +55,7 @@ export default function InventoryPage() {
         setInventory(Array.isArray(products) ? products : []);
         setHistoryEntries(Array.isArray(history) ? history : []);
       } catch (err: any) {
-        setError(err?.message ?? "Failed to load inventory");
+        setError(err?.message ?? "Unable to load inventory data");
       } finally {
         setLoading(false);
       }
@@ -69,217 +64,222 @@ export default function InventoryPage() {
     fetchInventory();
   }, []);
 
-  const filtered = useMemo(
-    () =>
-      inventory.filter((item) =>
-        `${item.name} ${item.category}`
-          .toLowerCase()
-          .includes(query.toLowerCase()),
-      ),
-    [query, inventory],
-  );
-
-  const totalProducts = inventory.length;
-  const lowStockAlerts = inventory.filter(
-    (item) => item.stock <= item.minStock,
-  ).length;
-  const totalInventoryItems = inventory.reduce(
-    (sum, item) => sum + item.stock,
+  const totalItems = inventory.reduce(
+    (total, item) => total + (item.stock || 0),
     0,
   );
+  const lowStockCount = inventory.filter(
+    (item) => item.stock > 0 && item.stock <= item.minStock,
+  ).length;
+  const outOfStockCount = inventory.filter((item) => item.stock === 0).length;
 
-  function getStatus(item: InventoryProduct) {
-    if (item.stock <= item.minStock) return "Low Stock";
-    if (item.stock <= item.minStock + 5) return "Medium";
-    return "Healthy";
-  }
-
-  function getStatusClasses(item: InventoryProduct) {
-    const status = getStatus(item);
-
-    if (status === "Low Stock") return "bg-red-500/20 text-red-400";
-    if (status === "Medium") return "bg-yellow-500/20 text-yellow-400";
-    return "bg-green-500/20 text-green-400";
-  }
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return inventory;
+    return inventory.filter(
+      (item) =>
+        item.name.toLowerCase().includes(q) ||
+        (item.category && item.category.toLowerCase().includes(q)),
+    );
+  }, [inventory, query]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-5xl font-bold text-white">
-            Inventory Management
-          </h1>
+      <div>
+        <p className="text-[11px] font-mono font-semibold uppercase tracking-[0.25em] text-[#A1A1AA]">
+          Supply Chain Control
+        </p>
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-white font-display tracking-tight mt-1">
+          Inventory Levels
+        </h1>
+        <p className="text-xs sm:text-sm text-[#A1A1AA] mt-1 max-w-2xl leading-relaxed">
+          Track warehouse reserves, minimum safety stock thresholds, and recent stock adjustments.
+        </p>
+      </div>
 
-          <p className="text-gray-400 mt-2">
-            Monitor stock levels and inventory activity
+      {/* 3 Metric Tiles */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-6 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-[#A1A1AA]">Total Units in Stock</p>
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#111214] border border-[#2A2B30] text-[#F97316]">
+              <Package size={18} />
+            </div>
+          </div>
+          <p className="mt-2 text-3xl font-extrabold text-white font-display">{totalItems.toLocaleString()}</p>
+          <p className="mt-3 text-xs text-[#A1A1AA]/80 border-t border-[#2A2B30]/60 pt-3">
+            Across {inventory.length} listed SKUs
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => router.push("/owner/inventory/restock")}
-          className="flex items-center gap-2 bg-[#F97316] hover:bg-[#EA580C] transition-all duration-300 px-6 py-3 rounded-2xl text-white font-medium cursor-pointer shadow-[0_0_15px_rgba(249,115,22,0.3)]"
-        >
-          <RefreshCcw size={18} />
-          Restock Inventory
-        </button>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl p-6 shadow-lg">
+        <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-6 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[#A1A1AA]">Total Products</p>
-
-              <h2 className="text-5xl font-bold text-white mt-3">
-                {totalProducts}
-              </h2>
-            </div>
-
-            <div className="bg-[#F97316]/15 border border-[#F97316]/30 p-5 rounded-2xl">
-              <Package className="text-[#F97316]" size={30} />
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-[#A1A1AA]">Low Stock Warnings</p>
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#111214] border border-[#2A2B30] text-amber-400">
+              <AlertTriangle size={18} />
             </div>
           </div>
+          <p className="mt-2 text-3xl font-extrabold text-white font-display">{lowStockCount}</p>
+          <p className="mt-3 text-xs text-[#A1A1AA]/80 border-t border-[#2A2B30]/60 pt-3">
+            Items nearing minimum threshold
+          </p>
         </div>
 
-        <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl p-6 shadow-lg">
+        <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-6 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[#A1A1AA]">Low Stock Alerts</p>
-
-              <h2 className="text-5xl font-bold text-white mt-3">
-                {lowStockAlerts}
-              </h2>
-            </div>
-
-            <div className="bg-red-500/20 border border-red-500/30 p-5 rounded-2xl">
-              <AlertTriangle className="text-red-400" size={30} />
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-[#A1A1AA]">Out of Stock</p>
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#111214] border border-[#2A2B30] text-red-400">
+              <AlertCircle size={18} />
             </div>
           </div>
-        </div>
-
-        <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl p-6 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[#A1A1AA]">Total Inventory Items</p>
-
-              <h2 className="text-5xl font-bold text-white mt-3">
-                {totalInventoryItems}
-              </h2>
-            </div>
-
-            <div className="bg-green-500/20 border border-green-500/30 p-5 rounded-2xl">
-              <RefreshCcw className="text-green-400" size={30} />
-            </div>
-          </div>
+          <p className="mt-2 text-3xl font-extrabold text-white font-display">{outOfStockCount}</p>
+          <p className="mt-3 text-xs text-[#A1A1AA]/80 border-t border-[#2A2B30]/60 pt-3">
+            Depleted items requiring replenishment
+          </p>
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search
-          className="absolute left-5 top-1/2 -translate-y-1/2 text-[#A1A1AA]"
-          size={20}
-          aria-hidden="true"
-        />
+      {/* Stock Levels Table Container */}
+      <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-6 shadow-sm space-y-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-[#2A2B30]/60">
+          <div>
+            <h2 className="text-lg font-bold text-white font-display">
+              SKU Stock Breakdown
+            </h2>
+            <p className="text-xs text-[#A1A1AA] mt-0.5">
+              Current storage quantity vs minimum reorder levels
+            </p>
+          </div>
 
-        <input
-          type="text"
-          aria-label="Search inventory"
-          placeholder="Search inventory..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="w-full bg-[#111214] border border-[#2A2B30] rounded-2xl pl-14 pr-4 py-4 text-[#F4F4F5] outline-none focus:border-[#F97316]"
-        />
-      </div>
-
-      {loading && <p className="text-[#A1A1AA]">Loading inventory...</p>}
-      {error && <p className="text-red-400">Error: {error}</p>}
-
-      {/* Inventory Table */}
-      <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl overflow-hidden shadow-lg">
-        <div className="p-6 border-b border-[#2A2B30]">
-          <h2 className="text-3xl font-bold text-white">Inventory Overview</h2>
+          <div className="relative">
+            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A1A1AA]" />
+            <input
+              type="text"
+              placeholder="Search by product name..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="w-full sm:w-72 pl-10 pr-4 py-2 bg-[#111214] border border-[#2A2B30] rounded-2xl text-xs text-white placeholder-[#A1A1AA]/60 focus:outline-none focus:border-[#F97316]/60 transition"
+            />
+          </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-[#111214]">
-              <tr className="text-left">
-                <th className="px-6 py-5 text-[#A1A1AA] font-medium">Product</th>
-
-                <th className="px-6 py-5 text-[#A1A1AA] font-medium">SKU</th>
-
-                <th className="px-6 py-5 text-[#A1A1AA] font-medium">Stock</th>
-
-                <th className="px-6 py-5 text-[#A1A1AA] font-medium">Status</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {filtered.map((item) => (
-                <tr
-                  key={item._id}
-                  className="border-t border-[#2A2B30] hover:bg-[#111214]/60 transition-all"
-                >
-                  <td className="px-6 py-5 text-white font-medium">
-                    {item.name}
-                  </td>
-
-                  <td className="px-6 py-5 text-[#A1A1AA]">{item.category}</td>
-
-                  <td className="px-6 py-5 text-white">{item.stock}</td>
-
-                  <td className="px-6 py-5">
-                    <span
-                      className={`px-4 py-2 rounded-full text-sm ${getStatusClasses(
-                        item,
-                      )}`}
-                    >
-                      {getStatus(item)}
-                    </span>
-                  </td>
+        {loading ? (
+          <div className="flex items-center justify-center py-16 text-xs text-[#A1A1AA]">
+            Loading inventory records...
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center space-y-2">
+            <AlertCircle size={24} className="text-red-400" />
+            <p className="text-sm font-bold text-white">Unable to load inventory</p>
+            <p className="text-xs text-[#A1A1AA]">{error}</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[650px] text-left text-xs">
+              <thead className="bg-[#111214] border-b border-[#2A2B30] text-[#A1A1AA] uppercase tracking-wider font-semibold">
+                <tr>
+                  <th className="p-3.5 pl-4">Product Name</th>
+                  <th className="p-3.5">Category</th>
+                  <th className="p-3.5">Current Stock</th>
+                  <th className="p-3.5">Min Safety Level</th>
+                  <th className="p-3.5 pr-4 text-right">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-[#2A2B30]/60">
+                {filtered.map((item) => {
+                  const isOut = item.stock === 0;
+                  const isLow = item.stock > 0 && item.stock <= item.minStock;
+
+                  return (
+                    <tr key={item._id} className="hover:bg-[#111214]/60 transition">
+                      <td className="p-3.5 pl-4 font-bold text-white font-display">
+                        {item.name}
+                      </td>
+                      <td className="p-3.5 text-[#A1A1AA] font-mono">
+                        {item.category || "General"}
+                      </td>
+                      <td className="p-3.5 font-extrabold text-white font-display">
+                        {item.stock} units
+                      </td>
+                      <td className="p-3.5 text-[#A1A1AA] font-mono">
+                        {item.minStock} units
+                      </td>
+                      <td className="p-3.5 pr-4 text-right">
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${
+                            isOut
+                              ? "bg-red-500/10 text-red-400 border border-red-500/30"
+                              : isLow
+                                ? "bg-amber-500/10 text-amber-400 border border-amber-500/30"
+                                : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
+                          }`}
+                        >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              isOut
+                                ? "bg-red-400"
+                                : isLow
+                                  ? "bg-amber-400 animate-pulse"
+                                  : "bg-emerald-400"
+                            }`}
+                          />
+                          <span>{isOut ? "Out of Stock" : isLow ? "Low Stock" : "Optimal"}</span>
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {filtered.length === 0 && (
+              <div className="rounded-2xl border border-[#2A2B30] bg-[#111214] p-10 text-center text-[#A1A1AA] space-y-2 mt-4">
+                <Package size={24} className="mx-auto text-[#A1A1AA]/40" />
+                <p className="text-sm font-bold text-white">No inventory items matched</p>
+                <p className="text-xs text-[#A1A1AA]">Adjust your search query.</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Inventory History */}
-      <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl p-6 shadow-lg">
-        <div className="flex items-center gap-3 mb-6">
-          <History className="text-[#F97316]" />
-
-          <h2 className="text-3xl font-bold text-white">Inventory History</h2>
+      {/* Inventory History Section */}
+      <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-6 shadow-sm space-y-4">
+        <div className="flex items-center gap-2 pb-4 border-b border-[#2A2B30]/60">
+          <History size={17} className="text-[#F97316]" />
+          <div>
+            <h2 className="text-base font-bold text-white font-display">
+              Recent Inventory Adjustments
+            </h2>
+            <p className="text-xs text-[#A1A1AA]">Audit trail of warehouse stock changes</p>
+          </div>
         </div>
 
-        <div className="space-y-4">
-          {historyEntries.length > 0 ? (
-            historyEntries.map((item) => (
-              <div
-                key={item._id}
-                className="bg-[#0D0D0D] border border-[#1F1F1F] rounded-2xl p-5 flex flex-col gap-3"
-              >
-                <div>
-                  <h3 className="text-white font-medium">{item.action}</h3>
-                  <p className="text-gray-400 text-sm mt-1">
-                    {item.productName} ·{" "}
-                    {item.quantity >= 0 ? `+${item.quantity}` : item.quantity}
-                  </p>
-                </div>
-                <div className="flex items-center justify-between text-sm text-gray-500">
-                  <span>{new Date(item.createdAt).toLocaleString()}</span>
-                  <span>{item.details}</span>
-                </div>
+        <div className="space-y-3">
+          {historyEntries.slice(0, 5).map((entry) => (
+            <div
+              key={entry._id}
+              className="rounded-2xl border border-[#2A2B30] bg-[#111214] p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+            >
+              <div>
+                <p className="text-xs font-bold text-white">{entry.productName}</p>
+                <p className="text-[11px] text-[#A1A1AA] mt-0.5">{entry.details || "Stock quantity updated"}</p>
               </div>
-            ))
-          ) : (
-            <div className="text-gray-400 text-center py-8">
-              No inventory history yet. Your restock and stock updates will
-              appear here.
+              <div className="flex items-center gap-3 text-xs">
+                <span className="font-mono text-emerald-400 font-bold">
+                  {entry.quantity > 0 ? `+${entry.quantity}` : entry.quantity} units
+                </span>
+                <span className="text-[#A1A1AA] font-mono text-[10px]">
+                  {new Date(entry.createdAt).toLocaleDateString()}
+                </span>
+              </div>
+            </div>
+          ))}
+
+          {historyEntries.length === 0 && (
+            <div className="p-8 text-center text-xs text-[#A1A1AA]">
+              No stock adjustment history on record yet.
             </div>
           )}
         </div>

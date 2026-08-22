@@ -10,7 +10,7 @@ import {
 } from "@/lib/api";
 
 export function CustomerHeader() {
-  const [userName, setUserName] = useState("User");
+  const [userName, setUserName] = useState("Customer");
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [selectedNotification, setSelectedNotification] =
     useState<AppNotification | null>(null);
@@ -76,30 +76,37 @@ export function CustomerHeader() {
 
   const handleOpenNotification = async (notification: AppNotification) => {
     setSelectedNotification(notification);
-    // Auto-mark as read when opened
     if (!notification.isRead) {
       await handleMarkOneRead(notification._id);
     }
   };
 
   return (
-    <div className="w-full bg-[#1A1B1E] border-b border-[#2A2B30] px-8 py-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-      <div>
-        <h1 className="text-2xl font-bold text-white">Customer Dashboard</h1>
-        <p className="text-[#A1A1AA] text-sm mt-1">
-          Welcome back, {userName}
-        </p>
+    <header className="w-full h-18 bg-[#1A1B1E]/90 backdrop-blur-xl border-b border-[#2A2B30] px-6 lg:px-8 flex items-center justify-between z-20 shrink-0">
+      {/* Left: Refined Workspace Context with Vertical Accent Bar */}
+      <div className="flex items-center gap-3">
+        <div className="w-[3px] h-6 rounded-full bg-gradient-to-b from-[#F97316] to-[#EA580C] shadow-[0_0_8px_rgba(249,115,22,0.4)] shrink-0" />
+        <div className="flex flex-col justify-center">
+          <p className="text-[11px] font-mono font-semibold uppercase tracking-[0.22em] text-[#F4F4F5] leading-none">
+            Customer Workspace
+          </p>
+          <p className="text-[10px] text-[#A1A1AA]/60 font-sans tracking-normal mt-1">
+            LogiTrack Order Management
+          </p>
+        </div>
       </div>
 
-      <div className="flex items-center gap-4 relative">
+      {/* Right: Notifications & Profile */}
+      <div className="flex items-center gap-3 sm:gap-4 relative">
+        {/* Notifications Drawer Button */}
         <div className="relative">
           <button
             type="button"
             onClick={() => setIsNotifOpen(!isNotifOpen)}
-            className="relative rounded-2xl bg-[#111214] border border-[#2A2B30] text-[#A1A1AA] hover:bg-[#F97316] hover:text-white p-2 transition cursor-pointer"
+            className="w-9 h-9 rounded-2xl bg-[#111214] border border-[#2A2B30] flex items-center justify-center text-[#A1A1AA] hover:border-[#F97316]/60 hover:text-white transition-all cursor-pointer shadow-sm"
             aria-label="Show notifications"
           >
-            <Bell size={20} aria-hidden="true" />
+            <Bell size={16} aria-hidden="true" />
             {unreadCount > 0 && (
               <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#F97316] px-1 text-[10px] font-bold text-white shadow-[0_0_8px_rgba(249,115,22,0.6)]">
                 {unreadCount}
@@ -108,33 +115,33 @@ export function CustomerHeader() {
           </button>
 
           {isNotifOpen && (
-            <div className="absolute right-0 mt-3 w-80 rounded-3xl bg-[#111214] border border-[#2A2B30] shadow-xl z-20">
-              <div className="flex items-center justify-between p-4 border-b border-[#2A2B30]">
-                <div>
-                  <p className="text-sm text-[#A1A1AA]">Notifications</p>
-                  <p className="text-xs text-[#A1A1AA]">
-                    {unreadCount} unread
-                  </p>
-                </div>
+            <div className="absolute right-0 mt-3 w-80 rounded-3xl bg-[#111214] border border-[#2A2B30] shadow-2xl z-30 p-4 space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-[#2A2B30]">
+                <p className="text-sm font-bold text-white">Notifications</p>
+                <span className="text-xs text-[#A1A1AA]">
+                  {unreadCount} unread
+                </span>
               </div>
-              <div className="space-y-3 p-4">
+              <div className="space-y-2 max-h-64 overflow-y-auto">
                 {visibleNotifications.map((item) => (
                   <div
                     key={item._id}
-                    className={`rounded-2xl border p-3 transition-colors hover:border-[#F97316] cursor-pointer ${item.isRead ? "border-[#2A2B30]" : "border-[#F97316]/40 bg-[#F97316]/5"}`}
+                    className={`rounded-2xl border p-3 transition-colors hover:border-[#F97316] cursor-pointer ${
+                      item.isRead ? "border-[#2A2B30] bg-[#1A1B1E]/40" : "border-[#F97316]/40 bg-[#F97316]/10"
+                    }`}
                     role="button"
                     tabIndex={0}
                     onClick={() => void handleOpenNotification(item)}
                   >
-                    <p className="text-white font-semibold">{item.title}</p>
-                    <p className="text-sm text-[#A1A1AA] mt-1">
+                    <p className="text-white font-semibold text-xs">{item.title}</p>
+                    <p className="text-xs text-[#A1A1AA] mt-1 leading-relaxed">
                       {item.message}
                     </p>
                   </div>
                 ))}
                 {visibleNotifications.length === 0 && (
-                  <div className="text-sm text-[#A1A1AA]">
-                    No notifications available
+                  <div className="text-xs text-[#A1A1AA] text-center py-4">
+                    No new notifications
                   </div>
                 )}
               </div>
@@ -142,23 +149,23 @@ export function CustomerHeader() {
           )}
         </div>
 
+        {/* Profile Link */}
         <Link
           href="/customer/profile"
-          className="flex min-w-0 items-center gap-3 rounded-2xl border border-[#2A2B30] bg-[#111214] px-4 py-2 hover:bg-[#1A1B1E] transition"
+          className="flex items-center gap-2.5 bg-[#111214] border border-[#2A2B30] px-3.5 py-1.5 rounded-2xl hover:border-[#F97316]/40 transition"
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F97316] text-sm font-bold text-white shadow-[0_0_10px_rgba(249,115,22,0.4)]">
-            {userName[0]?.toUpperCase() || "U"}
+          <div className="w-7 h-7 rounded-xl bg-[#F97316]/20 border border-[#F97316]/40 flex items-center justify-center text-[#F97316] font-bold text-xs">
+            {userName[0]?.toUpperCase() || "C"}
           </div>
-          <div className="min-w-0 overflow-hidden text-left">
-            <h3 className="truncate text-sm font-medium text-white">
-              {userName}
-            </h3>
-            <p className="truncate text-xs text-[#A1A1AA]">View profile</p>
+          <div className="hidden sm:block text-left">
+            <h2 className="text-white font-semibold text-xs leading-none">{userName}</h2>
+            <p className="text-[#A1A1AA] text-[10px] mt-0.5">Customer</p>
           </div>
           <span className="sr-only">Open profile</span>
         </Link>
       </div>
 
+      {/* Notification Modal */}
       {selectedNotification && (
         <div
           className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center z-50"
@@ -169,7 +176,7 @@ export function CustomerHeader() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between mb-4">
-              <h2 className="text-xl font-bold text-white pr-4">
+              <h2 className="text-lg font-bold text-white pr-4">
                 {selectedNotification.title}
               </h2>
               <button
@@ -180,14 +187,14 @@ export function CustomerHeader() {
               </button>
             </div>
 
-            <p className="text-neutral-300 mb-4">
+            <p className="text-neutral-300 text-xs mb-4 leading-relaxed">
               {selectedNotification.message}
             </p>
 
             {selectedNotification.orderCode && (
               <div className="mb-4 p-3 bg-[#111214] border border-[#2A2B30] rounded-xl">
-                <p className="text-xs text-[#A1A1AA] mb-1">Order ID</p>
-                <p className="text-sm font-mono text-white">
+                <p className="text-[10px] uppercase tracking-wider text-[#A1A1AA] font-semibold mb-1">Order ID</p>
+                <p className="text-xs font-mono text-white">
                   {selectedNotification.orderCode}
                 </p>
               </div>
@@ -195,14 +202,14 @@ export function CustomerHeader() {
 
             {selectedNotification.metadata?.productName && (
               <div className="mb-4 p-3 bg-[#111214] border border-[#2A2B30] rounded-xl">
-                <p className="text-xs text-[#A1A1AA] mb-1">Product</p>
-                <p className="text-sm text-white">
+                <p className="text-[10px] uppercase tracking-wider text-[#A1A1AA] font-semibold mb-1">Product</p>
+                <p className="text-xs text-white">
                   {selectedNotification.metadata.productName}
                 </p>
               </div>
             )}
 
-            <div className="text-xs text-[#A1A1AA] mb-4">
+            <div className="text-[11px] text-[#A1A1AA] mb-4">
               {selectedNotification.createdAt
                 ? new Date(selectedNotification.createdAt).toLocaleString()
                 : "Just now"}
@@ -210,13 +217,15 @@ export function CustomerHeader() {
 
             <button
               onClick={() => setSelectedNotification(null)}
-              className="w-full bg-[#F97316] hover:bg-[#EA580C] text-white py-2.5 rounded-xl font-semibold transition cursor-pointer"
+              className="w-full bg-[#F97316] hover:bg-[#EA580C] text-white py-2.5 rounded-xl font-bold text-xs transition cursor-pointer"
             >
               Close
             </button>
           </div>
         </div>
       )}
-    </div>
+    </header>
   );
 }
+
+export default CustomerHeader;

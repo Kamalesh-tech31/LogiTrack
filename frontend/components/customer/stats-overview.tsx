@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { ShoppingCart, Package, Clock, IndianRupee } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { customerStats } from "@/lib/mock-data";
 import { fetchDashboardStats } from "@/lib/api";
 
@@ -11,29 +10,29 @@ const defaultStats = [
     label: "Total Orders",
     value: customerStats.totalOrders.toLocaleString(),
     icon: ShoppingCart,
-    color: "text-blue-600",
-    bgColor: "bg-blue-100",
+    color: "text-[#F97316]",
+    bgColor: "bg-[#F97316]/10",
   },
   {
-    label: "Items",
+    label: "Items Ordered",
     value: customerStats.items.toString(),
     icon: Package,
-    color: "text-emerald-600",
-    bgColor: "bg-emerald-100",
+    color: "text-emerald-400",
+    bgColor: "bg-emerald-500/10",
   },
   {
-    label: "Pending",
+    label: "Pending Deliveries",
     value: customerStats.pending.toLocaleString(),
     icon: Clock,
-    color: "text-amber-600",
-    bgColor: "bg-amber-100",
+    color: "text-amber-400",
+    bgColor: "bg-amber-500/10",
   },
   {
-    label: "Revenue",
+    label: "Total Spend",
     value: `₹${customerStats.revenue.toLocaleString()}`,
     icon: IndianRupee,
-    color: "text-primary",
-    bgColor: "bg-primary/10",
+    color: "text-[#FDBA74]",
+    bgColor: "bg-[#FDBA74]/10",
   },
 ];
 
@@ -54,33 +53,33 @@ export function StatsOverview() {
                 backendStats.totalOrders?.toLocaleString() ||
                 customerStats.totalOrders.toLocaleString(),
               icon: ShoppingCart,
-              color: "text-blue-600",
-              bgColor: "bg-blue-100",
+              color: "text-[#F97316]",
+              bgColor: "bg-[#F97316]/10",
             },
             {
-              label: "Items",
+              label: "Items Ordered",
               value: (
                 backendStats.totalItems || customerStats.items
               ).toString(),
               icon: Package,
-              color: "text-emerald-600",
-              bgColor: "bg-emerald-100",
+              color: "text-emerald-400",
+              bgColor: "bg-emerald-500/10",
             },
             {
-              label: "Pending",
+              label: "Pending Deliveries",
               value: (
                 backendStats.pendingOrders || customerStats.pending
               ).toLocaleString(),
               icon: Clock,
-              color: "text-amber-600",
-              bgColor: "bg-amber-100",
+              color: "text-amber-400",
+              bgColor: "bg-amber-500/10",
             },
             {
-              label: "Revenue",
+              label: "Total Spend",
               value: `₹${(backendStats.totalRevenue || customerStats.revenue).toLocaleString()}`,
               icon: IndianRupee,
-              color: "text-primary",
-              bgColor: "bg-primary/10",
+              color: "text-[#FDBA74]",
+              bgColor: "bg-[#FDBA74]/10",
             },
           ]);
         }
@@ -95,30 +94,41 @@ export function StatsOverview() {
   }, []);
 
   return (
-    <section>
-      <h2 className="mb-4 text-lg font-semibold text-foreground">
-        Customer Overview
-      </h2>
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <section className="space-y-4">
+      <div>
+        <p className="text-[11px] uppercase tracking-[0.25em] text-[#A1A1AA] font-mono">
+          Account Telemetry
+        </p>
+        <h2 className="text-xl font-bold text-white font-display tracking-tight mt-0.5">
+          Activity Overview
+        </h2>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {stats.map((stat) => (
-          <Card
+          <div
             key={stat.label}
-            className="border border-[#2A2B30] bg-[#1A1B1E] shadow-sm hover:border-[#F97316] transition-all"
+            className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-6 shadow-sm hover:border-[#F97316]/50 transition-all duration-200 flex flex-col justify-between"
           >
-            <CardContent className="flex items-center gap-4 p-5 rounded-3xl">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[11px] uppercase tracking-wider font-semibold text-[#A1A1AA]">
+                {stat.label}
+              </p>
               <div
-                className={`flex h-14 w-14 items-center justify-center rounded-2xl ${stat.bgColor}`}
+                className={`flex h-10 w-10 items-center justify-center rounded-2xl border border-[#2A2B30] bg-[#111214] ${stat.color}`}
               >
-                <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                <stat.icon size={18} />
               </div>
-              <div>
-                <p className="text-2xl font-bold text-white">{stat.value}</p>
-                <p className="text-sm text-[#A1A1AA]">{stat.label}</p>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+
+            <p className="text-2xl sm:text-3xl font-extrabold text-white font-display tracking-tight mt-3">
+              {stat.value}
+            </p>
+          </div>
         ))}
       </div>
     </section>
   );
 }
+
+export default StatsOverview;

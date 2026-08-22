@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-import { MapPinned, Bell } from "lucide-react";
+import { Clock, Bell } from "lucide-react";
 import {
   fetchNotifications,
   markNotificationRead,
@@ -11,7 +10,7 @@ import {
 
 const Navbar = () => {
   const [time, setTime] = useState("");
-  const [userName, setUserName] = useState("Agent");
+  const [userName, setUserName] = useState("Delivery Agent");
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -19,8 +18,9 @@ const Navbar = () => {
     useState<AppNotification | null>(null);
 
   useEffect(() => {
+    setTime(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
     const interval = setInterval(() => {
-      setTime(new Date().toLocaleTimeString());
+      setTime(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
     }, 1000);
 
     const name = localStorage.getItem("userName");
@@ -79,34 +79,44 @@ const Navbar = () => {
   };
 
   return (
-    <div className="w-full h-20 bg-[#1A1B1E] border-b border-[#2A2B30] px-8 flex items-center justify-between">
-      <div>
-        <h1 className="text-2xl font-bold text-white">Delivery Dashboard</h1>
-        <p className="text-[#A1A1AA] text-sm mt-1">
-          Welcome back, {userName}
-        </p>
+    <header className="w-full h-18 bg-[#1A1B1E]/90 backdrop-blur-xl border-b border-[#2A2B30] px-6 lg:px-8 flex items-center justify-between z-20 shrink-0">
+      {/* Left: Refined Workspace Context with Vertical Accent Bar */}
+      <div className="flex items-center gap-3">
+        <div className="w-[3px] h-6 rounded-full bg-gradient-to-b from-[#F97316] to-[#EA580C] shadow-[0_0_8px_rgba(249,115,22,0.4)] shrink-0" />
+        <div className="flex flex-col justify-center">
+          <p className="text-[11px] font-mono font-semibold uppercase tracking-[0.22em] text-[#F4F4F5] leading-none">
+            Delivery Console
+          </p>
+          <p className="text-[10px] text-[#A1A1AA]/60 font-sans tracking-normal mt-1">
+            LogiTrack Fleet Network
+          </p>
+        </div>
       </div>
 
-      <div className="flex items-center gap-5">
-        <div className="flex items-center gap-2 rounded-2xl border border-[#2A2B30] px-4 py-3 bg-[#111214]">
-          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-sm text-[#A1A1AA]">Agent Online</span>
+      {/* Right: Status & Utilities */}
+      <div className="flex items-center gap-3 sm:gap-4">
+        {/* Agent Status Pill */}
+        <div className="hidden sm:flex items-center gap-2 rounded-2xl border border-[#2A2B30] px-3.5 py-1.5 bg-[#111214]">
+          <div className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse" />
+          <span className="text-xs font-semibold text-[#A1A1AA]">Online</span>
         </div>
 
-        <div className="flex items-center gap-2 rounded-2xl border border-[#2A2B30] px-4 py-3 bg-[#111214]">
-          <MapPinned size={16} className="text-[#A1A1AA]" />
-          <span className="text-sm text-white">{time || "--:--:--"}</span>
+        {/* Live Clock Pill */}
+        <div className="hidden md:flex items-center gap-2 rounded-2xl border border-[#2A2B30] px-3.5 py-1.5 bg-[#111214]">
+          <Clock size={13} className="text-[#F97316]" />
+          <span className="text-xs font-mono font-medium text-white">{time || "--:--:--"}</span>
         </div>
 
+        {/* Notifications Drawer Button */}
         <div className="relative">
           <button
             type="button"
             aria-label="Notifications"
             title="Notifications"
             onClick={() => setIsNotifOpen((s) => !s)}
-            className="w-12 h-12 rounded-2xl bg-[#111214] border border-[#2A2B30] flex items-center justify-center text-[#A1A1AA] hover:bg-[#F97316] hover:text-white transition-all cursor-pointer"
+            className="w-9 h-9 rounded-2xl bg-[#111214] border border-[#2A2B30] flex items-center justify-center text-[#A1A1AA] hover:border-[#F97316]/60 hover:text-white transition-all cursor-pointer shadow-sm"
           >
-            <Bell size={20} aria-hidden="true" />
+            <Bell size={16} aria-hidden="true" />
             {unreadCount > 0 && (
               <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#F97316] px-1 text-[10px] font-bold text-white shadow-[0_0_8px_rgba(249,115,22,0.6)]">
                 {unreadCount}
@@ -115,33 +125,33 @@ const Navbar = () => {
           </button>
 
           {isNotifOpen && (
-            <div className="absolute right-0 mt-3 w-80 rounded-3xl bg-[#111214] border border-[#2A2B30] shadow-xl z-20">
-              <div className="flex items-center justify-between p-4 border-b border-[#2A2B30]">
-                <div>
-                  <p className="text-sm text-[#A1A1AA]">Notifications</p>
-                  <p className="text-xs text-[#A1A1AA]">
-                    {unreadCount} unread
-                  </p>
-                </div>
+            <div className="absolute right-0 mt-3 w-80 rounded-3xl bg-[#111214] border border-[#2A2B30] shadow-2xl z-30 p-4 space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-[#2A2B30]">
+                <p className="text-sm font-bold text-white">Notifications</p>
+                <span className="text-xs text-[#A1A1AA]">
+                  {unreadCount} unread
+                </span>
               </div>
-              <div className="space-y-3 p-4">
+              <div className="space-y-2 max-h-64 overflow-y-auto">
                 {notifications.slice(0, 5).map((item) => (
                   <div
                     key={item._id}
-                    className={`rounded-2xl border p-3 transition-colors hover:border-[#F97316] cursor-pointer ${item.isRead ? "border-[#2A2B30]" : "border-[#F97316]/40 bg-[#F97316]/5"}`}
+                    className={`rounded-2xl border p-3 transition-colors hover:border-[#F97316] cursor-pointer ${
+                      item.isRead ? "border-[#2A2B30] bg-[#1A1B1E]/40" : "border-[#F97316]/40 bg-[#F97316]/10"
+                    }`}
                     role="button"
                     tabIndex={0}
                     onClick={() => void handleOpenNotification(item)}
                   >
-                    <p className="text-white font-semibold">{item.title}</p>
-                    <p className="text-sm text-[#A1A1AA] mt-1">
+                    <p className="text-white font-semibold text-xs">{item.title}</p>
+                    <p className="text-xs text-[#A1A1AA] mt-1 leading-relaxed">
                       {item.message}
                     </p>
                   </div>
                 ))}
                 {notifications.length === 0 && (
-                  <div className="text-sm text-[#A1A1AA]">
-                    No notifications available
+                  <div className="text-xs text-[#A1A1AA] text-center py-4">
+                    No new notifications
                   </div>
                 )}
               </div>
@@ -149,17 +159,18 @@ const Navbar = () => {
           )}
         </div>
 
-        <div className="flex items-center gap-3 bg-[#111214] border border-[#2A2B30] px-4 py-2 rounded-2xl">
-          <div className="w-10 h-10 rounded-full bg-[#F97316] flex items-center justify-center text-white font-bold shadow-[0_0_10px_rgba(249,115,22,0.4)]">
+        {/* User Identity Capsule */}
+        <div className="flex items-center gap-2.5 bg-[#111214] border border-[#2A2B30] px-3.5 py-1.5 rounded-2xl">
+          <div className="w-7 h-7 rounded-xl bg-[#F97316]/20 border border-[#F97316]/40 flex items-center justify-center text-[#F97316] font-bold text-xs">
             {userName[0]?.toUpperCase() || "A"}
           </div>
-          <div>
-            <h3 className="text-white font-medium">{userName}</h3>
-            <p className="text-[#A1A1AA] text-sm">Delivery Agent</p>
+          <div className="hidden sm:block text-left">
+            <h2 className="text-white font-semibold text-xs leading-none">{userName}</h2>
+            <p className="text-[#A1A1AA] text-[10px] mt-0.5">Delivery Agent</p>
           </div>
         </div>
       </div>
-    </div>
+    </header>
   );
 };
 
