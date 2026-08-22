@@ -94,15 +94,15 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const adminKey =
     typeof window !== "undefined" ? sessionStorage.getItem("admin_auth") : null;
 
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    Authorization: token ? `Bearer ${token}` : "",
-    ...(init?.headers as Record<string, string> || {}),
-  };
+  const isFormData =
+    typeof FormData !== "undefined" && init?.body instanceof FormData;
 
-  if (adminKey) {
-    headers["x-admin-key"] = adminKey;
-  }
+  const headers: Record<string, string> = {
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(adminKey ? { "x-admin-key": adminKey } : {}),
+    ...((init?.headers as Record<string, string>) || {}),
+  };
 
   const response = await fetch(`${getApiBaseUrl()}${path}`, {
     ...init,
@@ -110,7 +110,12 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    const errorBody = await response.json().catch(() => null);
+    let errorBody: any = null;
+    try {
+      errorBody = await response.json();
+    } catch {
+      errorBody = null;
+    }
 
     throw new Error(
       errorBody?.message ||
@@ -119,7 +124,12 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
     );
   }
 
-  const json = await response.json();
+  let json: any = null;
+  try {
+    json = await response.json();
+  } catch {
+    throw new Error("Invalid response received from server. Please try again.");
+  }
 
   if (json && typeof json === "object" && "data" in json) {
     return json.data as T;
@@ -170,14 +180,19 @@ export async function requestRegistrationOtp(email: string): Promise<{
     expiresAt: string;
   }>("/api/auth/register/request-otp", {
     method: "POST",
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({ email: email.trim().toLowerCase() }),
   });
 }
 
-export async function verifyRegistrationOtp(payload: {
-  email: string;
-  otp: string;
-}): Promise<{ email: string; registrationToken: string }> {
+export async function verifyRegistrationOtp(
+  payloadOrEmail: { email: string; otp: string } | string,
+  otpCode?: string,
+): Promise<{ email: string; registrationToken: string }> {
+  const payload =
+    typeof payloadOrEmail === "string"
+      ? { email: payloadOrEmail.trim().toLowerCase(), otp: (otpCode || "").trim() }
+      : { email: payloadOrEmail.email.trim().toLowerCase(), otp: payloadOrEmail.otp.trim() };
+
   return apiRequest<{ email: string; registrationToken: string }>(
     "/api/auth/register/verify-otp",
     {
@@ -187,17 +202,23 @@ export async function verifyRegistrationOtp(payload: {
   );
 }
 
-export async function completeRegistration(payload: {
-  registrationToken: string;
-  fullName: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-  role: string;
-}): Promise<any> {
+export async function completeRegistration(
+  payload:
+    | FormData
+    | {
+        registrationToken: string;
+        fullName: string;
+        email: string;
+        password: string;
+        confirmPassword?: string;
+        role: string;
+      },
+): Promise<any> {
+  const isFormData = typeof FormData !== "undefined" && payload instanceof FormData;
+
   return apiRequest<any>("/api/auth/register", {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: isFormData ? payload : JSON.stringify(payload),
   });
 }
 

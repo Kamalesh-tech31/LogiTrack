@@ -77,16 +77,16 @@ export default function CustomerCartPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {cart.length === 0 ? (
-                <div className="rounded-3xl border border-dashed border-[#27272A] bg-[#111111] p-10 text-center text-muted-foreground">
-                  <p className="text-lg font-medium text-foreground">
+                <div className="rounded-3xl border border-dashed border-[#2A2B30] bg-[#1A1B1E] p-10 text-center text-muted-foreground">
+                  <p className="text-lg font-medium text-white">
                     Your cart is empty.
                   </p>
-                  <p className="mt-2 text-sm">
+                  <p className="mt-2 text-sm text-[#A1A1AA]">
                     Browse products and add items to your cart.
                   </p>
                   <Link
                     href="/customer/products"
-                    className="mt-4 inline-flex rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+                    className="mt-4 inline-flex rounded-full bg-[#F97316] px-5 py-2 text-sm font-semibold text-white hover:bg-[#EA580C] transition shadow-[0_0_12px_rgba(249,115,22,0.3)]"
                   >
                     Browse Products
                   </Link>
@@ -96,17 +96,17 @@ export default function CustomerCartPage() {
                   {cart.map((item) => (
                     <div
                       key={item.id}
-                      className="rounded-3xl border border-[#27272A] bg-[#111111] p-4"
+                      className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-5 shadow-sm"
                     >
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-sm text-[#A1A1AA]">
                             {item.category}
                           </p>
                           <p className="text-lg font-semibold text-white">
                             {item.name}
                           </p>
-                          <p className="mt-1 text-sm text-muted-foreground">
+                          <p className="mt-1 text-sm text-[#A1A1AA]">
                             ₹{item.price.toLocaleString()} each
                           </p>
                         </div>
@@ -126,7 +126,7 @@ export default function CustomerCartPage() {
                                   handleQuantityChange(item.id, value);
                                 }
                               }}
-                              className="w-20 bg-[#0B0B0B] border border-[#27272A] text-white"
+                              className="w-20 bg-[#111214] border border-[#2A2B30] text-white"
                             />
                             <span className="text-sm text-muted-foreground">
                               Qty

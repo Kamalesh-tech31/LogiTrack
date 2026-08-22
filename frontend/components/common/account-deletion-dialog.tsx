@@ -97,7 +97,7 @@ export function AccountDeletionDialog({
         variant="outline"
         className={
           buttonClassName ||
-          "w-full justify-start border-[#7F1D1D]/50 bg-[#7F1D1D]/10 text-[#FCA5A5] hover:bg-[#7F1D1D]/20 hover:text-white"
+          "w-full justify-start border-red-900/40 bg-red-950/20 text-red-300 hover:bg-red-950/40 hover:text-white"
         }
         onClick={() => handleOpenChange(true)}
       >
@@ -111,17 +111,17 @@ export function AccountDeletionDialog({
       {trigger}
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="border-neutral-800 bg-[#111111] text-white sm:max-w-xl">
+        <DialogContent className="border-[#2A2B30] bg-[#1A1B1E] text-white sm:max-w-xl">
           <DialogHeader>
             <div className="flex items-center gap-3 text-red-400">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-500/10">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-500/10 border border-red-500/20">
                 <AlertTriangle size={18} />
               </div>
               <div>
                 <DialogTitle className="text-xl text-white">
                   Delete account permanently
                 </DialogTitle>
-                <DialogDescription className="mt-1 text-neutral-400">
+                <DialogDescription className="mt-1 text-[#A1A1AA]">
                   This will permanently delete your {roleLabel.toLowerCase()} account and sign you out.
                 </DialogDescription>
               </div>
@@ -129,35 +129,35 @@ export function AccountDeletionDialog({
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-4 text-sm text-red-100">
+            <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">
               Account deletion cannot be undone. Active records will be updated to keep the system consistent.
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="current-password">Current password</Label>
+              <Label htmlFor="current-password" className="text-[#A1A1AA]">Current password</Label>
               <PasswordInput
                 id="current-password"
                 value={currentPassword}
                 onChange={(event) => setCurrentPassword(event.target.value)}
                 placeholder="Enter your current password"
-                className="w-full rounded-2xl border border-neutral-800 bg-[#0B0B0B] px-4 py-3 text-white placeholder:text-neutral-500 focus:border-[#7F1D1D]"
+                className="w-full rounded-2xl border border-[#2A2B30] bg-[#111214] px-4 py-3 text-white placeholder:text-[#A1A1AA] focus:border-red-500"
                 disabled={isDeleting}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirm-delete">Type confirmation phrase</Label>
+              <Label htmlFor="confirm-delete" className="text-[#A1A1AA]">Type confirmation phrase</Label>
               <Input
                 id="confirm-delete"
                 value={confirmText}
                 onChange={(event) => setConfirmText(event.target.value)}
                 placeholder={CONFIRM_TEXT}
-                className="border-neutral-800 bg-[#0B0B0B]"
+                className="border-[#2A2B30] bg-[#111214] text-white focus:border-red-500"
                 disabled={isDeleting}
               />
             </div>
 
-            <Separator className="bg-neutral-800" />
+            <Separator className="bg-[#2A2B30]" />
 
             {error ? (
               <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">

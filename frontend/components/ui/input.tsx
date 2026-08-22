@@ -18,16 +18,16 @@ export function Input({
       placeholder={placeholder}
       className={`
         w-full
-        bg-[#0B0B0B]
+        bg-[#1A1B1E]
         border
-        border-neutral-800
-        focus:border-[#7F1D1D]
+        border-[#2A2B30]
+        focus:border-[#F97316]
         outline-none
         px-4
         py-3
         rounded-2xl
-        text-white
-        placeholder:text-neutral-500
+        text-[#F4F4F5]
+        placeholder:text-[#A1A1AA]
         transition-all
         ${className}
       `}

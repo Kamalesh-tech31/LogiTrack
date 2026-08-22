@@ -110,11 +110,11 @@ export default function CustomerDashboard() {
             return (
               <Card
                 key={stat.label}
-                className="border border-[#27272A] bg-[#1A1A1A] shadow-sm"
+                className="border border-[#2A2B30] bg-[#1A1B1E] shadow-sm hover:border-[#F97316] transition-all"
               >
                 <CardContent className="flex items-center justify-between gap-4 p-5 rounded-3xl">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">
+                    <p className="text-sm font-medium text-[#A1A1AA]">
                       {stat.label}
                     </p>
                     <p className="mt-2 text-3xl font-bold text-white">
@@ -124,7 +124,7 @@ export default function CustomerDashboard() {
                       {stat.description}
                     </p>
                   </div>
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#27272A] text-primary">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F97316]/15 border border-[#F97316]/30 text-[#F97316]">
                     <Icon className="h-6 w-6" />
                   </div>
                 </CardContent>
@@ -137,16 +137,16 @@ export default function CustomerDashboard() {
       <section className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-foreground">
+            <h2 className="text-lg font-semibold text-white">
               Featured Products
             </h2>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-[#A1A1AA]">
               Newest products available for order.
             </p>
           </div>
           <Link
             href="/customer/products"
-            className="text-sm font-medium text-[#F87171] hover:underline"
+            className="text-sm font-medium text-[#F97316] hover:text-[#EA580C] transition"
           >
             View All
           </Link>
@@ -156,10 +156,10 @@ export default function CustomerDashboard() {
           {featuredProducts.map((product) => (
             <Card
               key={product.id || product._id || product.name}
-              className="group overflow-hidden border border-[#27272A] bg-[#111111] shadow-sm"
+              className="group overflow-hidden border border-[#2A2B30] bg-[#1A1B1E] shadow-sm hover:border-[#F97316] transition-all"
             >
               <CardContent className="p-0 rounded-3xl">
-                <div className="relative aspect-square overflow-hidden bg-[#0B0B0B]">
+                <div className="relative aspect-square overflow-hidden bg-[#111214]">
                   <Image
                     src={
                       product.image ||
@@ -182,7 +182,7 @@ export default function CustomerDashboard() {
                     <span className="text-lg font-bold text-white">
                       ₹{Number(product.price ?? 0).toLocaleString()}
                     </span>
-                    <span className="rounded-full bg-[#27272A] px-3 py-1 text-xs text-white">
+                    <span className="rounded-full bg-[#F97316]/15 border border-[#F97316]/30 px-3 py-1 text-xs text-[#FDBA74]">
                       New
                     </span>
                   </div>
@@ -192,26 +192,26 @@ export default function CustomerDashboard() {
           ))}
 
           {featuredProducts.length === 0 && !loadingProducts && (
-            <div className="col-span-full rounded-3xl border border-[#27272A] bg-[#111111] p-8 text-center text-muted-foreground">
+            <div className="col-span-full rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-8 text-center text-[#A1A1AA]">
               No products are available right now.
             </div>
           )}
         </div>
 
-        <Card className="border border-[#27272A] bg-[#111111] shadow-sm">
+        <Card className="border border-[#2A2B30] bg-[#1A1B1E] shadow-sm">
           <CardContent>
             <div className="flex items-center justify-between pb-4">
               <div>
-                <h2 className="text-lg font-semibold text-foreground">
+                <h2 className="text-lg font-semibold text-white">
                   Recent Orders
                 </h2>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-[#A1A1AA]">
                   Latest 5 orders from your account.
                 </p>
               </div>
               <Link
                 href="/customer/orders"
-                className="text-sm font-medium text-primary hover:underline"
+                className="text-sm font-medium text-[#F97316] hover:text-[#EA580C] transition"
               >
                 View All
               </Link>
@@ -220,7 +220,7 @@ export default function CustomerDashboard() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-border text-left text-sm text-muted-foreground">
+                  <tr className="border-b border-[#2A2B30] text-left text-sm text-[#A1A1AA]">
                     <th className="px-6 py-3 font-medium">Order ID</th>
                     <th className="px-6 py-3 font-medium">Status</th>
                     <th className="px-6 py-3 text-right font-medium">Amount</th>
@@ -239,14 +239,14 @@ export default function CustomerDashboard() {
                       : "Unknown";
 
                     return (
-                      <tr key={orderId || String(index)} className="border-b border-border last:border-0">
-                        <td className="px-6 py-4 font-medium text-foreground">
+                      <tr key={orderId || String(index)} className="border-b border-[#2A2B30] last:border-0 hover:bg-[#111214]/60 transition">
+                        <td className="px-6 py-4 font-medium text-white">
                           {orderId || "-"}
                         </td>
-                        <td className="px-6 py-4 text-muted-foreground">
+                        <td className="px-6 py-4 text-[#A1A1AA]">
                           {statusText}
                         </td>
-                        <td className="px-6 py-4 text-right font-medium text-foreground">
+                        <td className="px-6 py-4 text-right font-medium text-white">
                           {amountValue != null ? `₹${amountValue.toLocaleString()}` : "-"}
                         </td>
                       </tr>
@@ -256,7 +256,7 @@ export default function CustomerDashboard() {
               </table>
 
               {recentOrders.length === 0 && !loadingOrders && (
-                <div className="rounded-3xl border border-[#27272A] bg-[#111111] p-6 text-center text-muted-foreground">
+                <div className="rounded-3xl border border-[#2A2B30] bg-[#111214] p-6 text-center text-[#A1A1AA]">
                   No orders found.
                 </div>
               )}

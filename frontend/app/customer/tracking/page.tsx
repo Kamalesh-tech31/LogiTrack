@@ -380,17 +380,17 @@ function TrackingContent() {
                     </div>
                   ) : deliveryRoute ? (
                     <div className="space-y-4">
-                      <div className="rounded-2xl border border-[#27272A] bg-[#111111] p-5">
+                      <div className="rounded-2xl border border-[#2A2B30] bg-[#1A1B1E] p-5 shadow-sm">
                         <div className="flex items-center gap-2 text-sm text-[#A1A1AA]">
-                          <MapPin className="h-4 w-4" />
+                          <MapPin className="h-4 w-4 text-[#F97316]" />
                           <p>Delivery partner location</p>
                         </div>
-                        <p className="mt-3 text-lg font-semibold text-foreground">
+                        <p className="mt-3 text-lg font-semibold text-white">
                           {deliveryRoute.currentPosition?.formattedAddress ||
                             deliveryRoute.currentPosition?.displayName ||
                             "Current driver location"}
                         </p>
-                        <p className="mt-2 text-sm text-muted-foreground">
+                        <p className="mt-2 text-sm text-[#A1A1AA]">
                           {deliveryRoute.currentPosition?.city
                             ? `${deliveryRoute.currentPosition.city}, ${deliveryRoute.currentPosition.state}`
                             : deliveryRoute.currentPosition?.formattedAddress ||
@@ -398,17 +398,17 @@ function TrackingContent() {
                         </p>
                       </div>
 
-                      <div className="rounded-2xl border border-[#27272A] bg-[#111111] p-5">
+                      <div className="rounded-2xl border border-[#2A2B30] bg-[#1A1B1E] p-5 shadow-sm">
                         <p className="text-sm text-[#A1A1AA]">
                           Delivery destination
                         </p>
-                        <p className="mt-3 text-lg font-semibold text-foreground">
+                        <p className="mt-3 text-lg font-semibold text-white">
                           {deliveryRoute.destination?.name ||
                             deliveryRoute.destination?.formattedAddress ||
                             selectedOrder.customer}
                         </p>
                         {deliveryRoute.destination?.formattedAddress && (
-                          <p className="mt-2 text-sm text-muted-foreground">
+                          <p className="mt-2 text-sm text-[#A1A1AA]">
                             {deliveryRoute.destination.formattedAddress}
                           </p>
                         )}

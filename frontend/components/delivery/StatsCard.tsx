@@ -9,20 +9,21 @@ const StatsCard = ({ title, value, description, trend }: Props) => {
   return (
     <div
       className="
-        bg-[#111111]
+        bg-[#1A1B1E]
         border
-        border-neutral-900
+        border-[#2A2B30]
         rounded-3xl
         p-6
-        hover:border-[#7F1D1D]
+        hover:border-[#F97316]
         transition-all
         duration-300
+        shadow-sm
       "
     >
       {/* TOP */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-neutral-500 text-sm">{title}</p>
+          <p className="text-[#A1A1AA] text-sm">{title}</p>
           <h2 className="text-3xl font-bold text-white mt-3">{value}</h2>
         </div>
 
@@ -32,13 +33,13 @@ const StatsCard = ({ title, value, description, trend }: Props) => {
               w-14
               h-14
               rounded-2xl
-              bg-[#7F1D1D]/20
+              bg-[#F97316]/15
               border
-              border-[#7F1D1D]
+              border-[#F97316]/40
               flex
               items-center
               justify-center
-              text-[#DC2626]
+              text-[#F97316]
             "
           >
             <span className="text-sm font-semibold">{trend}</span>
@@ -49,7 +50,7 @@ const StatsCard = ({ title, value, description, trend }: Props) => {
       {/* BOTTOM */}
       {description ? (
         <div className="mt-4">
-          <p className="text-neutral-400 text-sm">{description}</p>
+          <p className="text-[#A1A1AA] text-sm">{description}</p>
         </div>
       ) : null}
     </div>

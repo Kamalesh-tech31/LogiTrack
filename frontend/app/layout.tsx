@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "react-hot-toast";
 
@@ -7,24 +7,23 @@ import { ThemeProvider } from "@/components/theme-provider";
 
 import "./globals.css";
 
-const geist = Geist({
+const displayFont = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  variable: "--font-geist-sans",
+  variable: "--font-display",
+  weight: ["500", "600", "700", "800"],
 });
 
-const geistMono = Geist_Mono({
+const sansFont = Inter({
   subsets: ["latin"],
-  variable: "--font-geist-mono",
+  variable: "--font-sans",
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
   title: "LogiTrack - Smart Logistics Platform",
-
   description:
     "Track orders, manage deliveries, and monitor logistics with AI-powered insights",
-
   generator: "v0.app",
-
   icons: {
     icon: [
       {
@@ -40,7 +39,6 @@ export const metadata: Metadata = {
         type: "image/svg+xml",
       },
     ],
-
     apple: "/apple-icon.png",
   },
 };
@@ -53,13 +51,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geist.variable} ${geistMono.variable} font-sans antialiased`}
+        className={`${displayFont.variable} ${sansFont.variable} font-sans antialiased`}
       >
         <ThemeProvider>
           <Toaster position="top-right" />
-
           {children}
-
           {process.env.NODE_ENV === "production" && <Analytics />}
         </ThemeProvider>
       </body>

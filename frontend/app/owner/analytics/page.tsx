@@ -243,15 +243,15 @@ export default function AnalyticsPage() {
                           "Revenue",
                         ]}
                         contentStyle={{
-                          backgroundColor: "#111111",
-                          border: "1px solid #2d2d2d",
-                          borderRadius: 12,
+                          backgroundColor: "#111214",
+                          border: "1px solid #2A2B30",
+                          borderRadius: 16,
                           color: "#fff",
                         }}
                       />
                       <Bar
                         dataKey="value"
-                        fill="#ef4444"
+                        fill="#F97316"
                         radius={[12, 12, 0, 0]}
                       />
                     </BarChart>
@@ -298,9 +298,9 @@ export default function AnalyticsPage() {
                           "Delivered Orders",
                         ]}
                         contentStyle={{
-                          backgroundColor: "#111111",
-                          border: "1px solid #2d2d2d",
-                          borderRadius: 12,
+                          backgroundColor: "#111214",
+                          border: "1px solid #2A2B30",
+                          borderRadius: 16,
                           color: "#fff",
                         }}
                       />
@@ -322,7 +322,7 @@ export default function AnalyticsPage() {
                 <CardTitle className="text-lg">Last 30 Days Orders</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="rounded-3xl bg-[#0B0B0B] p-4">
+                <div className="rounded-3xl bg-[#111214] border border-[#2A2B30] p-4">
                   <p className="text-sm text-muted-foreground">
                     Last 30 days total orders
                   </p>
@@ -330,7 +330,7 @@ export default function AnalyticsPage() {
                     {analytics.last30Orders.toLocaleString()}
                   </p>
                 </div>
-                <div className="rounded-3xl bg-[#0B0B0B] p-4">
+                <div className="rounded-3xl bg-[#111214] border border-[#2A2B30] p-4">
                   <p className="text-sm text-muted-foreground">
                     Last 30 days delivered
                   </p>
@@ -348,7 +348,7 @@ export default function AnalyticsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="rounded-3xl bg-[#0B0B0B] p-4">
+                <div className="rounded-3xl bg-[#111214] border border-[#2A2B30] p-4">
                   <p className="text-sm text-muted-foreground">
                     Previous 30 days total orders
                   </p>
@@ -356,7 +356,7 @@ export default function AnalyticsPage() {
                     {analytics.prev30Orders.toLocaleString()}
                   </p>
                 </div>
-                <div className="rounded-3xl bg-[#0B0B0B] p-4">
+                <div className="rounded-3xl bg-[#111214] border border-[#2A2B30] p-4">
                   <p className="text-sm text-muted-foreground">
                     Previous 30 days delivered
                   </p>

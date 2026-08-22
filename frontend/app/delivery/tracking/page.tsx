@@ -358,7 +358,7 @@ export default function TrackingPage() {
           </p>
         </div>
 
-        <div className="rounded-2xl border border-[#27272A] bg-[#1A1A1A] px-4 py-3">
+        <div className="rounded-2xl border border-[#2A2B30] bg-[#1A1B1E] px-4 py-3">
           <p className="text-sm text-[#A1A1AA]">Active route</p>
           <p className="text-lg font-semibold text-white mt-1">
             {activeRoute?.customer || "No active route available"}
@@ -366,9 +366,9 @@ export default function TrackingPage() {
         </div>
       </div>
 
-      <div className="bg-[#1A1A1A] border border-[#27272A] rounded-2xl p-5 mt-8">
+      <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-2xl p-5 mt-8 shadow-sm">
         <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-2xl bg-[#111111] border border-[#27272A] p-5">
+          <div className="rounded-2xl bg-[#111214] border border-[#2A2B30] p-5">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-sm text-[#A1A1AA]">Map preview</p>
@@ -386,7 +386,7 @@ export default function TrackingPage() {
               </span>
             </div>
 
-            <div className="mt-4 rounded-2xl border border-[#27272A] bg-[#0B0B0B] p-4 min-h-100 flex flex-col">
+            <div className="mt-4 rounded-2xl border border-[#2A2B30] bg-[#1A1B1E] p-4 min-h-100 flex flex-col">
               {showMap && locationDetails ? (
                 <>
                   <div className="mb-4">
@@ -397,13 +397,13 @@ export default function TrackingPage() {
                       <p className="text-white text-lg font-semibold mt-2">
                         {locationDetails.displayName}
                       </p>
-                      <p className="text-[#D5D5D5] mt-1">
+                      <p className="text-[#A1A1AA] mt-1">
                         {locationDetails.formattedAddress}
                       </p>
                     </div>
 
                     {activeRoute && (
-                      <div className="bg-[#0B0B0B] border border-[#27272A] rounded-xl p-3 mt-3">
+                      <div className="bg-[#111214] border border-[#2A2B30] rounded-xl p-3 mt-3">
                         <p className="text-sm text-[#A1A1AA]">
                           Customer Delivery Address
                         </p>
@@ -415,18 +415,18 @@ export default function TrackingPage() {
                     )}
 
                     {activeRoute && routeInfo && (
-                      <div className="bg-[#0B0B0B] border border-[#27272A] rounded-xl p-3 mt-3">
+                      <div className="bg-[#111214] border border-[#2A2B30] rounded-xl p-3 mt-3">
                         <p className="text-sm text-[#A1A1AA]">Route summary</p>
                         <div className="grid grid-cols-2 gap-3 mt-3">
-                          <div className="rounded-lg bg-[#111111] p-3">
+                          <div className="rounded-lg bg-[#1A1B1E] p-3 border border-[#2A2B30]">
                             <p className="text-[#A1A1AA] text-xs">Distance</p>
-                            <p className="text-white font-bold text-lg mt-1">
+                            <p className="text-[#F97316] font-bold text-lg mt-1">
                               {routeInfo.distance} km
                             </p>
                           </div>
-                          <div className="rounded-lg bg-[#111111] p-3">
+                          <div className="rounded-lg bg-[#1A1B1E] p-3 border border-[#2A2B30]">
                             <p className="text-[#A1A1AA] text-xs">Est. Time</p>
-                            <p className="text-white font-bold text-lg mt-1">
+                            <p className="text-[#F97316] font-bold text-lg mt-1">
                               {routeInfo.duration} min
                             </p>
                           </div>
@@ -435,14 +435,14 @@ export default function TrackingPage() {
                     )}
 
                     <div className="grid grid-cols-2 gap-3 text-sm mt-3">
-                      <div className="rounded-xl border border-[#27272A] bg-[#111111] p-3">
+                      <div className="rounded-xl border border-[#2A2B30] bg-[#111214] p-3">
                         <p className="text-[#A1A1AA]">Latitude</p>
                         <p className="text-white font-semibold mt-2">
                           {locationDetails.latitude.toFixed(6)}
                         </p>
                       </div>
 
-                      <div className="rounded-xl border border-[#27272A] bg-[#111111] p-3">
+                      <div className="rounded-xl border border-[#2A2B30] bg-[#111214] p-3">
                         <p className="text-[#A1A1AA]">Longitude</p>
                         <p className="text-white font-semibold mt-2">
                           {locationDetails.longitude.toFixed(6)}
@@ -451,7 +451,7 @@ export default function TrackingPage() {
                     </div>
                   </div>
 
-                  <div className="flex-1 rounded-xl border border-[#27272A] overflow-hidden">
+                  <div className="flex-1 rounded-xl border border-[#2A2B30] overflow-hidden">
                     {deliveryMapRoute ? (
                       <DeliveryMap route={deliveryMapRoute} />
                     ) : (
@@ -484,8 +484,8 @@ export default function TrackingPage() {
           <div className="space-y-4">
             <div>
               <label className="text-sm text-[#A1A1AA]">Your Location</label>
-              <div className="mt-2 bg-[#111111] border border-[#27272A] rounded-2xl p-3 text-white">
-                <p className="text-xs text-[#D5D5D5]">
+              <div className="mt-2 bg-[#111214] border border-[#2A2B30] rounded-2xl p-3 text-white">
+                <p className="text-xs text-[#F4F4F5]">
                   Lat: {latitude || "-- "} | Lon: {longitude || "-- "}
                 </p>
               </div>
@@ -495,7 +495,7 @@ export default function TrackingPage() {
               <button
                 onClick={handleUseCurrentLocation}
                 disabled={isLoading}
-                className="bg-[#DC2626] hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-lg disabled:opacity-50"
+                className="bg-[#F97316] hover:bg-[#EA580C] text-white font-semibold px-4 py-2 rounded-xl transition cursor-pointer shadow-[0_0_12px_rgba(249,115,22,0.3)] disabled:opacity-50"
               >
                 {isLoading ? "Getting location..." : "Use current location"}
               </button>
@@ -503,7 +503,7 @@ export default function TrackingPage() {
               <button
                 onClick={() => void handleUpdateLocation()}
                 disabled={isLoading || !latitude || !longitude}
-                className="bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-lg disabled:opacity-50"
+                className="bg-[#F97316] hover:bg-[#EA580C] text-white font-semibold px-4 py-2 rounded-xl transition cursor-pointer shadow-[0_0_12px_rgba(249,115,22,0.3)] disabled:opacity-50"
               >
                 Map
               </button>
@@ -516,24 +516,24 @@ export default function TrackingPage() {
                   setShowMap(false);
                   setRouteInfo(null);
                 }}
-                className="bg-transparent border border-[#27272A] hover:bg-[#111111] text-white px-4 py-2 rounded-lg"
+                className="bg-transparent border border-[#2A2B30] hover:bg-[#111214] text-white px-4 py-2 rounded-xl cursor-pointer transition"
               >
                 Clear
               </button>
             </div>
 
-            <div className="bg-[#111111] border border-[#27272A] rounded-2xl p-4">
+            <div className="bg-[#111214] border border-[#2A2B30] rounded-2xl p-4">
               <p className="text-sm text-[#A1A1AA]">Live status</p>
               <p className="text-white font-semibold mt-2">
                 {locationDetails?.formattedAddress || "Awaiting GPS input"}
               </p>
-              <p className="text-sm text-[#D5D5D5] mt-3">
+              <p className="text-sm text-[#A1A1AA] mt-3">
                 Order: {activeRoute?.customer || "No active order"}
               </p>
-              <p className="text-sm text-[#D5D5D5]">
+              <p className="text-sm text-[#A1A1AA]">
                 Destination: {activeRoute?.address || "No address"}
               </p>
-              <p className="text-sm text-[#D5D5D5] mt-2">
+              <p className="text-sm text-[#A1A1AA] mt-2">
                 Last resolved:{" "}
                 {locationDetails?.timestamp || "No location resolved yet"}
               </p>

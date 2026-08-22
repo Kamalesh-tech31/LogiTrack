@@ -151,58 +151,58 @@ export default function DeliveryPage() {
       {error && <p className="text-red-400">Error: {error}</p>}
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-        <div className="bg-[#111111] border border-[#1F1F1F] rounded-3xl p-6">
+        <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl p-6 shadow-lg">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-400">Total Deliveries</p>
+              <p className="text-[#A1A1AA]">Total Deliveries</p>
               <h2 className="text-5xl font-bold mt-4 text-white">
                 {totalDeliveries}
               </h2>
             </div>
-            <div className="w-16 h-16 rounded-2xl bg-[#7F1D1D]/20 border border-[#7F1D1D] flex items-center justify-center">
-              <Truck className="text-[#EF4444]" size={30} />
+            <div className="w-16 h-16 rounded-2xl bg-[#F97316]/15 border border-[#F97316]/40 flex items-center justify-center">
+              <Truck className="text-[#F97316]" size={30} />
             </div>
           </div>
         </div>
 
-        <div className="bg-[#111111] border border-[#1F1F1F] rounded-3xl p-6">
+        <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl p-6 shadow-lg">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-400">Active Agents</p>
+              <p className="text-[#A1A1AA]">Active Agents</p>
               <h2 className="text-5xl font-bold mt-4 text-white">
                 {activeAgents}
               </h2>
             </div>
-            <div className="w-16 h-16 rounded-2xl bg-[#7F1D1D]/20 border border-[#7F1D1D] flex items-center justify-center">
-              <User className="text-[#EF4444]" size={30} />
+            <div className="w-16 h-16 rounded-2xl bg-[#F97316]/15 border border-[#F97316]/40 flex items-center justify-center">
+              <User className="text-[#F97316]" size={30} />
             </div>
           </div>
         </div>
 
-        <div className="bg-[#111111] border border-[#1F1F1F] rounded-3xl p-6">
+        <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl p-6 shadow-lg">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-400">Pending Orders</p>
+              <p className="text-[#A1A1AA]">Pending Orders</p>
               <h2 className="text-5xl font-bold mt-4 text-white">
                 {pendingOrders}
               </h2>
             </div>
-            <div className="w-16 h-16 rounded-2xl bg-[#7F1D1D]/20 border border-[#7F1D1D] flex items-center justify-center">
-              <Clock3 className="text-[#EF4444]" size={30} />
+            <div className="w-16 h-16 rounded-2xl bg-[#F97316]/15 border border-[#F97316]/40 flex items-center justify-center">
+              <Clock3 className="text-[#F97316]" size={30} />
             </div>
           </div>
         </div>
 
-        <div className="bg-[#111111] border border-[#1F1F1F] rounded-3xl p-6">
+        <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl p-6 shadow-lg">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-400">Success Rate</p>
+              <p className="text-[#A1A1AA]">Success Rate</p>
               <h2 className="text-5xl font-bold mt-4 text-white">
                 {successRate}%
               </h2>
             </div>
-            <div className="w-16 h-16 rounded-2xl bg-[#7F1D1D]/20 border border-[#7F1D1D] flex items-center justify-center">
-              <PackageCheck className="text-[#EF4444]" size={30} />
+            <div className="w-16 h-16 rounded-2xl bg-[#F97316]/15 border border-[#F97316]/40 flex items-center justify-center">
+              <PackageCheck className="text-[#F97316]" size={30} />
             </div>
           </div>
         </div>

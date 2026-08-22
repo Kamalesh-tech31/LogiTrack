@@ -20,9 +20,9 @@ export default function StatsCards({
       title: "Total Registered Users",
       value: totalUsers,
       icon: Users,
-      iconColor: "text-[#EF4444]",
-      badgeBg: "bg-[#7F1D1D]/20",
-      badgeBorder: "border-[#7F1D1D]",
+      iconColor: "text-[#F97316]",
+      badgeBg: "bg-[#F97316]/15",
+      badgeBorder: "border-[#F97316]/40",
       subtext: "Across all system roles",
     },
     {
@@ -62,14 +62,14 @@ export default function StatsCards({
         return (
           <div
             key={card.title}
-            className="bg-[#111111] border border-neutral-900 rounded-3xl p-6 hover:border-[#7F1D1D] transition-all duration-300 shadow-lg"
+            className="bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl p-6 hover:border-[#F97316] transition-all duration-300 shadow-lg"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-neutral-400 text-sm font-medium">
+                <p className="text-[#A1A1AA] text-sm font-medium">
                   {card.title}
                 </p>
-                <h2 className="text-3xl font-bold text-white mt-3">
+                <h2 className="text-3xl font-bold text-[#F4F4F5] mt-3">
                   {card.value}
                 </h2>
               </div>
@@ -81,8 +81,8 @@ export default function StatsCards({
               </div>
             </div>
 
-            <div className="mt-6 pt-4 border-t border-neutral-900/80">
-              <span className="text-neutral-500 text-xs font-medium">
+            <div className="mt-6 pt-4 border-t border-[#2A2B30]/60">
+              <span className="text-[#A1A1AA] text-xs font-medium">
                 {card.subtext}
               </span>
             </div>

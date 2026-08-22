@@ -45,7 +45,7 @@ export function RecentOrders() {
   }, []);
 
   return (
-    <Card className="border border-[#27272A] bg-[#111111] shadow-sm">
+    <Card className="border border-[#2A2B30] bg-[#1A1B1E] shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <h2 className="text-lg font-semibold text-foreground">Recent Orders</h2>
         <Link

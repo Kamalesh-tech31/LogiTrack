@@ -136,20 +136,20 @@ export default function PendingUserCard({
   };
 
   return (
-    <div className="bg-[#111111] border border-neutral-900 rounded-3xl p-7 hover:border-[#7F1D1D]/60 transition-all duration-300 shadow-xl">
+    <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl p-7 hover:border-[#F97316]/50 transition-all duration-300 shadow-xl">
       {/* Header Info */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-neutral-900">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-[#2A2B30]">
         <div>
           <div className="flex items-center gap-3">
-            <h3 className="text-2xl font-bold text-white">{user.fullName}</h3>
-            <span className="inline-flex items-center px-3 py-1 rounded-xl bg-[#7F1D1D]/20 border border-[#7F1D1D]/40 text-[#F87171] text-xs font-semibold">
+            <h3 className="text-2xl font-bold text-[#F4F4F5]">{user.fullName}</h3>
+            <span className="inline-flex items-center px-3 py-1 rounded-xl bg-[#F97316]/15 border border-[#F97316]/30 text-[#FDBA74] text-xs font-semibold">
               {user.role}
             </span>
           </div>
-          <p className="text-neutral-400 text-sm mt-1">{user.email}</p>
+          <p className="text-[#A1A1AA] text-sm mt-1">{user.email}</p>
           {user.businessName && (
-            <p className="text-neutral-500 text-xs mt-1">
-              Business: <span className="text-neutral-300">{user.businessName}</span>
+            <p className="text-[#A1A1AA] text-xs mt-1">
+              Business: <span className="text-[#F4F4F5]">{user.businessName}</span>
               {user.gstNumber && ` | GST: ${user.gstNumber}`}
             </p>
           )}
@@ -165,14 +165,14 @@ export default function PendingUserCard({
 
       {/* Documents Grid */}
       <div className="mt-6">
-        <h4 className="text-sm font-semibold text-neutral-400 uppercase tracking-wider mb-4">
+        <h4 className="text-sm font-semibold text-[#A1A1AA] uppercase tracking-wider mb-4">
           Submitted KYC Documents ({uploadedDocsList.length})
         </h4>
 
         {uploadedDocsList.length === 0 ? (
-          <div className="p-6 rounded-2xl bg-neutral-950 border border-neutral-900 text-center">
-            <FileText className="mx-auto text-neutral-600 mb-2" size={32} />
-            <p className="text-neutral-400 text-sm">
+          <div className="p-6 rounded-2xl bg-[#111214] border border-[#2A2B30] text-center">
+            <FileText className="mx-auto text-[#A1A1AA] mb-2" size={32} />
+            <p className="text-[#A1A1AA] text-sm">
               No verification documents attached during registration.
             </p>
           </div>
@@ -181,11 +181,11 @@ export default function PendingUserCard({
             {uploadedDocsList.map(({ key, title, doc }) => (
               <div
                 key={key}
-                className="bg-[#16131A] border border-neutral-800 rounded-2xl p-4 flex flex-col justify-between"
+                className="bg-[#111214] border border-[#2A2B30] rounded-2xl p-4 flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <h5 className="font-semibold text-white text-sm">{title}</h5>
+                    <h5 className="font-semibold text-[#F4F4F5] text-sm">{title}</h5>
 
                     {/* Status Badge */}
                     {doc.status === "approved" && (
@@ -209,7 +209,7 @@ export default function PendingUserCard({
                   </div>
 
                   {/* Document Preview Thumbnail */}
-                  <div className="relative group rounded-xl overflow-hidden bg-neutral-950 border border-neutral-800 h-44 mb-3 flex items-center justify-center">
+                  <div className="relative group rounded-xl overflow-hidden bg-black/40 border border-[#2A2B30] h-44 mb-3 flex items-center justify-center">
                     <img
                       src={doc.path}
                       alt={title}
@@ -219,7 +219,7 @@ export default function PendingUserCard({
                       <button
                         type="button"
                         onClick={() => setPreviewImage({ url: doc.path, title })}
-                        className="px-3 py-1.5 bg-[#111111] hover:bg-[#7F1D1D] text-white text-xs font-medium rounded-xl border border-neutral-700 flex items-center gap-1.5 transition"
+                        className="px-3 py-1.5 bg-[#1A1B1E] hover:bg-[#F97316] text-white text-xs font-medium rounded-xl border border-[#2A2B30] flex items-center gap-1.5 transition cursor-pointer"
                       >
                         <Eye size={14} />
                         Preview
@@ -228,7 +228,7 @@ export default function PendingUserCard({
                         href={doc.path}
                         target="_blank"
                         rel="noreferrer"
-                        className="px-3 py-1.5 bg-[#111111] hover:bg-[#7F1D1D] text-white text-xs font-medium rounded-xl border border-neutral-700 flex items-center gap-1.5 transition"
+                        className="px-3 py-1.5 bg-[#1A1B1E] hover:bg-[#F97316] text-white text-xs font-medium rounded-xl border border-[#2A2B30] flex items-center gap-1.5 transition"
                       >
                         <ExternalLink size={14} />
                         Open
@@ -245,7 +245,7 @@ export default function PendingUserCard({
                 </div>
 
                 {/* Document Action Buttons */}
-                <div className="flex gap-2 pt-2 border-t border-neutral-800/80">
+                <div className="flex gap-2 pt-2 border-t border-[#2A2B30]/60">
                   <button
                     type="button"
                     disabled={isProcessing}
@@ -273,7 +273,7 @@ export default function PendingUserCard({
       </div>
 
       {/* Main Review Status / Action Gate */}
-      <div className="mt-8 pt-6 border-t border-neutral-900">
+      <div className="mt-8 pt-6 border-t border-[#2A2B30]">
         {!allReviewed && uploadedDocsList.length > 0 && (
           <div className="flex items-center justify-center gap-2 p-3 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-xs font-medium mb-5 text-center">
             <AlertTriangle size={16} className="shrink-0" />
@@ -299,7 +299,7 @@ export default function PendingUserCard({
               setIsRejectUserModalOpen(true);
               setUserRejectionReason("");
             }}
-            className="flex-1 py-3.5 px-6 rounded-2xl bg-[#7F1D1D] hover:bg-[#991B1B] text-white font-semibold text-sm transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(127,29,29,0.3)]"
+            className="flex-1 py-3.5 px-6 rounded-2xl bg-[#DC2626] hover:bg-[#B91C1C] text-white font-semibold text-sm transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(220,38,38,0.3)]"
           >
             <XCircle size={18} />
             <span>Reject Registration</span>
@@ -310,14 +310,14 @@ export default function PendingUserCard({
       {/* Modal: Document Rejection Reason */}
       {activeDocModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[#111111] border border-neutral-800 rounded-3xl max-w-md w-full p-6 shadow-2xl">
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-neutral-800">
-              <h3 className="font-bold text-white text-lg">
+          <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl max-w-md w-full p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#2A2B30]">
+              <h3 className="font-bold text-[#F4F4F5] text-lg">
                 Reject {activeDocModal.title}
               </h3>
               <button
                 onClick={() => setActiveDocModal(null)}
-                className="text-neutral-400 hover:text-white p-1"
+                className="text-[#A1A1AA] hover:text-white p-1 cursor-pointer"
               >
                 <X size={20} />
               </button>
@@ -325,7 +325,7 @@ export default function PendingUserCard({
 
             <form onSubmit={handleRejectDocSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-neutral-300 mb-2">
+                <label className="block text-xs font-medium text-[#A1A1AA] mb-2">
                   Rejection Reason for Document
                 </label>
                 <textarea
@@ -334,7 +334,7 @@ export default function PendingUserCard({
                   placeholder="e.g. Blurry scan, name mismatch, expired document..."
                   required
                   rows={3}
-                  className="w-full bg-[#16131A] border border-neutral-800 rounded-2xl p-3.5 text-white text-sm outline-none focus:border-[#7F1D1D]"
+                  className="w-full bg-[#111214] border border-[#2A2B30] rounded-2xl p-3.5 text-[#F4F4F5] text-sm outline-none focus:border-red-500"
                 />
               </div>
 
@@ -342,14 +342,14 @@ export default function PendingUserCard({
                 <button
                   type="button"
                   onClick={() => setActiveDocModal(null)}
-                  className="flex-1 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-sm font-medium"
+                  className="flex-1 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-[#A1A1AA] text-sm font-medium cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!docRejectionReason.trim()}
-                  className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold disabled:opacity-50"
+                  className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold disabled:opacity-50 cursor-pointer"
                 >
                   Confirm Rejection
                 </button>
@@ -362,14 +362,14 @@ export default function PendingUserCard({
       {/* Modal: Main User Rejection Reason */}
       {isRejectUserModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[#111111] border border-neutral-800 rounded-3xl max-w-md w-full p-6 shadow-2xl">
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-neutral-800">
-              <h3 className="font-bold text-white text-lg">
+          <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl max-w-md w-full p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#2A2B30]">
+              <h3 className="font-bold text-[#F4F4F5] text-lg">
                 Reject Registration for {user.fullName}
               </h3>
               <button
                 onClick={() => setIsRejectUserModalOpen(false)}
-                className="text-neutral-400 hover:text-white p-1"
+                className="text-[#A1A1AA] hover:text-white p-1 cursor-pointer"
               >
                 <X size={20} />
               </button>
@@ -377,7 +377,7 @@ export default function PendingUserCard({
 
             <form onSubmit={handleRejectUserSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-neutral-300 mb-2">
+                <label className="block text-xs font-medium text-[#A1A1AA] mb-2">
                   Overall Rejection Reason
                 </label>
                 <textarea
@@ -386,7 +386,7 @@ export default function PendingUserCard({
                   placeholder="Explain why this account registration is being rejected..."
                   required
                   rows={4}
-                  className="w-full bg-[#16131A] border border-neutral-800 rounded-2xl p-3.5 text-white text-sm outline-none focus:border-[#7F1D1D]"
+                  className="w-full bg-[#111214] border border-[#2A2B30] rounded-2xl p-3.5 text-[#F4F4F5] text-sm outline-none focus:border-red-500"
                 />
               </div>
 
@@ -394,14 +394,14 @@ export default function PendingUserCard({
                 <button
                   type="button"
                   onClick={() => setIsRejectUserModalOpen(false)}
-                  className="flex-1 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-sm font-medium"
+                  className="flex-1 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-[#A1A1AA] text-sm font-medium cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!userRejectionReason.trim()}
-                  className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
                 >
                   <Send size={15} />
                   <span>Reject Account</span>
@@ -415,12 +415,12 @@ export default function PendingUserCard({
       {/* Modal: Full Preview Image */}
       {previewImage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-6">
-          <div className="relative max-w-3xl w-full bg-[#111111] border border-neutral-800 rounded-3xl p-5 shadow-2xl">
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-neutral-800">
-              <h3 className="font-bold text-white">{previewImage.title}</h3>
+          <div className="relative max-w-3xl w-full bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl p-5 shadow-2xl">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#2A2B30]">
+              <h3 className="font-bold text-[#F4F4F5]">{previewImage.title}</h3>
               <button
                 onClick={() => setPreviewImage(null)}
-                className="text-neutral-400 hover:text-white p-1"
+                className="text-[#A1A1AA] hover:text-white p-1 cursor-pointer"
               >
                 <X size={22} />
               </button>

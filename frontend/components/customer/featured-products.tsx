@@ -52,12 +52,12 @@ export function FeaturedProducts() {
   return (
     <section>
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-foreground">
+        <h2 className="text-lg font-semibold text-[#F4F4F5]">
           Featured Products
         </h2>
         <Link
           href="/customer/products"
-          className="text-sm font-medium text-[#F87171] hover:underline"
+          className="text-sm font-medium text-[#F97316] hover:text-[#EA580C] transition"
         >
           View All
         </Link>
@@ -66,10 +66,10 @@ export function FeaturedProducts() {
         {featuredProducts.map((product) => (
           <Card
             key={product.id}
-            className="group overflow-hidden border border-[#27272A] bg-[#111111] shadow-sm"
+            className="group overflow-hidden border border-[#2A2B30] bg-[#1A1B1E] shadow-sm hover:border-[#F97316] transition-all"
           >
             <CardContent className="p-0 rounded-3xl">
-              <div className="relative aspect-square overflow-hidden bg-[#0B0B0B]">
+              <div className="relative aspect-square overflow-hidden bg-[#111214]">
                 <Image
                   src={product.image}
                   alt={product.name}
@@ -86,7 +86,7 @@ export function FeaturedProducts() {
                   <span className="text-lg font-bold text-white">
                     ₹{product.price.toLocaleString()}
                   </span>
-                  <Button size="sm" className="h-8 text-xs">
+                  <Button size="sm" className="h-8 text-xs bg-[#F97316] hover:bg-[#EA580C] text-white cursor-pointer">
                     Add To Cart
                   </Button>
                 </div>

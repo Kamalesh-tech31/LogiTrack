@@ -83,10 +83,10 @@ export default function Topbar(): JSX.Element {
   const visibleNotifications = notifications.slice(0, 5);
 
   return (
-    <div className="w-full h-20 bg-[#111111] border-b border-neutral-900 px-8 flex items-center justify-between">
+    <div className="w-full h-20 bg-[#1A1B1E] border-b border-[#2A2B30] px-8 flex items-center justify-between">
       <div>
         <h1 className="text-2xl font-bold text-white">Owner Dashboard</h1>
-        <p className="text-neutral-500 text-sm mt-1">
+        <p className="text-[#A1A1AA] text-sm mt-1">
           Welcome back, {userName}
         </p>
       </div>
@@ -99,7 +99,7 @@ export default function Topbar(): JSX.Element {
               setIsPlanOpen((current) => !current);
               setIsNotifOpen(false);
             }}
-            className="flex items-center gap-2 bg-[#7F1D1D]/20 border border-[#7F1D1D] px-4 py-2 rounded-2xl text-[#DC2626] font-medium"
+            className="flex items-center gap-2 bg-[#F97316]/15 border border-[#F97316]/40 px-4 py-2 rounded-2xl text-[#F97316] font-medium"
             aria-expanded={isPlanOpen}
           >
             <Crown size={18} />
@@ -107,23 +107,23 @@ export default function Topbar(): JSX.Element {
           </button>
 
           {isPlanOpen && (
-            <div className="absolute right-0 mt-3 w-72 rounded-3xl bg-[#0B0B0B] border border-neutral-800 shadow-xl z-20">
-              <div className="p-4 border-b border-neutral-800">
-                <p className="text-sm text-neutral-400">Upgrade options</p>
+            <div className="absolute right-0 mt-3 w-72 rounded-3xl bg-[#111214] border border-[#2A2B30] shadow-xl z-20">
+              <div className="p-4 border-b border-[#2A2B30]">
+                <p className="text-sm text-[#A1A1AA]">Upgrade options</p>
               </div>
               <div className="space-y-3 p-4">
                 {plans.map((plan) => (
                   <div
                     key={plan.name}
-                    className="rounded-2xl border border-[#1F1F1F] p-3 hover:border-[#7F1D1D] transition-colors"
+                    className="rounded-2xl border border-[#2A2B30] p-3 hover:border-[#F97316] transition-colors"
                   >
                     <div className="flex items-center justify-between">
                       <p className="font-semibold text-white">{plan.name}</p>
-                      <span className="text-sm text-[#DC2626]">
+                      <span className="text-sm text-[#F97316] font-medium">
                         {plan.price}
                       </span>
                     </div>
-                    <p className="text-sm text-neutral-500 mt-1">
+                    <p className="text-sm text-[#A1A1AA] mt-1">
                       {plan.details}
                     </p>
                   </div>
@@ -142,23 +142,23 @@ export default function Topbar(): JSX.Element {
               setIsNotifOpen((current) => !current);
               setIsPlanOpen(false);
             }}
-            className="w-12 h-12 rounded-2xl bg-[#0B0B0B] border border-neutral-800 flex items-center justify-center text-neutral-400 hover:bg-[#7F1D1D] hover:text-white transition-all"
+            className="w-12 h-12 rounded-2xl bg-[#111214] border border-[#2A2B30] flex items-center justify-center text-[#A1A1AA] hover:bg-[#F97316] hover:text-white transition-all cursor-pointer"
             aria-expanded={isNotifOpen}
           >
             <Bell size={20} aria-hidden="true" />
             {unreadCount > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-medium text-white">
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#F97316] px-1 text-[10px] font-bold text-white shadow-[0_0_8px_rgba(249,115,22,0.6)]">
                 {unreadCount}
               </span>
             )}
           </button>
 
           {isNotifOpen && (
-            <div className="absolute right-0 mt-3 w-80 rounded-3xl bg-[#0B0B0B] border border-neutral-800 shadow-xl z-20">
-              <div className="flex items-center justify-between p-4 border-b border-neutral-800">
+            <div className="absolute right-0 mt-3 w-80 rounded-3xl bg-[#111214] border border-[#2A2B30] shadow-xl z-20">
+              <div className="flex items-center justify-between p-4 border-b border-[#2A2B30]">
                 <div>
-                  <p className="text-sm text-neutral-400">Notifications</p>
-                  <p className="text-xs text-neutral-500">
+                  <p className="text-sm text-[#A1A1AA]">Notifications</p>
+                  <p className="text-xs text-[#A1A1AA]">
                     {unreadCount} unread
                   </p>
                 </div>
@@ -167,19 +167,19 @@ export default function Topbar(): JSX.Element {
                 {visibleNotifications.map((item) => (
                   <div
                     key={item._id}
-                    className={`rounded-2xl border p-3 transition-colors hover:border-[#7F1D1D] cursor-pointer ${item.isRead ? "border-[#1F1F1F]" : "border-[#7F1D1D]/40"}`}
+                    className={`rounded-2xl border p-3 transition-colors hover:border-[#F97316] cursor-pointer ${item.isRead ? "border-[#2A2B30]" : "border-[#F97316]/40 bg-[#F97316]/5"}`}
                     role="button"
                     tabIndex={0}
                     onClick={() => void handleOpenNotification(item)}
                   >
                     <p className="text-white font-semibold">{item.title}</p>
-                    <p className="text-sm text-neutral-500 mt-1">
+                    <p className="text-sm text-[#A1A1AA] mt-1">
                       {item.message}
                     </p>
                   </div>
                 ))}
                 {visibleNotifications.length === 0 && (
-                  <div className="text-sm text-neutral-500">
+                  <div className="text-sm text-[#A1A1AA]">
                     No notifications available
                   </div>
                 )}
@@ -188,24 +188,24 @@ export default function Topbar(): JSX.Element {
           )}
         </div>
 
-        <div className="flex items-center gap-3 bg-[#0B0B0B] border border-neutral-800 px-4 py-2 rounded-2xl">
-          <div className="w-10 h-10 rounded-full bg-[#7F1D1D] flex items-center justify-center text-white font-bold">
+        <div className="flex items-center gap-3 bg-[#111214] border border-[#2A2B30] px-4 py-2 rounded-2xl">
+          <div className="w-10 h-10 rounded-full bg-[#F97316] flex items-center justify-center text-white font-bold shadow-[0_0_10px_rgba(249,115,22,0.4)]">
             A
           </div>
           <div>
             <h3 className="text-white font-medium">{userName}</h3>
-            <p className="text-neutral-500 text-sm">Business Owner</p>
+            <p className="text-[#A1A1AA] text-sm">Business Owner</p>
           </div>
         </div>
       </div>
 
       {selectedNotification && (
         <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center z-50"
           onClick={() => setSelectedNotification(null)}
         >
           <div
-            className="bg-[#111111] border border-neutral-800 rounded-3xl p-6 max-w-md w-full mx-4"
+            className="bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl p-6 max-w-md w-full mx-4 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between mb-4">
@@ -214,7 +214,7 @@ export default function Topbar(): JSX.Element {
               </h2>
               <button
                 onClick={() => setSelectedNotification(null)}
-                className="text-neutral-400 hover:text-white text-2xl leading-none"
+                className="text-[#A1A1AA] hover:text-white text-2xl leading-none cursor-pointer"
               >
                 ×
               </button>
@@ -225,8 +225,8 @@ export default function Topbar(): JSX.Element {
             </p>
 
             {selectedNotification.orderCode && (
-              <div className="mb-4 p-3 bg-[#0B0B0B] border border-neutral-800 rounded-xl">
-                <p className="text-xs text-neutral-500 mb-1">Order ID</p>
+              <div className="mb-4 p-3 bg-[#111214] border border-[#2A2B30] rounded-xl">
+                <p className="text-xs text-[#A1A1AA] mb-1">Order ID</p>
                 <p className="text-sm font-mono text-white">
                   {selectedNotification.orderCode}
                 </p>
@@ -234,15 +234,15 @@ export default function Topbar(): JSX.Element {
             )}
 
             {selectedNotification.metadata?.productName && (
-              <div className="mb-4 p-3 bg-[#0B0B0B] border border-neutral-800 rounded-xl">
-                <p className="text-xs text-neutral-500 mb-1">Product</p>
+              <div className="mb-4 p-3 bg-[#111214] border border-[#2A2B30] rounded-xl">
+                <p className="text-xs text-[#A1A1AA] mb-1">Product</p>
                 <p className="text-sm text-white">
                   {selectedNotification.metadata.productName}
                 </p>
               </div>
             )}
 
-            <div className="text-xs text-neutral-500 mb-4">
+            <div className="text-xs text-[#A1A1AA] mb-4">
               {selectedNotification.createdAt
                 ? new Date(selectedNotification.createdAt).toLocaleString()
                 : "Just now"}
@@ -250,7 +250,7 @@ export default function Topbar(): JSX.Element {
 
             <button
               onClick={() => setSelectedNotification(null)}
-              className="w-full bg-[#7F1D1D] hover:bg-[#9D2D2D] text-white py-2 rounded-lg font-medium transition"
+              className="w-full bg-[#F97316] hover:bg-[#EA580C] text-white py-2.5 rounded-xl font-semibold transition cursor-pointer"
             >
               Close
             </button>

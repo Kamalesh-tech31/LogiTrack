@@ -29,15 +29,15 @@ const orders = [
 
 export default function RecentOrders() {
   return (
-    <div className="bg-[#111111] border border-[#1f1f1f] rounded-3xl p-6">
+    <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl p-6 shadow-lg">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-3xl font-bold text-white">Recent Orders</h2>
 
-          <p className="text-gray-400 mt-1">Latest incoming customer orders</p>
+          <p className="text-[#A1A1AA] mt-1">Latest incoming customer orders</p>
         </div>
 
-        <button className="bg-[#7F1D1D] hover:bg-[#991B1B] transition px-5 py-3 rounded-2xl text-white flex items-center gap-2">
+        <button className="bg-[#F97316] hover:bg-[#EA580C] transition px-5 py-3 rounded-2xl text-white font-medium flex items-center gap-2 cursor-pointer shadow-[0_0_15px_rgba(249,115,22,0.3)]">
           View All
           <ArrowRight size={18} />
         </button>
@@ -47,14 +47,14 @@ export default function RecentOrders() {
         {orders.map((order) => (
           <div
             key={order.id}
-            className="bg-black border border-[#222] rounded-2xl p-5 flex items-center justify-between hover:border-[#7F1D1D] transition"
+            className="bg-[#111214] border border-[#2A2B30] rounded-2xl p-5 flex items-center justify-between hover:border-[#F97316] transition"
           >
             <div>
               <h3 className="text-white font-semibold text-lg">
                 Order {order.id}
               </h3>
 
-              <p className="text-gray-400">{order.customer}</p>
+              <p className="text-[#A1A1AA]">{order.customer}</p>
             </div>
 
             <div className="text-right">
@@ -68,7 +68,7 @@ export default function RecentOrders() {
                       ? "bg-yellow-500/10 text-yellow-400"
                       : order.status === "Returned"
                         ? "bg-red-500/10 text-red-400"
-                        : "bg-blue-500/10 text-blue-400"
+                        : "bg-[#F97316]/10 text-[#FDBA74]"
                 }`}
               >
                 {order.status}

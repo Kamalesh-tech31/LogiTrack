@@ -61,11 +61,11 @@ export default function DashboardPage() {
   return (
     <div className="p-8 space-y-8">
       {isLoading ? (
-        <div className="rounded-3xl border border-[#1F1F1F] bg-[#111111] p-6 text-white">
+        <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-6 text-[#A1A1AA]">
           Loading delivery dashboard from the backend...
         </div>
       ) : error || !dashboard ? (
-        <div className="rounded-3xl border border-[#1F1F1F] bg-[#111111] p-6 text-red-200">
+        <div className="rounded-3xl border border-red-500/30 bg-red-500/10 p-6 text-red-300">
           {error || "Unable to load dashboard data from the backend."}
         </div>
       ) : (
@@ -75,7 +75,7 @@ export default function DashboardPage() {
               <h1 className="text-4xl font-bold text-white">
                 Dashboard Overview
               </h1>
-              <p className="text-neutral-400 mt-2 max-w-2xl">
+              <p className="text-[#A1A1AA] mt-2 max-w-2xl">
                 Monitor delivery routes, track active agents, and keep your
                 logistics operations running smoothly with actionable insights.
               </p>
@@ -110,16 +110,16 @@ export default function DashboardPage() {
           </section>
 
           <section className="grid gap-6 xl:grid-cols-[1.8fr_1fr]">
-            <div className="rounded-3xl border border-[#1F1F1F] bg-[#111111] p-6 shadow-lg shadow-black/10">
+            <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-6 shadow-lg shadow-black/10">
               <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <p className="text-sm uppercase tracking-[0.2em] text-neutral-500">
+                  <p className="text-sm uppercase tracking-[0.2em] text-[#A1A1AA]">
                     Priority routes
                   </p>
                   <h2 className="mt-3 text-3xl font-bold text-white">
                     Assigned deliveries
                   </h2>
-                  <p className="text-neutral-400 mt-2 max-w-2xl">
+                  <p className="text-[#A1A1AA] mt-2 max-w-2xl">
                     Monitor active delivery routes and real-time status updates
                     for optimal fleet performance.
                   </p>
@@ -145,8 +145,8 @@ export default function DashboardPage() {
             </div>
 
             <div className="space-y-6">
-              <div className="rounded-3xl border border-[#1F1F1F] bg-[#111111] p-6 shadow-lg shadow-black/10">
-                <p className="text-sm uppercase tracking-[0.2em] text-neutral-500">
+              <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-6 shadow-lg shadow-black/10">
+                <p className="text-sm uppercase tracking-[0.2em] text-[#A1A1AA]">
                   Operational snapshot
                 </p>
                 <h2 className="mt-3 text-3xl font-bold text-white">
@@ -154,22 +154,22 @@ export default function DashboardPage() {
                 </h2>
 
                 <div className="mt-8 space-y-4">
-                  <div className="rounded-3xl border border-neutral-800 bg-[#0B0B0B] p-5">
-                    <p className="text-sm text-neutral-400">
+                  <div className="rounded-3xl border border-[#2A2B30] bg-[#111214] p-5">
+                    <p className="text-sm text-[#A1A1AA]">
                       Active route count
                     </p>
                     <p className="mt-3 text-3xl font-semibold text-white">
                       {dashboard.activeDeliveries}
                     </p>
                   </div>
-                  <div className="rounded-3xl border border-neutral-800 bg-[#0B0B0B] p-5">
-                    <p className="text-sm text-neutral-400">Pending routes</p>
+                  <div className="rounded-3xl border border-[#2A2B30] bg-[#111214] p-5">
+                    <p className="text-sm text-[#A1A1AA]">Pending routes</p>
                     <p className="mt-3 text-3xl font-semibold text-white">
                       {pendingRoutes}
                     </p>
                   </div>
-                  <div className="rounded-3xl border border-neutral-800 bg-[#0B0B0B] p-5">
-                    <p className="text-sm text-neutral-400">Failed attempts</p>
+                  <div className="rounded-3xl border border-[#2A2B30] bg-[#111214] p-5">
+                    <p className="text-sm text-[#A1A1AA]">Failed attempts</p>
                     <p className="mt-3 text-3xl font-semibold text-white">
                       {failedRoutes}
                     </p>

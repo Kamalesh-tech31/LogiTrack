@@ -422,7 +422,6 @@ export default function ProductsPage() {
                 Cancel
               </Button>
               <Button
-                variant="destructive"
                 onClick={submitOrder}
                 disabled={orderingProductId === selectedProduct.id}
               >

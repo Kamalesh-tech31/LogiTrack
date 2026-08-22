@@ -82,8 +82,8 @@ export default function PendingUsersPage() {
   if (loading) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
-        <div className="w-10 h-10 border-2 border-[#7F1D1D] border-t-transparent rounded-full animate-spin" />
-        <p className="text-neutral-500 text-sm">Loading pending registrations...</p>
+        <div className="w-10 h-10 border-2 border-[#F97316] border-t-transparent rounded-full animate-spin" />
+        <p className="text-[#A1A1AA] text-sm">Loading pending registrations...</p>
       </div>
     );
   }
@@ -101,7 +101,7 @@ export default function PendingUsersPage() {
               {users.length} Pending
             </span>
           </div>
-          <p className="text-neutral-400 text-sm mt-1.5">
+          <p className="text-[#A1A1AA] text-sm mt-1.5">
             Review submitted government IDs and business licenses before authorizing accounts.
           </p>
         </div>
@@ -109,7 +109,7 @@ export default function PendingUsersPage() {
         <button
           onClick={handleRefresh}
           disabled={isRefreshing}
-          className="self-start sm:self-auto inline-flex items-center gap-2 px-4 py-2.5 bg-[#16131A] hover:bg-[#221c27] text-neutral-300 hover:text-white border border-neutral-800 rounded-2xl text-xs font-medium transition cursor-pointer disabled:opacity-50"
+          className="self-start sm:self-auto inline-flex items-center gap-2 px-4 py-2.5 bg-[#1A1B1E] hover:bg-[#2A2B30] text-[#A1A1AA] hover:text-white border border-[#2A2B30] rounded-2xl text-xs font-medium transition cursor-pointer disabled:opacity-50"
         >
           <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
           <span>Refresh</span>
@@ -118,7 +118,7 @@ export default function PendingUsersPage() {
 
       {/* List / Empty State */}
       {users.length === 0 ? (
-        <div className="rounded-3xl border border-neutral-900 bg-[#111111] p-12 text-center shadow-lg">
+        <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-12 text-center shadow-lg">
           <div className="w-16 h-16 rounded-2xl bg-green-500/10 border border-green-500/30 flex items-center justify-center text-green-400 mx-auto mb-4">
             <CheckCircle2 size={32} />
           </div>

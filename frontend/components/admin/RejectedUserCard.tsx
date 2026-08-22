@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { XCircle, Eye, ExternalLink, FileText, X, AlertOctagon } from "lucide-react";
+import { XCircle, Eye, ExternalLink, X, AlertOctagon } from "lucide-react";
 import type { AdminUser, AdminDocument } from "@/lib/api";
 
 export default function RejectedUserCard({ user }: { user: AdminUser }) {
@@ -48,20 +48,20 @@ export default function RejectedUserCard({ user }: { user: AdminUser }) {
   }
 
   return (
-    <div className="bg-[#111111] border border-neutral-900 rounded-3xl p-7 hover:border-red-900/50 transition-all duration-300 shadow-xl">
+    <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl p-7 hover:border-red-900/50 transition-all duration-300 shadow-xl">
       {/* User Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-neutral-900">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-[#2A2B30]">
         <div>
           <div className="flex items-center gap-3">
-            <h3 className="text-2xl font-bold text-white">{user.fullName}</h3>
-            <span className="inline-flex items-center px-3 py-1 rounded-xl bg-[#7F1D1D]/20 border border-[#7F1D1D]/40 text-[#F87171] text-xs font-semibold">
+            <h3 className="text-2xl font-bold text-[#F4F4F5]">{user.fullName}</h3>
+            <span className="inline-flex items-center px-3 py-1 rounded-xl bg-[#F97316]/15 border border-[#F97316]/30 text-[#FDBA74] text-xs font-semibold">
               {user.role}
             </span>
           </div>
-          <p className="text-neutral-400 text-sm mt-1">{user.email}</p>
+          <p className="text-[#A1A1AA] text-sm mt-1">{user.email}</p>
           {user.businessName && (
-            <p className="text-neutral-500 text-xs mt-1">
-              Business: <span className="text-neutral-300">{user.businessName}</span>
+            <p className="text-[#A1A1AA] text-xs mt-1">
+              Business: <span className="text-[#F4F4F5]">{user.businessName}</span>
               {user.gstNumber && ` | GST: ${user.gstNumber}`}
             </p>
           )}
@@ -75,7 +75,7 @@ export default function RejectedUserCard({ user }: { user: AdminUser }) {
         </div>
       </div>
 
-      {/* Rejection Reason Box */}
+      {/* Rejection Reason Box (Semantic Red) */}
       {user.applicationRejectionReason && (
         <div className="mt-5 p-4 rounded-2xl bg-red-950/30 border border-red-800/40">
           <div className="flex items-center gap-2 text-red-400 font-semibold text-xs uppercase tracking-wider">
@@ -90,12 +90,12 @@ export default function RejectedUserCard({ user }: { user: AdminUser }) {
 
       {/* Documents Status */}
       <div className="mt-6">
-        <h4 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-4">
+        <h4 className="text-xs font-semibold text-[#A1A1AA] uppercase tracking-wider mb-4">
           Submitted Documents ({uploadedDocsList.length})
         </h4>
 
         {uploadedDocsList.length === 0 ? (
-          <div className="p-5 rounded-2xl bg-neutral-950 border border-neutral-900 text-center text-xs text-neutral-500">
+          <div className="p-5 rounded-2xl bg-[#111214] border border-[#2A2B30] text-center text-xs text-[#A1A1AA]">
             No document attachments on record.
           </div>
         ) : (
@@ -103,11 +103,11 @@ export default function RejectedUserCard({ user }: { user: AdminUser }) {
             {uploadedDocsList.map(({ key, title, doc }) => (
               <div
                 key={key}
-                className="bg-[#16131A] border border-neutral-800 rounded-2xl p-4 flex flex-col justify-between"
+                className="bg-[#111214] border border-[#2A2B30] rounded-2xl p-4 flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <h5 className="font-semibold text-white text-xs">{title}</h5>
+                    <h5 className="font-semibold text-[#F4F4F5] text-xs">{title}</h5>
                     {doc.status === "rejected" ? (
                       <span className="inline-flex items-center gap-1 text-[11px] font-medium text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-lg">
                         <XCircle size={11} />
@@ -120,7 +120,7 @@ export default function RejectedUserCard({ user }: { user: AdminUser }) {
                     )}
                   </div>
 
-                  <div className="relative group rounded-xl overflow-hidden bg-neutral-950 border border-neutral-800 h-36 mb-2 flex items-center justify-center">
+                  <div className="relative group rounded-xl overflow-hidden bg-black/40 border border-[#2A2B30] h-36 mb-2 flex items-center justify-center">
                     <img
                       src={doc.path}
                       alt={title}
@@ -130,7 +130,7 @@ export default function RejectedUserCard({ user }: { user: AdminUser }) {
                       <button
                         type="button"
                         onClick={() => setPreviewImage({ url: doc.path, title })}
-                        className="px-2.5 py-1 bg-[#111111] hover:bg-[#7F1D1D] text-white text-xs rounded-lg border border-neutral-700 flex items-center gap-1 transition"
+                        className="px-2.5 py-1 bg-[#1A1B1E] hover:bg-[#F97316] text-white text-xs rounded-lg border border-[#2A2B30] flex items-center gap-1 transition cursor-pointer"
                       >
                         <Eye size={12} />
                         Preview
@@ -139,7 +139,7 @@ export default function RejectedUserCard({ user }: { user: AdminUser }) {
                         href={doc.path}
                         target="_blank"
                         rel="noreferrer"
-                        className="px-2.5 py-1 bg-[#111111] hover:bg-[#7F1D1D] text-white text-xs rounded-lg border border-neutral-700 flex items-center gap-1 transition"
+                        className="px-2.5 py-1 bg-[#1A1B1E] hover:bg-[#F97316] text-white text-xs rounded-lg border border-[#2A2B30] flex items-center gap-1 transition"
                       >
                         <ExternalLink size={12} />
                         Open
@@ -163,12 +163,12 @@ export default function RejectedUserCard({ user }: { user: AdminUser }) {
       {/* Preview Modal */}
       {previewImage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-6">
-          <div className="relative max-w-3xl w-full bg-[#111111] border border-neutral-800 rounded-3xl p-5 shadow-2xl">
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-neutral-800">
-              <h3 className="font-bold text-white">{previewImage.title}</h3>
+          <div className="relative max-w-3xl w-full bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl p-5 shadow-2xl">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#2A2B30]">
+              <h3 className="font-bold text-[#F4F4F5]">{previewImage.title}</h3>
               <button
                 onClick={() => setPreviewImage(null)}
-                className="text-neutral-400 hover:text-white p-1"
+                className="text-[#A1A1AA] hover:text-white p-1 cursor-pointer"
               >
                 <X size={22} />
               </button>

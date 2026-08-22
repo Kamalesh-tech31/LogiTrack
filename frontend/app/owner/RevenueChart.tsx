@@ -22,23 +22,23 @@ const data = [
 
 export default function RevenueChart() {
   return (
-    <div className="bg-[#111111] border border-[#222222] rounded-2xl p-6">
+    <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl p-6 shadow-lg">
       <h2 className="text-2xl font-bold text-white mb-6">Revenue Overview</h2>
 
       <div className="h-[350px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data}>
-            <CartesianGrid stroke="#222222" strokeDasharray="3 3" />
+            <CartesianGrid stroke="#2A2B30" strokeDasharray="3 3" />
 
-            <XAxis dataKey="month" stroke="#888888" />
+            <XAxis dataKey="month" stroke="#A1A1AA" />
 
-            <YAxis stroke="#888888" />
+            <YAxis stroke="#A1A1AA" />
 
             <Tooltip
               contentStyle={{
-                backgroundColor: "#111111",
-                border: "1px solid #7F1D1D",
-                borderRadius: "12px",
+                backgroundColor: "#111214",
+                border: "1px solid #F97316",
+                borderRadius: "16px",
                 color: "white",
               }}
             />
@@ -46,11 +46,11 @@ export default function RevenueChart() {
             <Line
               type="monotone"
               dataKey="revenue"
-              stroke="#991B1B"
+              stroke="#F97316"
               strokeWidth={4}
               dot={{
                 r: 5,
-                fill: "#991B1B",
+                fill: "#EA580C",
               }}
             />
           </LineChart>

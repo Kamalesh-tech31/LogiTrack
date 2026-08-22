@@ -190,15 +190,15 @@ export default function CartCheckoutPage() {
             <CardTitle className="text-lg">Order Summary</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="rounded-3xl border border-[#27272A] bg-[#111111] p-4">
-              <p className="text-sm text-muted-foreground">Product</p>
+            <div className="rounded-3xl border border-[#2A2B30] bg-[#111214] p-4">
+              <p className="text-sm text-[#A1A1AA]">Product</p>
               <p className="mt-1 text-lg font-semibold text-white">
                 {cartItem.name}
               </p>
-              <p className="mt-2 text-sm text-muted-foreground">
+              <p className="mt-2 text-sm text-[#A1A1AA]">
                 ₹{cartItem.price.toLocaleString()} x {cartItem.quantity}
               </p>
-              <p className="mt-2 text-sm text-muted-foreground">
+              <p className="mt-2 text-sm text-[#A1A1AA]">
                 Total: ₹{(cartItem.price * cartItem.quantity).toLocaleString()}
               </p>
             </div>

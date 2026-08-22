@@ -26,3 +26,5 @@ export function PasswordInput({ className = "", ...props }: PasswordInputProps) 
     </div>
   );
 }
+
+export default PasswordInput;

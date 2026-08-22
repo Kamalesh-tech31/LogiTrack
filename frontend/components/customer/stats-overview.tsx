@@ -103,7 +103,7 @@ export function StatsOverview() {
         {stats.map((stat) => (
           <Card
             key={stat.label}
-            className="border border-[#27272A] bg-[#1A1A1A] shadow-sm"
+            className="border border-[#2A2B30] bg-[#1A1B1E] shadow-sm hover:border-[#F97316] transition-all"
           >
             <CardContent className="flex items-center gap-4 p-5 rounded-3xl">
               <div

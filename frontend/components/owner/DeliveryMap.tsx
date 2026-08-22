@@ -47,23 +47,23 @@ export default function DeliveryMap({ agents = [] }: DeliveryMapProps) {
   ];
 
   return (
-    <div className="rounded-3xl border border-[#1F1F1F] bg-[#111111] p-6 shadow-xl shadow-black/20">
+    <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-6 shadow-xl shadow-black/20">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-white">Route Optimisation</h2>
-          <p className="text-neutral-400 text-sm mt-1">
+          <p className="text-[#A1A1AA] text-sm mt-1">
             Live delivery tracking map
           </p>
         </div>
 
-        <div className="inline-flex items-center gap-2 rounded-2xl border border-[#7F1D1D] bg-[#7F1D1D]/10 px-4 py-2 text-sm text-red-300">
-          <span className="inline-flex h-2.5 w-2.5 rounded-full bg-red-400 animate-pulse" />
+        <div className="inline-flex items-center gap-2 rounded-2xl border border-[#F97316]/40 bg-[#F97316]/10 px-4 py-2 text-sm text-[#FDBA74]">
+          <span className="inline-flex h-2.5 w-2.5 rounded-full bg-[#F97316] animate-pulse" />
           {agents.length} Active Agents
         </div>
       </div>
 
-      <div className="relative h-115 overflow-hidden rounded-3xl bg-linear-to-br from-slate-950 via-slate-900 to-slate-800 border border-[#1F1F1F]">
-        <div className="absolute inset-0 opacity-25 bg-[radial-gradient(circle_at_20%_20%,rgba(56,189,248,0.18),transparent_24%),radial-gradient(circle_at_85%_80%,rgba(239,68,68,0.18),transparent_24%)]" />
+      <div className="relative h-115 overflow-hidden rounded-3xl bg-linear-to-br from-slate-950 via-slate-900 to-slate-800 border border-[#2A2B30]">
+        <div className="absolute inset-0 opacity-25 bg-[radial-gradient(circle_at_20%_20%,rgba(56,189,248,0.18),transparent_24%),radial-gradient(circle_at_85%_80%,rgba(249,115,22,0.18),transparent_24%)]" />
         <div className="absolute inset-0 opacity-15 bg-[linear-gradient(90deg,rgba(255,255,255,0.08)_0%,transparent_20%,transparent_80%,rgba(255,255,255,0.08)_100%)]" />
 
         <svg
@@ -73,7 +73,7 @@ export default function DeliveryMap({ agents = [] }: DeliveryMapProps) {
         >
           <defs>
             <linearGradient id="routeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#F87171" stopOpacity="1" />
+              <stop offset="0%" stopColor="#F97316" stopOpacity="1" />
               <stop offset="100%" stopColor="#60A5FA" stopOpacity="1" />
             </linearGradient>
           </defs>
@@ -84,7 +84,7 @@ export default function DeliveryMap({ agents = [] }: DeliveryMapProps) {
             strokeWidth="1.8"
             strokeDasharray="5 5"
           />
-          <path d="M 20 18 L 17 22 L 23 22 Z" fill="#F87171" />
+          <path d="M 20 18 L 17 22 L 23 22 Z" fill="#F97316" />
           <path d="M 92 70 L 88 67 L 90 73 Z" fill="#60A5FA" />
           {routeDots.map((dot) => (
             <circle

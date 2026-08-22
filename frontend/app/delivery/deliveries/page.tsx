@@ -267,12 +267,12 @@ export default function DeliveriesPage() {
         {/* Notifications moved to Topbar component */}
 
         <div className="grid grid-cols-2 gap-3 min-w-70">
-          <div className="rounded-2xl border border-[#27272A] bg-[#1A1A1A] p-4">
+          <div className="rounded-2xl border border-[#2A2B30] bg-[#1A1B1E] p-4">
             <p className="text-sm text-[#A1A1AA]">Active</p>
             <p className="text-2xl font-bold text-white mt-2">{activeCount}</p>
           </div>
 
-          <div className="rounded-2xl border border-[#27272A] bg-[#1A1A1A] p-4">
+          <div className="rounded-2xl border border-[#2A2B30] bg-[#1A1B1E] p-4">
             <p className="text-sm text-[#A1A1AA]">Completed</p>
             <p className="text-2xl font-bold text-white mt-2">
               {completedCount}
@@ -282,11 +282,11 @@ export default function DeliveriesPage() {
       </div>
 
       {isLoading ? (
-        <div className="mt-8 rounded-2xl border border-[#27272A] bg-[#1A1A1A] p-6 text-white">
+        <div className="mt-8 rounded-2xl border border-[#2A2B30] bg-[#1A1B1E] p-6 text-white">
           Loading deliveries from the backend...
         </div>
       ) : error ? (
-        <div className="mt-8 rounded-2xl border border-[#27272A] bg-[#1A1A1A] p-6 text-[#F5D0D0]">
+        <div className="mt-8 rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-red-300">
           {error}
         </div>
       ) : (
@@ -304,12 +304,12 @@ export default function DeliveriesPage() {
             return (
               <div
                 key={delivery.id}
-                className="bg-linear-to-br from-[#0b0b0b] to-[#0f0f13] border border-[#27272A] rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-shadow duration-200"
+                className="bg-[#1A1B1E] border border-[#2A2B30] rounded-2xl p-6 shadow-lg hover:border-[#F97316]/50 transition-all duration-200"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-3">
-                      <div className="px-3 py-1 rounded-lg bg-[#1F2937] text-xs text-[#E5E7EB] font-medium">
+                      <div className="px-3 py-1 rounded-lg bg-[#111214] border border-[#2A2B30] text-xs text-[#E5E7EB] font-medium">
                         {delivery.orderId || delivery.id}
                       </div>
                       <h3 className="text-lg font-semibold text-white">
@@ -317,12 +317,12 @@ export default function DeliveriesPage() {
                       </h3>
                     </div>
 
-                    <p className="text-sm text-[#9CA3AF] mt-2 max-w-xl">
+                    <p className="text-sm text-[#A1A1AA] mt-2 max-w-xl">
                       {delivery.address}
                     </p>
                     {/* Show product name if available */}
                     {delivery.raw?.items?.length > 0 && (
-                      <p className="text-sm text-[#D1D5DB] mt-2">
+                      <p className="text-sm text-neutral-300 mt-2">
                         Product:{" "}
                         {delivery.raw.items[0].product?.name ||
                           delivery.raw.items[0].product}
@@ -331,24 +331,24 @@ export default function DeliveriesPage() {
                   </div>
 
                   <div className="text-right">
-                    <span className="inline-block bg-[#0B1220] text-xs text-[#C7D2FE] px-3 py-1 rounded-full">
+                    <span className="inline-block bg-[#111214] border border-[#2A2B30] text-xs text-[#FDBA74] px-3 py-1 rounded-full">
                       {toTitleCase(delivery.status)}
                     </span>
-                    <div className="text-sm text-[#9CA3AF] mt-2">
+                    <div className="text-sm text-[#A1A1AA] mt-2">
                       ETA: {delivery.eta || "--"}
                     </div>
                   </div>
                 </div>
 
                 <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="rounded-xl border border-[#27272A] bg-[#0E0E10] p-4">
+                  <div className="rounded-xl border border-[#2A2B30] bg-[#111214] p-4">
                     <p className="text-sm text-[#A1A1AA]">Priority</p>
                     <p className="text-white font-semibold mt-2">
                       {delivery.priority || "Normal"}
                     </p>
                   </div>
 
-                  <div className="rounded-xl border border-[#27272A] bg-[#0E0E10] p-4">
+                  <div className="rounded-xl border border-[#2A2B30] bg-[#111214] p-4">
                     <p className="text-sm text-[#A1A1AA]">Last updated</p>
                     <p className="text-white font-semibold mt-2">
                       {delivery.lastUpdated || "-"}
@@ -356,7 +356,7 @@ export default function DeliveriesPage() {
                   </div>
                 </div>
 
-                <div className="mt-6 rounded-xl border border-[#27272A] bg-[#111111] p-4">
+                <div className="mt-6 rounded-xl border border-[#2A2B30] bg-[#111214] p-4">
                   <p className="text-sm text-[#A1A1AA]">Status update</p>
 
                   <div className="mt-3 flex flex-col sm:flex-row gap-3 items-center">
@@ -369,7 +369,7 @@ export default function DeliveriesPage() {
                           [delivery.id]: event.target.value as DeliveryStatus,
                         }))
                       }
-                      className="flex-1 bg-[#0B0B0B] border border-[#27272A] text-white rounded-2xl px-4 py-3 outline-none"
+                      className="flex-1 bg-[#1A1B1E] border border-[#2A2B30] text-white rounded-2xl px-4 py-3 outline-none focus:border-[#F97316]"
                     >
                       {options && options.length > 0 ? (
                         options.map((option) => (
@@ -389,7 +389,7 @@ export default function DeliveriesPage() {
                         <button
                           onClick={() => void handleAccept(delivery.id)}
                           disabled={hasActiveAssignedOrder}
-                          className={`rounded-full px-5 py-3 text-white font-semibold shadow transition ${hasActiveAssignedOrder ? "bg-slate-600 cursor-not-allowed" : "bg-green-500 hover:brightness-105"}`}
+                          className={`rounded-full px-5 py-3 text-white font-semibold shadow transition ${hasActiveAssignedOrder ? "bg-slate-600 cursor-not-allowed" : "bg-[#22C55E] hover:bg-[#16A34A]"}`}
                         >
                           {hasActiveAssignedOrder
                             ? "Claim disabled until current delivery completes"
@@ -403,13 +403,13 @@ export default function DeliveriesPage() {
                             <p className="block text-sm text-[#A1A1AA] mb-2">
                               Delivery OTP
                             </p>
-                            <p className="text-xs text-[#9CA3AF] mb-3">
+                            <p className="text-xs text-[#A1A1AA] mb-3">
                               Enter the 6-digit code sent to the customer
                             </p>
                           </div>
 
                           <div className="mt-3">
-                            <div className="inline-block rounded-2xl bg-[#0B0B0B] border border-[#27272A] p-4">
+                            <div className="inline-block rounded-2xl bg-[#1A1B1E] border border-[#2A2B30] p-4">
                               <InputOTP
                                 value={completionOtps[delivery.id] || ""}
                                 onChange={(val: string) =>
@@ -439,7 +439,7 @@ export default function DeliveriesPage() {
                                   [delivery.id]: "",
                                 }));
                               }}
-                              className="flex-1 px-4 py-2.5 rounded-lg bg-[#0B1220] border border-[#2b556b] text-[#C7D2FE] hover:bg-[#122034] hover:border-[#3b6a8b] transition font-medium text-sm"
+                              className="flex-1 px-4 py-2.5 rounded-lg bg-[#1A1B1E] border border-[#2A2B30] text-[#A1A1AA] hover:text-white transition font-medium text-sm cursor-pointer"
                               type="button"
                             >
                               Clear
@@ -464,7 +464,7 @@ export default function DeliveriesPage() {
                                   );
                                 }
                               }}
-                              className="flex-1 px-4 py-2.5 rounded-lg bg-[#0B1220] border border-[#2b556b] text-[#C7D2FE] hover:bg-[#122034] hover:border-[#3b6a8b] transition font-medium text-sm"
+                              className="flex-1 px-4 py-2.5 rounded-lg bg-[#1A1B1E] border border-[#2A2B30] text-[#FDBA74] hover:text-white transition font-medium text-sm cursor-pointer"
                               type="button"
                             >
                               Resend OTP
@@ -474,7 +474,7 @@ export default function DeliveriesPage() {
                           {delivery.status !== "completed" && (
                             <button
                               onClick={() => void handleComplete(delivery.id)}
-                              className="rounded-full bg-indigo-600 px-5 py-3 text-white font-semibold shadow hover:brightness-105 transition"
+                              className="rounded-full bg-[#F97316] hover:bg-[#EA580C] px-5 py-3 text-white font-semibold shadow transition cursor-pointer shadow-[0_0_12px_rgba(249,115,22,0.3)]"
                             >
                               Complete
                             </button>
@@ -486,7 +486,7 @@ export default function DeliveriesPage() {
                     </div>
                   </div>
 
-                  <p className="text-sm text-[#D5D5D5] mt-3">
+                  <p className="text-sm text-[#A1A1AA] mt-3">
                     Last sync: {delivery.lastUpdated}
                   </p>
                 </div>

@@ -56,35 +56,35 @@ export default function AddProductPage() {
           placeholder="Product name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full bg-[#111111] border border-[#2A2A2A] rounded-2xl pl-4 pr-4 py-3 text-white outline-none"
+          className="w-full bg-[#111214] border border-[#2A2B30] rounded-2xl pl-4 pr-4 py-3 text-[#F4F4F5] outline-none focus:border-[#F97316]"
         />
         <input
           type="text"
           placeholder="SKU"
           value={sku}
           onChange={(e) => setSku(e.target.value)}
-          className="w-full bg-[#111111] border border-[#2A2A2A] rounded-2xl pl-4 pr-4 py-3 text-white outline-none"
+          className="w-full bg-[#111214] border border-[#2A2B30] rounded-2xl pl-4 pr-4 py-3 text-[#F4F4F5] outline-none focus:border-[#F97316]"
         />
         <input
           type="text"
           placeholder="Price"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
-          className="w-full bg-[#111111] border border-[#2A2A2A] rounded-2xl pl-4 pr-4 py-3 text-white outline-none"
+          className="w-full bg-[#111214] border border-[#2A2B30] rounded-2xl pl-4 pr-4 py-3 text-[#F4F4F5] outline-none focus:border-[#F97316]"
         />
         <input
           type="number"
           placeholder="Stock"
           value={stock}
           onChange={(e) => setStock(Number(e.target.value))}
-          className="w-full bg-[#111111] border border-[#2A2A2A] rounded-2xl pl-4 pr-4 py-3 text-white outline-none"
+          className="w-full bg-[#111214] border border-[#2A2B30] rounded-2xl pl-4 pr-4 py-3 text-[#F4F4F5] outline-none focus:border-[#F97316]"
         />
         <input
           type="text"
           placeholder="Image URL"
           value={image}
           onChange={(e) => setImage(e.target.value)}
-          className="w-full bg-[#111111] border border-[#2A2A2A] rounded-2xl pl-4 pr-4 py-3 text-white outline-none"
+          className="w-full bg-[#111214] border border-[#2A2B30] rounded-2xl pl-4 pr-4 py-3 text-[#F4F4F5] outline-none focus:border-[#F97316]"
         />
 
         {error && <p className="text-red-400">{error}</p>}
@@ -94,7 +94,7 @@ export default function AddProductPage() {
             type="button"
             onClick={handleSave}
             disabled={loading}
-            className="px-4 py-2 bg-[#7F1D1D] rounded-2xl text-white"
+            className="px-5 py-2.5 bg-[#F97316] hover:bg-[#EA580C] rounded-2xl text-white font-medium transition cursor-pointer shadow-[0_0_12px_rgba(249,115,22,0.3)] disabled:opacity-50"
           >
             {loading ? "Saving..." : "Save"}
           </button>
@@ -102,7 +102,7 @@ export default function AddProductPage() {
           <button
             type="button"
             onClick={() => router.back()}
-            className="px-4 py-2 bg-neutral-800 rounded-2xl text-white"
+            className="px-5 py-2.5 bg-[#1A1B1E] hover:bg-[#2A2B30] border border-[#2A2B30] rounded-2xl text-[#A1A1AA] hover:text-white transition cursor-pointer"
           >
             Cancel
           </button>

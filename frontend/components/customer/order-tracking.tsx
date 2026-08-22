@@ -16,8 +16,8 @@ const stepIcons = {
 
 const statusColors = {
   completed: "bg-emerald-500",
-  "in-progress": "bg-amber-500",
-  pending: "bg-muted",
+  "in-progress": "bg-[#F97316]",
+  pending: "bg-[#2A2B30]",
 };
 
 export function OrderTracking() {
@@ -28,7 +28,7 @@ export function OrderTracking() {
   useEffect(() => {
     const loadTracking = async () => {
       try {
-        const orders = await fetchCustomerOrders();
+        const orders = await fetchOrders();
         if (Array.isArray(orders) && orders.length > 0) {
           const activeOrder =
             orders.find((o: any) => o.status !== "delivered") || orders[0];
@@ -57,7 +57,7 @@ export function OrderTracking() {
   };
 
   return (
-    <Card className="border border-[#27272A] bg-[#111111] shadow-sm">
+    <Card className="border border-[#2A2B30] bg-[#1A1B1E] shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div>
           <p className="text-sm text-muted-foreground">Live Tracking</p>

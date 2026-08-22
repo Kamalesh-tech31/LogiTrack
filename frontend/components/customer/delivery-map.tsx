@@ -21,7 +21,7 @@ export function DeliveryMap({ route }: { route?: any }) {
   const currentRoute = route || deliveryRoute;
 
   return (
-    <Card className="border border-[#27272A] bg-[#111111] shadow-sm">
+    <Card className="border border-[#2A2B30] bg-[#1A1B1E] shadow-sm">
       <CardHeader className="pb-2">
         <h2 className="text-lg font-semibold text-foreground">
           Live Delivery Map

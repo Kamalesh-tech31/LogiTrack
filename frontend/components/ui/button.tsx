@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 const buttonVariants = {
   default:
-    "bg-[#7F1D1D] text-white shadow-sm shadow-red-900/20 hover:bg-[#991B1B]",
+    "bg-[#F97316] text-white shadow-sm shadow-orange-950/20 hover:bg-[#EA580C]",
   secondary:
     "bg-[#27272A] text-white shadow-sm shadow-black/20 hover:bg-[#3F3F46]",
   destructive:

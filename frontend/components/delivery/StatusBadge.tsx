@@ -4,16 +4,16 @@ interface Props {
 
 const StatusBadge = ({ status }: Props) => {
   const statusStyles: Record<string, string> = {
-    Pending: "border-[#3F1F1F] bg-[#111111] text-[#F3F4F6]",
-    "Out for Delivery": "border-[#7F1D1D] bg-[#2A1111] text-[#FCE7E7]",
-    Delivered: "border-[#991B1B] bg-[#111111] text-[#FDF2F2]",
-    "Failed Attempt": "border-[#5F1717] bg-[#130B0B] text-[#FADDDD]",
-    Returned: "border-[#7F1D1D] bg-[#130B0B] text-[#F9DEDE]",
+    Pending: "border-amber-500/30 bg-amber-500/10 text-amber-300",
+    "Out for Delivery": "border-[#F97316]/30 bg-[#F97316]/10 text-[#FDBA74]",
+    Delivered: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
+    "Failed Attempt": "border-red-500/30 bg-red-500/10 text-red-300",
+    Returned: "border-red-500/30 bg-red-500/10 text-red-300",
   };
 
   const classes =
     statusStyles[status] ||
-    "border-[#27272A] bg-[#111111] text-[#F3F4F6]";
+    "border-[#2A2B30] bg-[#111214] text-[#F4F4F5]";
 
   return (
     <span
@@ -21,8 +21,8 @@ const StatusBadge = ({ status }: Props) => {
         px-3
         py-1
         rounded-full
-        text-sm
-        font-semibold
+        text-xs
+        font-medium
         border
         ${classes}
       `}

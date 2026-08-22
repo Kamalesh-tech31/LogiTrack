@@ -14,20 +14,21 @@ export default function DashboardCard({
   return (
     <div
       className="
-        bg-[#111111]
+        bg-[#1A1B1E]
         border
-        border-neutral-900
+        border-[#2A2B30]
         rounded-3xl
         p-6
-        hover:border-[#7F1D1D]
+        hover:border-[#F97316]
         transition-all
         duration-300
+        shadow-lg
       "
     >
       {/* TOP */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-neutral-500 text-sm">{title}</p>
+          <p className="text-[#A1A1AA] text-sm">{title}</p>
 
           <h2 className="text-3xl font-bold text-white mt-3">{value}</h2>
         </div>
@@ -37,13 +38,13 @@ export default function DashboardCard({
             w-14
             h-14
             rounded-2xl
-            bg-[#7F1D1D]/20
+            bg-[#F97316]/15
             border
-            border-[#7F1D1D]
+            border-[#F97316]/40
             flex
             items-center
             justify-center
-            text-[#DC2626]
+            text-[#F97316]
           "
         >
           {icon}
@@ -62,7 +63,7 @@ export default function DashboardCard({
           {change}
         </span>
 
-        <span className="text-neutral-500 text-sm ml-2">from last week</span>
+        <span className="text-[#A1A1AA] text-sm ml-2">from last week</span>
       </div>
     </div>
   );

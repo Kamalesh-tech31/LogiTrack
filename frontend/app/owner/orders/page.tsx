@@ -104,91 +104,91 @@ export default function OrdersPage() {
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {/* Total Orders */}
-        <div className="bg-[#111111] border border-[#1F1F1F] rounded-2xl p-6">
+        <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-2xl p-6 shadow-lg">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-400">Total Orders</p>
+              <p className="text-[#A1A1AA]">Total Orders</p>
 
               <h2 className="text-3xl font-bold mt-2">{totalOrders}</h2>
             </div>
 
-            <div className="w-14 h-14 rounded-2xl bg-[#7F1D1D]/20 border border-[#7F1D1D] flex items-center justify-center">
-              <ShoppingCart className="text-red-500" />
+            <div className="w-14 h-14 rounded-2xl bg-[#F97316]/15 border border-[#F97316]/40 flex items-center justify-center">
+              <ShoppingCart className="text-[#F97316]" />
             </div>
           </div>
         </div>
 
         {/* Pending */}
-        <div className="bg-[#111111] border border-[#1F1F1F] rounded-2xl p-6">
+        <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-2xl p-6 shadow-lg">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-400">Pending</p>
+              <p className="text-[#A1A1AA]">Pending</p>
 
               <h2 className="text-3xl font-bold mt-2">{pendingCount}</h2>
             </div>
 
-            <div className="w-14 h-14 rounded-2xl bg-yellow-500/10 border border-yellow-500 flex items-center justify-center">
+            <div className="w-14 h-14 rounded-2xl bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center">
               <Clock className="text-yellow-400" />
             </div>
           </div>
         </div>
 
         {/* Delivered */}
-        <div className="bg-[#111111] border border-[#1F1F1F] rounded-2xl p-6">
+        <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-2xl p-6 shadow-lg">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-400">Delivered</p>
+              <p className="text-[#A1A1AA]">Delivered</p>
 
               <h2 className="text-3xl font-bold mt-2">{deliveredCount}</h2>
             </div>
 
-            <div className="w-14 h-14 rounded-2xl bg-green-500/10 border border-green-500 flex items-center justify-center">
+            <div className="w-14 h-14 rounded-2xl bg-green-500/10 border border-green-500/30 flex items-center justify-center">
               <CheckCircle className="text-green-400" />
             </div>
           </div>
         </div>
 
         {/* Delivery */}
-        <div className="bg-[#111111] border border-[#1F1F1F] rounded-2xl p-6">
+        <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-2xl p-6 shadow-lg">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-400">In Delivery</p>
+              <p className="text-[#A1A1AA]">In Delivery</p>
 
               <h2 className="text-3xl font-bold mt-2">{inDeliveryCount}</h2>
             </div>
 
-            <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500 flex items-center justify-center">
+            <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center">
               <Truck className="text-blue-400" />
             </div>
           </div>
         </div>
       </div>
 
-      {loading && <p className="text-gray-400">Loading orders...</p>}
+      {loading && <p className="text-[#A1A1AA]">Loading orders...</p>}
       {error && <p className="text-red-400">Error: {error}</p>}
 
       {/* Orders Table */}
-      <div className="bg-[#111111] border border-[#1F1F1F] rounded-2xl overflow-hidden">
-        <div className="p-6 border-b border-[#1F1F1F] flex items-center justify-between">
+      <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl overflow-hidden shadow-lg">
+        <div className="p-6 border-b border-[#2A2B30] flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-semibold">Recent Orders</h2>
 
-            <p className="text-gray-400 text-sm mt-1">
+            <p className="text-[#A1A1AA] text-sm mt-1">
               Latest customer transactions
             </p>
           </div>
 
           <button
             type="button"
-            className="px-5 py-2 rounded-xl bg-[#7F1D1D] hover:bg-[#991B1B] transition-all"
+            className="px-5 py-2.5 rounded-xl bg-[#F97316] hover:bg-[#EA580C] text-white font-medium transition-all cursor-pointer shadow-[0_0_12px_rgba(249,115,22,0.3)]"
           >
             Export
           </button>
         </div>
 
         <table className="w-full">
-          <thead className="bg-[#181818]">
-            <tr className="text-left text-gray-400 text-sm">
+          <thead className="bg-[#111214]">
+            <tr className="text-left text-[#A1A1AA] text-sm">
               <th className="p-5">Order ID</th>
               <th className="p-5">Customer</th>
               <th className="p-5">Product</th>
@@ -203,7 +203,7 @@ export default function OrdersPage() {
             {orders.map((order, index) => (
               <tr
                 key={order._id}
-                className="border-t border-[#1F1F1F] hover:bg-[#151515] transition-all"
+                className="border-t border-[#2A2B30] hover:bg-[#111214]/60 transition-all"
               >
                 <td className="p-5 font-medium">{order.orderId}</td>
 
@@ -242,7 +242,7 @@ export default function OrdersPage() {
                 </td>
 
                 <td className="p-5">
-                  <button className="px-4 py-2 rounded-xl border border-[#7F1D1D] hover:bg-[#7F1D1D] transition-all">
+                  <button className="px-4 py-2 rounded-xl border border-[#F97316] text-[#F97316] hover:bg-[#F97316] hover:text-white transition-all cursor-pointer">
                     View
                   </button>
                 </td>

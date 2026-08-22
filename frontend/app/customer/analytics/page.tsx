@@ -20,7 +20,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchCustomerAnalyticsSummary, type CustomerAnalyticsSummary } from "@/lib/api";
 
-const colors = ["#60A5FA", "#F87171", "#34D399", "#FBBF24", "#A78BFA", "#FB7185"];
+const colors = ["#F97316", "#60A5FA", "#34D399", "#FBBF24", "#A78BFA", "#EA580C"];
 
 const statusLabels: Record<string, string> = {
   pending: "Pending",
@@ -102,7 +102,7 @@ export default function CustomerAnalyticsPage() {
         label: "Total Orders",
         value: summary?.totalOrders ?? 0,
         icon: ShoppingBag,
-        accent: "from-blue-500/20 to-blue-500/5",
+        accent: "from-[#F97316]/20 to-[#F97316]/5",
       },
       {
         label: "Pending Orders",
@@ -132,7 +132,7 @@ export default function CustomerAnalyticsPage() {
         label: "Total Spending",
         value: `₹${currencyFormatter.format(summary?.totalSpending ?? 0)}`,
         icon: IndianRupee,
-        accent: "from-rose-500/20 to-rose-500/5",
+        accent: "from-[#F97316]/20 to-[#F97316]/5",
       },
     ],
     [summary],
@@ -140,24 +140,24 @@ export default function CustomerAnalyticsPage() {
 
   return (
     <div className="space-y-6 p-2 md:p-4">
-      <div className="flex flex-col gap-4 rounded-[2rem] border border-neutral-800 bg-[linear-gradient(135deg,rgba(127,29,29,0.28),rgba(17,17,17,0.96)_60%)] p-6 md:p-8 lg:flex-row lg:items-end lg:justify-between">
+      <div className="flex flex-col gap-4 rounded-[2rem] border border-[#2A2B30] bg-[linear-gradient(135deg,rgba(249,115,22,0.15),rgba(26,27,30,0.95)_60%)] p-6 md:p-8 lg:flex-row lg:items-end lg:justify-between shadow-sm">
         <div className="max-w-3xl space-y-3">
-          <p className="text-xs uppercase tracking-[0.3em] text-neutral-400">
+          <p className="text-xs uppercase tracking-[0.3em] text-[#A1A1AA]">
             Customer analytics
           </p>
           <h1 className="text-3xl font-bold text-white md:text-4xl">
             Analytics Dashboard
           </h1>
-          <p className="text-sm text-neutral-300 md:text-base">
+          <p className="text-sm text-[#A1A1AA] md:text-base">
             Real order activity, spend, and status trends across your account,
             refreshed automatically.
           </p>
         </div>
-        <div className="rounded-2xl border border-neutral-800 bg-[#0B0B0B]/80 px-4 py-3 text-sm text-neutral-300">
-          <p className="text-xs uppercase tracking-[0.25em] text-neutral-500">
+        <div className="rounded-2xl border border-[#2A2B30] bg-[#111214] px-4 py-3 text-sm text-[#A1A1AA]">
+          <p className="text-xs uppercase tracking-[0.25em] text-[#A1A1AA]">
             Last updated
           </p>
-          <p className="mt-1 text-white">
+          <p className="mt-1 text-white font-medium">
             {lastUpdated
               ? lastUpdated.toLocaleTimeString([], {
                   hour: "2-digit",
@@ -169,11 +169,11 @@ export default function CustomerAnalyticsPage() {
       </div>
 
       {loading ? (
-        <div className="rounded-2xl border border-neutral-800 bg-[#111111] p-6 text-white">
+        <div className="rounded-2xl border border-[#2A2B30] bg-[#1A1B1E] p-6 text-white">
           Loading analytics...
         </div>
       ) : error ? (
-        <div className="rounded-2xl border border-neutral-800 bg-[#111111] p-6 text-[#FCA5A5]">
+        <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-red-300">
           {error}
         </div>
       ) : summary ? (
@@ -185,19 +185,19 @@ export default function CustomerAnalyticsPage() {
               return (
                 <Card
                   key={item.label}
-                  className="overflow-hidden border border-[#27272A] bg-[#111111]"
+                  className="overflow-hidden border border-[#2A2B30] bg-[#1A1B1E] shadow-sm hover:border-[#F97316] transition-all"
                 >
                   <CardContent
                     className={`relative p-5 bg-gradient-to-br ${item.accent}`}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <p className="text-sm text-neutral-300">{item.label}</p>
+                        <p className="text-sm text-[#A1A1AA]">{item.label}</p>
                         <p className="mt-2 text-3xl font-bold text-white">
                           {item.value}
                         </p>
                       </div>
-                      <div className="rounded-2xl border border-white/10 bg-black/20 p-3 text-white">
+                      <div className="rounded-2xl border border-[#2A2B30] bg-[#111214] p-3 text-[#F97316]">
                         <Icon size={20} />
                       </div>
                     </div>
@@ -208,49 +208,53 @@ export default function CustomerAnalyticsPage() {
           </div>
 
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.9fr)]">
-            <Card className="border border-[#27272A] bg-[#111111]">
+            <Card className="border border-[#2A2B30] bg-[#1A1B1E] shadow-sm">
               <CardHeader>
-                <CardTitle>Monthly Orders Trend</CardTitle>
+                <CardTitle className="text-white">Monthly Orders Trend</CardTitle>
               </CardHeader>
               <CardContent className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={monthlyOrders}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#27272A" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#2A2B30" />
                     <XAxis dataKey="month" stroke="#A1A1AA" />
                     <YAxis stroke="#A1A1AA" />
                     <Tooltip
                       contentStyle={{
-                        background: "#111111",
-                        border: "1px solid #27272A",
+                        background: "#111214",
+                        border: "1px solid #2A2B30",
+                        borderRadius: 16,
+                        color: "#fff",
                       }}
                       labelStyle={{ color: "#FFFFFF" }}
                     />
                     <Line
                       type="monotone"
                       dataKey="orders"
-                      stroke="#F87171"
+                      stroke="#F97316"
                       strokeWidth={3}
-                      dot={{ r: 4 }}
+                      dot={{ r: 4, fill: "#F97316" }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
 
-            <Card className="border border-[#27272A] bg-[#111111]">
+            <Card className="border border-[#2A2B30] bg-[#1A1B1E] shadow-sm">
               <CardHeader>
-                <CardTitle>Monthly Spending Analysis</CardTitle>
+                <CardTitle className="text-white">Monthly Spending Analysis</CardTitle>
               </CardHeader>
               <CardContent className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={monthlyOrders}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#27272A" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#2A2B30" />
                     <XAxis dataKey="month" stroke="#A1A1AA" />
                     <YAxis stroke="#A1A1AA" />
                     <Tooltip
                       contentStyle={{
-                        background: "#111111",
-                        border: "1px solid #27272A",
+                        background: "#111214",
+                        border: "1px solid #2A2B30",
+                        borderRadius: 16,
+                        color: "#fff",
                       }}
                       labelStyle={{ color: "#FFFFFF" }}
                       formatter={(value) => [
@@ -260,7 +264,7 @@ export default function CustomerAnalyticsPage() {
                     />
                     <Bar
                       dataKey="spending"
-                      fill="#60A5FA"
+                      fill="#F97316"
                       radius={[8, 8, 0, 0]}
                     />
                   </BarChart>
@@ -269,9 +273,9 @@ export default function CustomerAnalyticsPage() {
             </Card>
           </div>
 
-          <Card className="border border-[#27272A] bg-[#111111]">
+          <Card className="border border-[#2A2B30] bg-[#1A1B1E] shadow-sm">
             <CardHeader>
-              <CardTitle>Order Status Distribution</CardTitle>
+              <CardTitle className="text-white">Order Status Distribution</CardTitle>
             </CardHeader>
             <CardContent className="h-96">
               <ResponsiveContainer width="100%" height="100%">
@@ -291,11 +295,13 @@ export default function CustomerAnalyticsPage() {
                       />
                     ))}
                   </Pie>
-                  <Legend wrapperStyle={{ color: "#D4D4D8" }} />
+                  <Legend wrapperStyle={{ color: "#A1A1AA" }} />
                   <Tooltip
                     contentStyle={{
-                      background: "#111111",
-                      border: "1px solid #27272A",
+                      background: "#111214",
+                      border: "1px solid #2A2B30",
+                      borderRadius: 16,
+                      color: "#fff",
                     }}
                     labelStyle={{ color: "#FFFFFF" }}
                   />

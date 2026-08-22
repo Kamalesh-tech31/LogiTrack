@@ -136,18 +136,18 @@ export default function HistoryPage() {
       </div>
 
       {isLoading ? (
-        <div className="mt-8 rounded-2xl border border-[#27272A] bg-[#1A1A1A] p-6 text-white">
+        <div className="mt-8 rounded-2xl border border-[#2A2B30] bg-[#1A1B1E] p-6 text-white">
           Loading delivery history from the backend...
         </div>
       ) : error ? (
-        <div className="mt-8 rounded-2xl border border-[#27272A] bg-[#1A1A1A] p-6 text-[#F5D0D0]">
+        <div className="mt-8 rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-red-300">
           {error}
         </div>
       ) : (
-        <div className="bg-[#1A1A1A] border border-[#27272A] rounded-2xl mt-8 overflow-hidden">
+        <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-2xl mt-8 overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full min-w-175">
-              <thead className="bg-[#111111]">
+              <thead className="bg-[#111214]">
                 <tr>
                   <th className="text-left p-4 text-[#A1A1AA]">Delivery ID</th>
                   <th className="text-left p-4 text-[#A1A1AA]">Customer</th>
@@ -160,17 +160,17 @@ export default function HistoryPage() {
 
               <tbody>
                 {history.map((delivery) => (
-                  <tr key={delivery.id} className="border-t border-[#27272A]">
-                    <td className="p-4 text-white">{delivery.id}</td>
+                  <tr key={delivery.id} className="border-t border-[#2A2B30] hover:bg-[#111214]/60 transition">
+                    <td className="p-4 text-white font-medium">{delivery.id}</td>
                     <td className="p-4 text-white">{delivery.customer}</td>
-                    <td className="p-4 text-[#D5D5D5]">{delivery.city}</td>
-                    <td className="p-4 text-[#D5D5D5]">
+                    <td className="p-4 text-[#A1A1AA]">{delivery.city}</td>
+                    <td className="p-4 text-[#A1A1AA]">
                       {delivery.eta || "--"}
                     </td>
                     <td className="p-4">
                       <StatusBadge status={delivery.status} />
                     </td>
-                    <td className="p-4 text-[#D5D5D5]">
+                    <td className="p-4 text-[#A1A1AA]">
                       {delivery.lastUpdated}
                     </td>
                   </tr>

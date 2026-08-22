@@ -53,8 +53,8 @@ export default function AdminLayout({
   // Initial client-side loading state
   if (isAuthenticated === null) {
     return (
-      <div className="min-h-screen bg-[#0B0B0B] text-white flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[#7F1D1D] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-[#111214] text-[#F4F4F5] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#F97316] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -62,29 +62,29 @@ export default function AdminLayout({
   // Password Gate Form
   if (!isAuthenticated) {
     return (
-      <main className="min-h-screen bg-[#0B0B0B] text-white flex items-center justify-center px-4">
-        <div className="w-full max-w-md bg-[#111111]/90 backdrop-blur-xl border border-[#7F1D1D]/30 rounded-3xl p-8 shadow-[0_0_50px_rgba(127,29,29,0.2)]">
+      <main className="min-h-screen bg-[#111214] text-[#F4F4F5] flex items-center justify-center px-4">
+        <div className="w-full max-w-md bg-[#1A1B1E]/95 backdrop-blur-xl border border-[#F97316]/30 rounded-3xl p-8 shadow-[0_0_50px_rgba(249,115,22,0.15)]">
           {/* Brand Header */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#7F1D1D]/20 border border-[#7F1D1D]/50 text-[#EF4444] mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#F97316]/15 border border-[#F97316]/40 text-[#F97316] mb-4">
               <KeyRound size={30} />
             </div>
             <h1 className="text-4xl font-bold tracking-tight text-white">
-              Logi<span className="text-[#7F1D1D]">Track</span>
+              Logi<span className="text-[#F97316]">Track</span>
             </h1>
-            <p className="text-neutral-400 text-sm mt-2">
+            <p className="text-[#A1A1AA] text-sm mt-2">
               Administrator Control Center
             </p>
           </div>
 
           <form onSubmit={handlePasswordSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-neutral-300 mb-2">
+              <label className="block text-sm font-medium text-[#A1A1AA] mb-2">
                 Admin Password
               </label>
               <div className="relative">
                 <Lock
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-[#A1A1AA]"
                   size={18}
                 />
                 <input
@@ -97,12 +97,12 @@ export default function AdminLayout({
                   placeholder="Enter admin password"
                   autoFocus
                   required
-                  className="w-full bg-[#16131A] border border-neutral-800 rounded-2xl pl-11 pr-12 py-3.5 text-white placeholder:text-neutral-600 outline-none focus:border-[#7F1D1D] focus:ring-1 focus:ring-[#7F1D1D] transition-all"
+                  className="w-full bg-[#111214] border border-[#2A2B30] rounded-2xl pl-11 pr-12 py-3.5 text-[#F4F4F5] placeholder:text-neutral-600 outline-none focus:border-[#F97316] focus:ring-1 focus:ring-[#F97316] transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300 transition"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#A1A1AA] hover:text-white transition"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -119,7 +119,7 @@ export default function AdminLayout({
             <button
               type="submit"
               disabled={isSubmitting || !password}
-              className="w-full bg-[#7F1D1D] hover:bg-[#991B1B] text-white font-semibold py-3.5 rounded-2xl transition-all duration-200 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(127,29,29,0.3)] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              className="w-full bg-[#F97316] hover:bg-[#EA580C] text-white font-semibold py-3.5 rounded-2xl transition-all duration-200 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(249,115,22,0.3)] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {isSubmitting ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -132,7 +132,7 @@ export default function AdminLayout({
             </button>
           </form>
 
-          <p className="text-center text-xs text-neutral-500 mt-8">
+          <p className="text-center text-xs text-[#A1A1AA] mt-8">
             Restricted area. Authorized personnel only.
           </p>
         </div>
@@ -142,7 +142,7 @@ export default function AdminLayout({
 
   // Authenticated Admin Shell
   return (
-    <div className="min-h-screen bg-[#0B0B0B] text-white flex">
+    <div className="min-h-screen bg-[#111214] text-[#F4F4F5] flex">
       {/* Shared Admin Sidebar */}
       <AdminSidebar onLogout={handleLogout} />
 

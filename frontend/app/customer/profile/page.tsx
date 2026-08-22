@@ -108,21 +108,21 @@ export default function CustomerProfilePage() {
   return (
     <div className="space-y-6 p-2 md:p-4">
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.7fr)]">
-        <Card className="border border-[#27272A] bg-[#111111]">
+        <Card className="border border-[#2A2B30] bg-[#1A1B1E]">
           <CardContent className="flex flex-col gap-6 p-6 md:p-8 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-4">
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Account</p>
+                <p className="text-xs uppercase tracking-[0.3em] text-[#A1A1AA]">Account</p>
                 <h1 className="mt-2 text-3xl font-bold text-white">Profile</h1>
-                <p className="mt-2 max-w-2xl text-sm text-neutral-400">
+                <p className="mt-2 max-w-2xl text-sm text-[#A1A1AA]">
                   Manage your profile, security, and account session from one place.
                 </p>
               </div>
 
-              <div className="flex flex-wrap gap-3 text-sm text-neutral-300">
-                <span className="rounded-full border border-neutral-800 bg-[#0B0B0B] px-3 py-1">{profile.role || "Customer"}</span>
-                <span className="rounded-full border border-neutral-800 bg-[#0B0B0B] px-3 py-1">{profile.email || "No email loaded"}</span>
-                <span className="rounded-full border border-neutral-800 bg-[#0B0B0B] px-3 py-1">{profile.phone || "No phone added"}</span>
+              <div className="flex flex-wrap gap-3 text-sm text-[#A1A1AA]">
+                <span className="rounded-full border border-[#2A2B30] bg-[#111214] px-3 py-1 text-white">{profile.role || "Customer"}</span>
+                <span className="rounded-full border border-[#2A2B30] bg-[#111214] px-3 py-1 text-white">{profile.email || "No email loaded"}</span>
+                <span className="rounded-full border border-[#2A2B30] bg-[#111214] px-3 py-1 text-white">{profile.phone || "No phone added"}</span>
               </div>
             </div>
 
@@ -130,41 +130,41 @@ export default function CustomerProfilePage() {
               <Button
                 variant="outline"
                 onClick={() => profileSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                className="justify-start rounded-2xl border-neutral-700 bg-[#0B0B0B] text-white hover:bg-[#1A1A1A]"
+                className="justify-start rounded-2xl border-[#2A2B30] bg-[#111214] text-white hover:bg-[#1A1B1E]"
               >
                 Profile
               </Button>
               <Button
                 variant="outline"
                 onClick={() => securitySectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                className="justify-start rounded-2xl border-neutral-700 bg-[#0B0B0B] text-white hover:bg-[#1A1A1A]"
+                className="justify-start rounded-2xl border-[#2A2B30] bg-[#111214] text-white hover:bg-[#1A1B1E]"
               >
                 Settings
               </Button>
               <AccountDeletionDialog
                 roleLabel="Customer"
-                buttonClassName="w-full justify-start rounded-2xl border-[#7F1D1D]/50 bg-[#7F1D1D]/10 text-[#FCA5A5] hover:bg-[#7F1D1D]/20 hover:text-white"
+                buttonClassName="w-full justify-start rounded-2xl border-red-900/40 bg-red-950/20 text-red-300 hover:bg-red-950/40 hover:text-white"
               />
-              <Button onClick={logout} className="w-full justify-start rounded-2xl bg-red-600 hover:bg-red-700">
+              <Button onClick={logout} className="w-full justify-start rounded-2xl bg-[#111214] border border-[#2A2B30] hover:border-red-600/60 text-[#A1A1AA] hover:text-red-400 transition cursor-pointer">
                 Logout
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border border-[#27272A] bg-[#111111]">
+        <Card className="border border-[#2A2B30] bg-[#1A1B1E]">
           <CardHeader>
-            <CardTitle>Session overview</CardTitle>
+            <CardTitle className="text-white">Session overview</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4 text-sm text-neutral-400">
-            <p>This page now contains the full customer account menu, so the dashboard header stays clean and direct.</p>
+          <CardContent className="space-y-4 text-sm text-[#A1A1AA]">
+            <p>This page contains the full customer account menu, so the dashboard header stays clean and direct.</p>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-              <div className="rounded-2xl border border-neutral-800 bg-[#0B0B0B] p-4">
-                <p className="text-xs uppercase tracking-[0.25em] text-neutral-500">Status</p>
+              <div className="rounded-2xl border border-[#2A2B30] bg-[#111214] p-4">
+                <p className="text-xs uppercase tracking-[0.25em] text-[#A1A1AA]">Status</p>
                 <p className="mt-2 text-white">Signed in</p>
               </div>
-              <div className="rounded-2xl border border-neutral-800 bg-[#0B0B0B] p-4">
-                <p className="text-xs uppercase tracking-[0.25em] text-neutral-500">Profile</p>
+              <div className="rounded-2xl border border-[#2A2B30] bg-[#111214] p-4">
+                <p className="text-xs uppercase tracking-[0.25em] text-[#A1A1AA]">Profile</p>
                 <p className="mt-2 text-white">Editable account details</p>
               </div>
             </div>
@@ -172,12 +172,12 @@ export default function CustomerProfilePage() {
         </Card>
       </div>
 
-      {message && <div className="rounded-2xl border border-neutral-800 bg-[#111111] p-4 text-sm text-neutral-200">{message}</div>}
+      {message && <div className="rounded-2xl border border-[#2A2B30] bg-[#1A1B1E] p-4 text-sm text-neutral-200">{message}</div>}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.7fr)]">
-        <Card ref={profileSectionRef} className="border border-[#27272A] bg-[#111111]">
+        <Card ref={profileSectionRef} className="border border-[#2A2B30] bg-[#1A1B1E]">
           <CardHeader>
-            <CardTitle>Account details</CardTitle>
+            <CardTitle className="text-white">Account details</CardTitle>
           </CardHeader>
           <CardContent>
             <form className="space-y-4" onSubmit={handleProfileSubmit}>
@@ -190,27 +190,27 @@ export default function CustomerProfilePage() {
               <Input placeholder="Business name" value={profile.businessName} onChange={(event) => setProfile((current) => ({ ...current, businessName: event.target.value }))} />
               <Input placeholder="GST number" value={profile.gstNumber} onChange={(event) => setProfile((current) => ({ ...current, gstNumber: event.target.value }))} />
               <Input placeholder="Business address" value={profile.businessAddress} onChange={(event) => setProfile((current) => ({ ...current, businessAddress: event.target.value }))} />
-              <Button type="submit" disabled={savingProfile} className="rounded-2xl bg-red-600 hover:bg-red-700">
+              <Button type="submit" disabled={savingProfile} className="rounded-2xl bg-[#F97316] hover:bg-[#EA580C] text-white font-medium cursor-pointer shadow-[0_0_12px_rgba(249,115,22,0.3)]">
                 {savingProfile ? "Saving..." : "Save profile"}
               </Button>
             </form>
           </CardContent>
         </Card>
 
-        <Card ref={securitySectionRef} className="border border-[#27272A] bg-[#111111]">
+        <Card ref={securitySectionRef} className="border border-[#2A2B30] bg-[#1A1B1E]">
           <CardHeader>
-            <CardTitle>Settings & security</CardTitle>
+            <CardTitle className="text-white">Settings & security</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-5">
-              <div className="rounded-2xl border border-neutral-800 bg-[#0B0B0B] p-4 text-sm text-neutral-400">
+              <div className="rounded-2xl border border-[#2A2B30] bg-[#111214] p-4 text-sm text-[#A1A1AA]">
                 Update your password below. These controls stay on the profile page so the dashboard header does not need a dropdown.
               </div>
               <form className="space-y-4" onSubmit={handlePasswordSubmit}>
                 <Input placeholder="Current password" type="password" value={passwordForm.currentPassword} onChange={(event) => setPasswordForm((current) => ({ ...current, currentPassword: event.target.value }))} />
                 <Input placeholder="New password" type="password" value={passwordForm.newPassword} onChange={(event) => setPasswordForm((current) => ({ ...current, newPassword: event.target.value }))} />
                 <Input placeholder="Confirm password" type="password" value={passwordForm.confirmPassword} onChange={(event) => setPasswordForm((current) => ({ ...current, confirmPassword: event.target.value }))} />
-                <Button type="submit" disabled={savingPassword} className="rounded-2xl bg-red-600 hover:bg-red-700">
+                <Button type="submit" disabled={savingPassword} className="rounded-2xl bg-[#F97316] hover:bg-[#EA580C] text-white font-medium cursor-pointer shadow-[0_0_12px_rgba(249,115,22,0.3)]">
                   {savingPassword ? "Updating..." : "Update password"}
                 </Button>
               </form>
@@ -220,7 +220,7 @@ export default function CustomerProfilePage() {
       </div>
 
       <div className="flex justify-end">
-        <Button variant="outline" onClick={() => router.push("/customer/orders")} className="rounded-2xl border-neutral-700 bg-[#111111] text-white hover:bg-[#1A1A1A]">
+        <Button variant="outline" onClick={() => router.push("/customer/orders")} className="rounded-2xl border-[#2A2B30] bg-[#1A1B1E] text-white hover:bg-[#111214] transition cursor-pointer">
           Back to orders
         </Button>
       </div>

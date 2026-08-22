@@ -50,12 +50,12 @@ export default function AdminSidebar({ onLogout }: AdminSidebarProps) {
   };
 
   return (
-    <aside className="w-72 min-h-screen bg-black border-r border-[#1f1f1f] p-6 flex flex-col shrink-0">
+    <aside className="w-72 min-h-screen bg-[#111214] border-r border-[#2A2B30] p-6 flex flex-col shrink-0">
       <div>
         <h1 className="text-4xl font-bold text-white mb-2">
-          Logi<span className="text-red-600">Track</span>
+          Logi<span className="text-[#F97316]">Track</span>
         </h1>
-        <p className="text-gray-500 mb-10 text-sm">Administrator Panel</p>
+        <p className="text-[#A1A1AA] mb-10 text-sm">Administrator Panel</p>
 
         <nav className="space-y-3">
           {menuItems.map((item) => {
@@ -68,8 +68,8 @@ export default function AdminSidebar({ onLogout }: AdminSidebarProps) {
                 href={item.href}
                 className={`flex items-center gap-4 p-4 rounded-2xl transition-all ${
                   active
-                    ? "bg-red-600 text-white shadow-[0_0_20px_rgba(220,38,38,0.25)]"
-                    : "text-gray-400 hover:bg-[#111111] hover:text-white"
+                    ? "bg-[#F97316] text-white shadow-[0_0_20px_rgba(249,115,22,0.25)]"
+                    : "text-[#A1A1AA] hover:bg-[#1A1B1E] hover:text-white"
                 }`}
               >
                 <Icon size={22} />
@@ -80,10 +80,10 @@ export default function AdminSidebar({ onLogout }: AdminSidebarProps) {
         </nav>
       </div>
 
-      <div className="mt-auto pt-8 border-t border-[#1f1f1f]">
+      <div className="mt-auto pt-8 border-t border-[#2A2B30]">
         <button
           onClick={handleLogoutClick}
-          className="w-full flex items-center justify-center gap-3 bg-red-600 hover:bg-red-700 text-white py-3.5 rounded-2xl transition-all font-medium cursor-pointer"
+          className="w-full flex items-center justify-center gap-3 bg-[#1A1B1E] border border-[#2A2B30] hover:border-red-600/60 text-[#A1A1AA] hover:text-red-400 py-3.5 rounded-2xl transition-all font-medium cursor-pointer"
         >
           <LogOut size={20} />
           <span>Exit Admin</span>

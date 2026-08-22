@@ -29,11 +29,11 @@ const activities = [
 
 export default function ActivityFeed() {
   return (
-    <div className="bg-[#111111] border border-[#1f1f1f] rounded-3xl p-6">
+    <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl p-6 shadow-lg">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-white">Activity Feed</h2>
 
-        <p className="text-gray-400 text-sm mt-1">
+        <p className="text-[#A1A1AA] text-sm mt-1">
           Live business activities and updates
         </p>
       </div>
@@ -45,20 +45,20 @@ export default function ActivityFeed() {
           return (
             <div
               key={index}
-              className="bg-black border border-[#222] rounded-2xl p-5 flex gap-4 hover:border-[#7F1D1D] transition"
+              className="bg-[#111214] border border-[#2A2B30] rounded-2xl p-5 flex gap-4 hover:border-[#F97316] transition"
             >
-              <div className="w-12 h-12 rounded-2xl bg-[#7F1D1D]/20 border border-[#7F1D1D] flex items-center justify-center">
-                <Icon className="text-red-500" size={22} />
+              <div className="w-12 h-12 rounded-2xl bg-[#F97316]/15 border border-[#F97316]/40 flex items-center justify-center">
+                <Icon className="text-[#F97316]" size={22} />
               </div>
 
               <div className="flex-1">
                 <div className="flex items-center justify-between">
                   <h3 className="text-white font-semibold">{activity.title}</h3>
 
-                  <span className="text-xs text-gray-500">{activity.time}</span>
+                  <span className="text-xs text-[#A1A1AA]">{activity.time}</span>
                 </div>
 
-                <p className="text-gray-400 text-sm mt-1">
+                <p className="text-[#A1A1AA] text-sm mt-1">
                   {activity.description}
                 </p>
               </div>

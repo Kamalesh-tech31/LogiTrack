@@ -47,42 +47,47 @@ const Sidebar = () => {
   ];
 
   return (
-    <div className="w-72 min-h-screen bg-black border-r border-[#1f1f1f] p-6">
-      <h1 className="text-4xl font-bold text-white mb-10">
-        Logi<span className="text-red-600">Track</span>
-      </h1>
+    <div className="w-72 min-h-screen bg-[#111214] border-r border-[#2A2B30] p-6 flex flex-col justify-between shrink-0">
+      <div>
+        <h1 className="text-4xl font-bold text-white mb-2">
+          Logi<span className="text-[#F97316]">Track</span>
+        </h1>
+        <p className="text-[#A1A1AA] mb-10 text-sm">Delivery Portal</p>
 
-      <div className="space-y-3">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const active = pathname === item.href;
+        <div className="space-y-3">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const active = pathname === item.href;
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-4 p-4 rounded-2xl transition-all ${
-                active
-                  ? "bg-red-600 text-white"
-                  : "text-gray-400 hover:bg-[#111111] hover:text-white"
-              }`}
-            >
-              <Icon size={22} />
-              <span className="text-lg">{item.name}</span>
-            </Link>
-          );
-        })}
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-4 p-4 rounded-2xl transition-all ${
+                  active
+                    ? "bg-[#F97316] text-white shadow-[0_0_20px_rgba(249,115,22,0.25)]"
+                    : "text-[#A1A1AA] hover:bg-[#1A1B1E] hover:text-white"
+                }`}
+              >
+                <Icon size={22} />
+                <span className="text-base font-medium">{item.name}</span>
+              </Link>
+            );
+          })}
+        </div>
       </div>
-      <div className="mt-8 space-y-3">
+
+      <div className="mt-8 space-y-3 pt-6 border-t border-[#2A2B30]">
         <AccountDeletionDialog
           roleLabel="Delivery Agent"
-          buttonClassName="w-full justify-start border-[#7F1D1D]/50 bg-[#7F1D1D]/10 text-[#FCA5A5] hover:bg-[#7F1D1D]/20 hover:text-white"
+          buttonClassName="w-full justify-start border-red-900/40 bg-red-950/20 text-red-300 hover:bg-red-950/40 hover:text-white"
         />
         <button
           onClick={logout}
-          className="w-full mt-0 bg-red-600 hover:bg-red-700 text-white py-3 rounded-2xl transition-all"
+          className="w-full flex items-center justify-center gap-2 bg-[#1A1B1E] border border-[#2A2B30] hover:border-red-600/60 text-[#A1A1AA] hover:text-red-400 py-3 rounded-2xl transition-all font-medium cursor-pointer"
         >
-          Logout
+          <LogOut size={18} />
+          <span>Logout</span>
         </button>
       </div>
     </div>

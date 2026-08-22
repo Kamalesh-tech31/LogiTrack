@@ -269,25 +269,25 @@ export default function OwnerDashboard() {
         </div>
       </section>
       <section className="grid gap-6 xl:grid-cols-1">
-        <div className="rounded-3xl border border-[#1F1F1F] bg-[#111111] p-6 shadow-lg shadow-black/10">
+        <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-6 shadow-lg shadow-black/10">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm uppercase tracking-[0.2em] text-neutral-500">
+              <p className="text-sm uppercase tracking-[0.2em] text-[#A1A1AA]">
                 Fleet & Agents
               </p>
               <h2 className="mt-3 text-3xl font-bold text-white">
                 Agents Overview
               </h2>
-              <p className="text-neutral-400 mt-2 max-w-2xl">
+              <p className="text-[#A1A1AA] mt-2 max-w-2xl">
                 Key driver metrics and assignment counts.
               </p>
             </div>
             <div className="text-right">
-              <p className="text-sm text-neutral-400">Total agents</p>
+              <p className="text-sm text-[#A1A1AA]">Total agents</p>
               <p className="text-2xl font-bold text-white mt-1">
                 {uniqueAgents.length}
               </p>
-              <p className="text-sm text-neutral-500">{driversOnline} online</p>
+              <p className="text-sm text-[#A1A1AA]">{driversOnline} online</p>
             </div>
           </div>
 
@@ -316,18 +316,18 @@ export default function OwnerDashboard() {
                 return (
                   <div
                     key={agent._id}
-                    className="rounded-3xl border border-neutral-800 bg-[#0B0B0B] p-4 flex items-center justify-between"
+                    className="rounded-3xl border border-[#2A2B30] bg-[#111214] p-4 flex items-center justify-between"
                   >
                     <div>
                       <p className="font-semibold text-white">{agent.name}</p>
-                      <p className="text-sm text-neutral-500 mt-1">
+                      <p className="text-sm text-[#A1A1AA] mt-1">
                         {agent.contact || agent.email || "—"}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm text-neutral-400">Assigned</p>
+                      <p className="text-sm text-[#A1A1AA]">Assigned</p>
                       <p className="font-bold text-white">{assignedCount}</p>
-                      <p className="text-sm text-neutral-400">Completed</p>
+                      <p className="text-sm text-[#A1A1AA]">Completed</p>
                       <p className="font-bold text-white">{completedCount}</p>
                     </div>
                   </div>
@@ -345,17 +345,17 @@ export default function OwnerDashboard() {
       {/* Active Fleet and Shipment Pulse removed per request */}
 
       <section className="grid gap-6 xl:grid-cols-3">
-        <div className="xl:col-span-2 rounded-3xl border border-neutral-900 bg-[#111111] p-6 shadow-lg shadow-black/10">
+        <div className="xl:col-span-2 rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-6 shadow-lg shadow-black/10">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-2xl font-bold text-white">Recent Orders</h2>
-              <p className="text-neutral-500 mt-2">
+              <p className="text-[#A1A1AA] mt-2">
                 Today’s most important shipments and order status.
               </p>
             </div>
             <a
               href="/owner/orders"
-              className="rounded-2xl bg-red-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
+              className="rounded-2xl bg-[#F97316] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#EA580C] shadow-[0_0_15px_rgba(249,115,22,0.3)]"
             >
               View all
             </a>
@@ -366,18 +366,18 @@ export default function OwnerDashboard() {
               recentOrders.map((order) => (
                 <div
                   key={order._id}
-                  className="flex flex-col gap-4 rounded-3xl border border-neutral-800 bg-[#0B0B0B] p-5 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-4 rounded-3xl border border-[#2A2B30] bg-[#111214] p-5 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
                     <p className="text-white font-semibold">{order.orderId}</p>
-                    <p className="text-sm text-neutral-500 mt-1">
+                    <p className="text-sm text-[#A1A1AA] mt-1">
                       {order.customerName} ·{" "}
                       {order.items[0]?.product?.name ?? ""}
                     </p>
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-neutral-400">
+                  <div className="flex items-center gap-4 text-sm text-[#A1A1AA]">
                     <span>₹{Number(order.totalPrice).toLocaleString()}</span>
-                    <span className="rounded-full bg-[#7F1D1D]/20 px-3 py-1 text-red-300">
+                    <span className="rounded-full bg-[#F97316]/15 px-3 py-1 text-[#FDBA74] border border-[#F97316]/20">
                       {order.status}
                     </span>
                   </div>
@@ -391,9 +391,9 @@ export default function OwnerDashboard() {
           </div>
         </div>
 
-        <div className="rounded-3xl border border-neutral-900 bg-[#111111] p-6 shadow-lg shadow-black/10">
+        <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-6 shadow-lg shadow-black/10">
           <h2 className="text-2xl font-bold text-white">Low Stock Alerts</h2>
-          <p className="text-neutral-500 mt-2">
+          <p className="text-[#A1A1AA] mt-2">
             Keep an eye on inventory that needs restocking soon.
           </p>
 
@@ -402,16 +402,16 @@ export default function OwnerDashboard() {
               lowStockItems.map((p) => (
                 <div
                   key={p._id}
-                  className="rounded-3xl border border-[#7F1D1D] bg-[#0B0B0B] p-4"
+                  className="rounded-3xl border border-red-900/50 bg-[#111214] p-4"
                 >
                   <div className="flex items-center justify-between gap-4">
                     <div>
                       <h3 className="text-white font-semibold">{p.name}</h3>
-                      <p className="text-sm text-neutral-500 mt-1">
+                      <p className="text-sm text-[#A1A1AA] mt-1">
                         Running low — reorder soon.
                       </p>
                     </div>
-                    <span className="rounded-full bg-red-500/15 px-3 py-1 text-sm text-red-300">
+                    <span className="rounded-full bg-red-500/15 border border-red-500/20 px-3 py-1 text-sm text-red-300">
                       Critical
                     </span>
                   </div>
