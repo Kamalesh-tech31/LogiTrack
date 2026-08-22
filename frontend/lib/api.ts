@@ -299,13 +299,35 @@ export async function fetchDeliveries(): Promise<DeliveryRecord[]> {
 
 export async function acceptDelivery(
   orderOrDeliveryId: string,
-): Promise<DeliveryRecord> {
-  return apiRequest<DeliveryRecord>(
+): Promise<DeliveryRecord | { batchable: true; message: string }> {
+  return apiRequest<any>(
     `/api/deliveries/orders/${orderOrDeliveryId}/accept`,
     {
       method: "POST",
     },
   );
+}
+
+export async function addOrderToBatch(
+  orderOrDeliveryId: string,
+): Promise<{ success: boolean; message: string }> {
+  return apiRequest<any>(
+    `/api/deliveries/orders/${orderOrDeliveryId}/add-to-batch`,
+    {
+      method: "POST",
+    },
+  );
+}
+
+export async function checkAgentAvailability(
+  agentId: string,
+): Promise<{
+  agentStatus: string;
+  activeBatchSize: number;
+  batchCap: number;
+  activeOrders: DeliveryRecord[];
+}> {
+  return apiRequest<any>(`/api/deliveries/agent/${agentId}/availability`);
 }
 
 export async function fetchHistory(): Promise<DeliveryRecord[]> {

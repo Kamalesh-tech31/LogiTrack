@@ -45,6 +45,12 @@ const userSchema = new mongoose.Schema(
       default: true,
     },
 
+    agentStatus: {
+      type: String,
+      enum: ["available", "on-delivery", "offline"],
+      default: "available",
+    },
+
     deletedAt: {
       type: Date,
       default: null,

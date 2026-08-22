@@ -37,6 +37,7 @@ type TrackingOrder = {
   status: string;
   amount: number;
   date: string;
+  sequenceOrder?: number;
 };
 
 function TrackingContent() {
@@ -73,6 +74,7 @@ function TrackingContent() {
       order.createdAt ||
       order.updatedAt ||
       new Date().toISOString(),
+    sequenceOrder: order.sequenceOrder,
   });
 
   useEffect(() => {
@@ -348,6 +350,11 @@ function TrackingContent() {
                       <p className="text-sm text-muted-foreground mt-1">
                         {selectedOrder.customer}
                       </p>
+                      {selectedOrder.sequenceOrder && selectedOrder.sequenceOrder > 1 && (
+                        <p className="text-xs font-medium text-amber-600 mt-2 bg-amber-50 px-2 py-1 rounded-full inline-block border border-amber-200">
+                          Your order is stop #{selectedOrder.sequenceOrder} on the route.
+                        </p>
+                      )}
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Button

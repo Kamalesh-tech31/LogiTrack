@@ -1,5 +1,9 @@
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
+const dns = require("dns");
+
+// Set DNS servers to Google DNS to resolve MongoDB Atlas SRV records
+dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
 dotenv.config();
 

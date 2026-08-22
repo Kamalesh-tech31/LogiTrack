@@ -146,7 +146,24 @@ export default function DeliveriesPage() {
     const item = deliveries.find((d) => d.id === id);
     if (!item) return;
     try {
-      const accepted = await acceptDelivery(id);
+      const response = await acceptDelivery(id);
+      
+      if ('batchable' in response && response.batchable) {
+        if (window.confirm(response.message || "Order is nearby. Add to batch?")) {
+          const { addOrderToBatch } = await import("@/lib/api");
+          const batchRes = await addOrderToBatch(id);
+          toast.success(batchRes.message || "Added to batch!");
+          // Reload deliveries to update UI
+          const data = await fetchDeliveries();
+          setDeliveries(data);
+          setSelectedStatuses(
+            Object.fromEntries(data.map((item) => [item.id, item.status])) as Record<string, DeliveryStatus>
+          );
+        }
+        return; // Don't proceed to location tracking for a batched order just yet
+      }
+      
+      const accepted = response as DeliveryRecord;
       setDeliveries((prev) => prev.map((p) => (p.id === id ? accepted : p)));
       toast.success("Delivery accepted. Capturing your current location...");
 
@@ -310,6 +327,11 @@ export default function DeliveriesPage() {
                       <div className="px-3 py-1 rounded-lg bg-[#1F2937] text-xs text-[#E5E7EB] font-medium">
                         {delivery.orderId || delivery.id}
                       </div>
+                      {delivery.raw?.sequenceOrder && (
+                        <div className="px-3 py-1 rounded-lg bg-indigo-600 text-xs text-white font-medium">
+                          Stop #{delivery.raw.sequenceOrder}
+                        </div>
+                      )}
                       <h3 className="text-lg font-semibold text-white">
                         {delivery.customer}
                       </h3>
@@ -386,12 +408,9 @@ export default function DeliveriesPage() {
                       {!delivery.raw?.assignedAgent && (
                         <button
                           onClick={() => void handleAccept(delivery.id)}
-                          disabled={hasActiveAssignedOrder}
-                          className={`rounded-full px-5 py-3 text-white font-semibold shadow transition ${hasActiveAssignedOrder ? "bg-slate-600 cursor-not-allowed" : "bg-green-500 hover:brightness-105"}`}
+                          className="rounded-full px-5 py-3 text-white font-semibold shadow transition bg-green-500 hover:brightness-105"
                         >
-                          {hasActiveAssignedOrder
-                            ? "Claim disabled until current delivery completes"
-                            : "Claim & Accept"}
+                          Claim & Accept
                         </button>
                       )}
 

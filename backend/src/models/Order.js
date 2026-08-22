@@ -63,6 +63,14 @@ const OrderSchema = new mongoose.Schema(
       ref: "User",
       default: null,
     },
+    batchId: {
+      type: String,
+      default: null,
+    },
+    sequenceOrder: {
+      type: Number,
+      default: null,
+    },
     completionPhoto: {
       type: String,
       default: null,

@@ -1,6 +1,12 @@
 const mongoose = require("mongoose");
 const Order = require("../models/Order");
 const User = require("../models/User");
+const LocationUpdate = require("../models/LocationUpdate");
+const { getDistanceFromLatLonInKm, computeRouteSequence } = require("../utils/geo");
+
+// Configurable constants for batching
+const BATCH_CAP = 3;
+const PROXIMITY_RADIUS_KM = 2;
 
 function formatDuration(ms) {
   if (ms <= 0) return "0m";
@@ -100,6 +106,42 @@ function mapOrderToRecord(o) {
     raw: o,
   };
 }
+
+// GET /api/deliveries/agent/:agentId/availability
+const checkAgentAvailability = async (req, res, next) => {
+  try {
+    const { agentId } = req.params;
+    const agent = await User.findById(agentId);
+    if (!agent || agent.role !== "Delivery Agent") {
+      return res.status(404).json({ message: "Agent not found" });
+    }
+
+    const terminalStatuses = [
+      "completed",
+      "delivered",
+      "failed",
+      "returned",
+      "cancelled",
+    ];
+
+    const activeOrders = await Order.find({
+      assignedAgent: agentId,
+      status: { $nin: terminalStatuses }
+    }).populate("items.product", "name price images").populate("customerId", "fullName email");
+
+    res.json({
+      success: true,
+      data: {
+        agentStatus: agent.agentStatus || "available",
+        activeBatchSize: activeOrders.length,
+        batchCap: BATCH_CAP,
+        activeOrders: activeOrders.map(mapOrderToRecord)
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
 
 // GET /api/deliveries
 // Supports query params: owner=true, mine=true, status=...
@@ -236,18 +278,63 @@ const acceptOrder = async (req, res, next) => {
       "cancelled",
     ];
 
-    const activeAssignedOrders = await Order.countDocuments({
+    const activeOrders = await Order.find({
       assignedAgent: userId,
       status: { $nin: terminalStatuses },
       _id: { $ne: order._id },
     });
 
-    if (activeAssignedOrders > 0) {
-      return res.status(403).json({
-        message:
-          "Complete your current delivery before accepting another order.",
-      });
+    if (activeOrders.length > 0) {
+      if (activeOrders.length >= BATCH_CAP) {
+        return res.status(403).json({
+          message: `Batch cap of ${BATCH_CAP} reached. Complete your current deliveries first.`,
+        });
+      }
+
+      const newOrderAddr = order.deliveryAddress;
+      if (!newOrderAddr || !newOrderAddr.latitude || !newOrderAddr.longitude) {
+        return res.status(403).json({
+          message: "New order has no valid coordinates. Complete current delivery first.",
+        });
+      }
+
+      let isNearby = false;
+      const latestLocation = await LocationUpdate.findOne({ deliveryId: { $in: activeOrders.map(o => o._id) } }).sort({ timestamp: -1 });
+      
+      if (latestLocation) {
+        const dist = getDistanceFromLatLonInKm(newOrderAddr.latitude, newOrderAddr.longitude, latestLocation.latitude, latestLocation.longitude);
+        if (dist <= PROXIMITY_RADIUS_KM) isNearby = true;
+      }
+
+      if (!isNearby) {
+        for (const activeOrder of activeOrders) {
+          const addr = activeOrder.deliveryAddress;
+          if (addr && addr.latitude && addr.longitude) {
+            const dist = getDistanceFromLatLonInKm(newOrderAddr.latitude, newOrderAddr.longitude, addr.latitude, addr.longitude);
+            if (dist <= PROXIMITY_RADIUS_KM) {
+              isNearby = true;
+              break;
+            }
+          }
+        }
+      }
+
+      if (isNearby) {
+        return res.status(202).json({
+          success: true,
+          batchable: true,
+          message: `Order #${order.orderId} is nearby your current route! Would you like to add it to your batch?`
+        });
+      } else {
+        return res.status(403).json({
+          message: "Order is too far from your current route. Complete your current delivery before accepting another order.",
+        });
+      }
     }
+
+    // Agent is now on a new delivery
+    await User.findByIdAndUpdate(userId, { agentStatus: "on-delivery" });
+
 
     if (
       !order.assignedAgent ||
@@ -268,6 +355,78 @@ const acceptOrder = async (req, res, next) => {
       .populate("assignedAgent", "fullName email role")
       .populate("items.product", "name");
     res.json({ success: true, data: mapOrderToRecord(populated) });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/deliveries/orders/:orderId/add-to-batch
+const addOrderToBatch = async (req, res, next) => {
+  try {
+    const user = req.user;
+    if (!user || user.role !== "Delivery Agent") {
+      return res.status(403).json({ message: "Only delivery agents can batch orders" });
+    }
+    const userId = user._id || user.id;
+    const { orderId } = req.params;
+
+    const order = await Order.findById(orderId);
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    if (order.assignedAgent && String(order.assignedAgent) !== String(userId)) {
+      return res.status(403).json({ message: "Order not assigned to you" });
+    }
+
+    const terminalStatuses = ["completed", "delivered", "failed", "returned", "cancelled"];
+    const activeOrders = await Order.find({
+      assignedAgent: userId,
+      status: { $nin: terminalStatuses },
+      _id: { $ne: order._id }
+    });
+
+    if (activeOrders.length >= BATCH_CAP) {
+      return res.status(403).json({ message: `Batch cap of ${BATCH_CAP} reached.` });
+    }
+
+    const batchId = activeOrders.length > 0 && activeOrders[0].batchId 
+      ? activeOrders[0].batchId 
+      : new mongoose.Types.ObjectId().toString();
+
+    order.assignedAgent = userId;
+    order.status = "shipped";
+    order.shippedAt = new Date();
+    order.batchId = batchId;
+    await order.save();
+
+    activeOrders.push(order);
+
+    await Order.updateMany(
+      { _id: { $in: activeOrders.map(o => o._id) } },
+      { $set: { batchId } }
+    );
+
+    const latestLocation = await LocationUpdate.findOne({ deliveryId: { $in: activeOrders.map(o => o._id) } }).sort({ timestamp: -1 });
+    let currentLoc = latestLocation ? { lat: latestLocation.latitude, lng: latestLocation.longitude } : null;
+    
+    if (!currentLoc) {
+      currentLoc = { lat: activeOrders[0].deliveryAddress.latitude, lng: activeOrders[0].deliveryAddress.longitude };
+    }
+
+    const ObjectStops = activeOrders.filter(o => o.deliveryAddress && o.deliveryAddress.latitude).map(o => ({
+      id: o._id.toString(),
+      lat: o.deliveryAddress.latitude,
+      lng: o.deliveryAddress.longitude
+    }));
+
+    const sequence = computeRouteSequence(currentLoc, ObjectStops);
+
+    for (let i = 0; i < sequence.length; i++) {
+      await Order.findByIdAndUpdate(sequence[i], { sequenceOrder: i + 1 });
+    }
+
+    await User.findByIdAndUpdate(userId, { agentStatus: "on-delivery" });
+
+    res.json({ success: true, message: "Added to batch successfully!" });
   } catch (err) {
     next(err);
   }
@@ -327,6 +486,16 @@ const updateDeliveryStatus = async (req, res, next) => {
     if (status) order.status = status;
     if (status === "shipped") order.shippedAt = new Date();
     await order.save();
+
+    if (order.assignedAgent && ["completed", "delivered", "cancelled", "returned", "failed"].includes(status)) {
+      const activeAssigned = await Order.countDocuments({
+        assignedAgent: order.assignedAgent,
+        status: { $nin: ["completed", "delivered", "failed", "returned", "cancelled"] }
+      });
+      if (activeAssigned === 0) {
+        await User.findByIdAndUpdate(order.assignedAgent, { agentStatus: "available" });
+      }
+    }
 
     const populated = await Order.findById(order._id)
       .populate("assignedAgent", "fullName email role")
@@ -570,6 +739,8 @@ const getDeliveries = async (req, res, next) => {
 };
 
 module.exports = {
+  checkAgentAvailability,
+  addOrderToBatch,
   getAllDeliveries,
   assignOrder,
   acceptOrder,
