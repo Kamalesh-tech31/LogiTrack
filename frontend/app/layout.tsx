@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "react-hot-toast";
 
 import { ThemeProvider } from "@/components/theme-provider";
+import { ChunkErrorRecovery } from "@/components/common/ChunkErrorRecovery";
 
 import "./globals.css";
 
@@ -53,6 +54,7 @@ export default function RootLayout({
       <body
         className={`${displayFont.variable} ${sansFont.variable} font-sans antialiased`}
       >
+        <ChunkErrorRecovery />
         <ThemeProvider>
           <Toaster position="top-right" />
           {children}

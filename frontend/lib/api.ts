@@ -169,6 +169,26 @@ export async function createCustomerOrder(orderData: unknown): Promise<any> {
   });
 }
 
+export async function cancelOrder(orderId: string): Promise<any> {
+  return apiRequest<any>(`/api/orders/${orderId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function geocodeAddressApi(address: string): Promise<any> {
+  return apiRequest<any>("/api/orders/geocode", {
+    method: "POST",
+    body: JSON.stringify({ address }),
+  });
+}
+
+export async function getAddressSuggestionsApi(query: string): Promise<any[]> {
+  const res = await apiRequest<any>(
+    `/api/orders/address-suggestions?query=${encodeURIComponent(query)}`,
+  );
+  return Array.isArray(res) ? res : res?.data || [];
+}
+
 export async function requestRegistrationOtp(email: string): Promise<{
   email: string;
   resendAfterSeconds: number;

@@ -2,6 +2,7 @@ const Order = require("../models/Order");
 const Product = require("../models/product");
 const User = require("../models/User");
 const { createOrderEventNotifications } = require("../services/notificationService");
+const { geocodeAddress, getAddressSuggestions } = require("../services/geocodingService");
 const fs = require("fs");
 const path = require("path");
 
@@ -76,6 +77,55 @@ exports.createOrder = async (req, res, next) => {
       orderItems.push({ product: product._id, quantity, price });
     }
 
+    // Process & enrich delivery address with fullAddress and geocoding if needed
+    let processedAddress = { ...(deliveryAddress || {}) };
+    const fullAddressStr =
+      processedAddress.fullAddress ||
+      [
+        processedAddress.doorNo,
+        processedAddress.street,
+        processedAddress.area,
+        processedAddress.city,
+        processedAddress.state,
+        processedAddress.postalCode,
+      ]
+        .filter(Boolean)
+        .join(", ") ||
+      processedAddress.street ||
+      "";
+
+    if (
+      fullAddressStr &&
+      (!processedAddress.latitude || !processedAddress.longitude)
+    ) {
+      try {
+        const geo = await geocodeAddress(fullAddressStr);
+        if (geo?.success && geo?.data) {
+          processedAddress.latitude = geo.data.latitude;
+          processedAddress.longitude = geo.data.longitude;
+          if (!processedAddress.city && geo.data.city)
+            processedAddress.city = geo.data.city;
+          if (!processedAddress.state && geo.data.state)
+            processedAddress.state = geo.data.state;
+          if (!processedAddress.postalCode && geo.data.postalCode)
+            processedAddress.postalCode = geo.data.postalCode;
+        }
+      } catch (geoErr) {
+        console.warn(
+          "[Geocoding on createOrder] Geo lookup warning:",
+          geoErr.message,
+        );
+      }
+    }
+
+    processedAddress.fullAddress = fullAddressStr;
+    if (!processedAddress.fullName && user.fullName) {
+      processedAddress.fullName = user.fullName;
+    }
+    if (!processedAddress.phone && (user.phone || user.phoneNumber)) {
+      processedAddress.phone = user.phone || user.phoneNumber;
+    }
+
     const orderId = generateOrderId();
     const order = new Order({
       orderId,
@@ -84,7 +134,7 @@ exports.createOrder = async (req, res, next) => {
       customerName: user.fullName,
       items: orderItems,
       totalPrice: total,
-      deliveryAddress: deliveryAddress || {},
+      deliveryAddress: processedAddress,
       status: "pending",
     });
 
@@ -244,32 +294,16 @@ exports.getOrderById = async (req, res, next) => {
 exports.updateOrderStatus = async (req, res, next) => {
   try {
     const { status } = req.body;
-    const allowed = [
-      "pending",
-      "processing",
-      "assigned",
-      "out-for-delivery",
-      "shipped",
-      "completed",
-      "delivered",
-      "failed",
-      "returned",
-      "cancelled",
-    ];
-    if (!allowed.includes(status))
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid status" });
-
     const order = await Order.findById(req.params.id);
-    if (!order)
+
+    if (!order) {
       return res
         .status(404)
         .json({ success: false, message: "Order not found" });
+    }
 
     order.status = status;
-    if (status === "out-for-delivery" || status === "shipped")
-      order.shippedAt = new Date();
+    if (status === "shipped") order.shippedAt = new Date();
     if (status === "delivered" || status === "completed")
       order.deliveredAt = new Date();
     await order.save();
@@ -282,7 +316,7 @@ exports.updateOrderStatus = async (req, res, next) => {
   }
 };
 
-// Delete order (and optionally restock if not delivered)
+// Delete/Cancel order
 exports.deleteOrder = async (req, res, next) => {
   try {
     const order = await Order.findById(req.params.id);
@@ -291,6 +325,7 @@ exports.deleteOrder = async (req, res, next) => {
         .status(404)
         .json({ success: false, message: "Order not found" });
 
+    // If order not delivered, return stock
     if (order.status !== "delivered") {
       await createOrderEventNotifications(order, "cancelled");
       for (const it of order.items) {
@@ -301,8 +336,70 @@ exports.deleteOrder = async (req, res, next) => {
     }
 
     await Order.findByIdAndDelete(req.params.id);
-    res.json({ success: true, message: "Order deleted" });
+    res.json({ success: true, message: "Order deleted and stock restored" });
   } catch (err) {
     next(err);
+  }
+};
+
+// Geocode address using Geoapify
+exports.geocodeAddressController = async (req, res, next) => {
+  try {
+    const address = req.body?.address || req.query?.address;
+    if (!address || typeof address !== "string" || address.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Delivery address is required for geocoding.",
+      });
+    }
+
+    const result = await geocodeAddress(address);
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: result.message,
+      });
+    }
+    return res.status(200).json({
+      success: true,
+      source: result.source,
+      data: result.data,
+    });
+  } catch (err) {
+    console.error("Geocoding controller error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to geocode the provided address. Please try again.",
+      error: err.message,
+    });
+  }
+};
+
+// Address suggestions / autocomplete endpoint
+exports.getAddressSuggestionsController = async (req, res, next) => {
+  try {
+    const query =
+      req.query?.query ||
+      req.body?.query ||
+      req.query?.text ||
+      req.body?.text;
+    if (!query || typeof query !== "string" || query.trim().length < 2) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+      });
+    }
+
+    const suggestions = await getAddressSuggestions(query.trim());
+    return res.status(200).json({
+      success: true,
+      data: suggestions,
+    });
+  } catch (err) {
+    console.error("Address suggestions error:", err);
+    return res.status(200).json({
+      success: true,
+      data: [],
+    });
   }
 };

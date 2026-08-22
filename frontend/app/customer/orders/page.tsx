@@ -3,7 +3,20 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fetchOrders } from "@/lib/api";
-import { Search, Eye, Package, Truck, CheckCircle2, Clock, Copy, Check, ShoppingBag, AlertCircle } from "lucide-react";
+import {
+  Search,
+  Eye,
+  Package,
+  Truck,
+  CheckCircle2,
+  Clock,
+  Copy,
+  Check,
+  ShoppingBag,
+  AlertCircle,
+  Ban,
+} from "lucide-react";
+import { CancelOrderModal } from "@/components/customer/cancel-order-modal";
 
 type CustomerOrder = {
   id: string;
@@ -34,10 +47,17 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(
+    null,
+  );
   const router = useRouter();
 
   const normalizeOrder = (order: any, index: number): CustomerOrder => {
-    const productName = order.items?.[0]?.product || order.items?.[0]?.name || "Assorted Items";
+    const productName =
+      order.items?.[0]?.product?.name ||
+      order.items?.[0]?.product ||
+      order.items?.[0]?.name ||
+      "Assorted Items";
     const rawStatus = String(order.status || "pending").toLowerCase();
     const normalizedStatus =
       rawStatus === "completed" ? "delivered" : rawStatus;
@@ -61,28 +81,28 @@ export default function OrdersPage() {
     };
   };
 
+  const loadOrders = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const ordersData = await fetchOrders(searchQuery || undefined);
+      const normalizedOrders = Array.isArray(ordersData)
+        ? ordersData.map(normalizeOrder)
+        : [];
+      setOrders(normalizedOrders);
+    } catch (fetchError) {
+      setError(
+        fetchError instanceof Error
+          ? fetchError.message
+          : "Failed to load orders",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadOrders = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const ordersData = await fetchOrders(searchQuery || undefined);
-        const normalizedOrders = Array.isArray(ordersData)
-          ? ordersData.map(normalizeOrder)
-          : [];
-        setOrders(normalizedOrders);
-      } catch (fetchError) {
-        setError(
-          fetchError instanceof Error
-            ? fetchError.message
-            : "Failed to load orders",
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
     const t = setTimeout(() => {
       void loadOrders();
     }, 200);
@@ -96,77 +116,86 @@ export default function OrdersPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const handleOrderCancelled = () => {
+    void loadOrders();
+  };
+
   const filteredOrders = orders.filter((order) => {
     const query = searchQuery.toLowerCase();
     return (
-      String(order.id).toLowerCase().includes(query) ||
-      String(order.customer).toLowerCase().includes(query) ||
-      String(order.product).toLowerCase().includes(query)
+      order.id.toLowerCase().includes(query) ||
+      order.product.toLowerCase().includes(query) ||
+      order.status.toLowerCase().includes(query)
     );
   });
 
   const orderStats = {
     total: orders.length,
-    delivered: orders.filter((o) => String(o.status).toLowerCase() === "delivered").length,
-    shipped: orders.filter((o) => String(o.status).toLowerCase() === "shipped").length,
-    pending: orders.filter((o) => String(o.status).toLowerCase() !== "delivered" && String(o.status).toLowerCase() !== "shipped").length,
+    delivered: orders.filter((o) => o.status === "delivered").length,
+    shipped: orders.filter((o) => o.status === "shipped").length,
+    pending: orders.filter(
+      (o) => o.status === "pending" || o.status === "processing",
+    ).length,
   };
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-6">
       {/* Header */}
       <div>
-        <p className="text-[11px] font-mono font-semibold uppercase tracking-[0.25em] text-[#A1A1AA]">
-          Order History
+        <p className="text-[11px] uppercase tracking-[0.25em] text-[#A1A1AA] font-mono">
+          Purchases
         </p>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-white font-display tracking-tight mt-1">
-          My Orders
+        <h1 className="text-3xl font-extrabold text-white font-display tracking-tight mt-1">
+          My Order History
         </h1>
-        <p className="text-xs sm:text-sm text-[#A1A1AA] mt-1 max-w-2xl leading-relaxed">
-          Review all fulfilled purchases, view receipts, and monitor active dispatches.
+        <p className="mt-1 text-sm text-[#A1A1AA]">
+          Track live dispatch routes, cancel unfulfilled orders, and review past
+          deliveries.
         </p>
       </div>
 
-      {/* 4 Overview Metric Tiles */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {/* Stats Overview */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-5 shadow-sm hover:border-[#F97316]/40 transition flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <p className="text-[11px] uppercase tracking-wider font-semibold text-[#A1A1AA]">Total Orders</p>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#111214] border border-[#2A2B30] text-[#F97316]">
-              <Package size={16} />
-            </div>
-          </div>
-          <p className="mt-2 text-2xl sm:text-3xl font-extrabold text-white font-display">{orderStats.total}</p>
-        </div>
-
-        <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-5 shadow-sm hover:border-[#F97316]/40 transition flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] uppercase tracking-wider font-semibold text-[#A1A1AA]">Delivered</p>
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-[#A1A1AA]">
+              Delivered
+            </p>
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#111214] border border-[#2A2B30] text-emerald-400">
               <CheckCircle2 size={16} />
             </div>
           </div>
-          <p className="mt-2 text-2xl sm:text-3xl font-extrabold text-white font-display">{orderStats.delivered}</p>
+          <p className="mt-2 text-2xl sm:text-3xl font-extrabold text-white font-display">
+            {orderStats.delivered}
+          </p>
         </div>
 
         <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-5 shadow-sm hover:border-[#F97316]/40 transition flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <p className="text-[11px] uppercase tracking-wider font-semibold text-[#A1A1AA]">In Transit</p>
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-[#A1A1AA]">
+              In Transit
+            </p>
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#111214] border border-[#2A2B30] text-blue-400">
               <Truck size={16} />
             </div>
           </div>
-          <p className="mt-2 text-2xl sm:text-3xl font-extrabold text-white font-display">{orderStats.shipped}</p>
+          <p className="mt-2 text-2xl sm:text-3xl font-extrabold text-white font-display">
+            {orderStats.shipped}
+          </p>
         </div>
 
         <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-5 shadow-sm hover:border-[#F97316]/40 transition flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <p className="text-[11px] uppercase tracking-wider font-semibold text-[#A1A1AA]">Processing</p>
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-[#A1A1AA]">
+              Processing
+            </p>
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#111214] border border-[#2A2B30] text-amber-400">
               <Clock size={16} />
             </div>
           </div>
-          <p className="mt-2 text-2xl sm:text-3xl font-extrabold text-white font-display">{orderStats.pending}</p>
+          <p className="mt-2 text-2xl sm:text-3xl font-extrabold text-white font-display">
+            {orderStats.pending}
+          </p>
         </div>
       </div>
 
@@ -223,11 +252,17 @@ export default function OrdersPage() {
                   const displayId = formatDisplayId(rawId);
                   const isCopied = copiedId === rawId;
                   const rawStatus = (order.status || "pending").toLowerCase();
-                  const isDelivered = rawStatus === "delivered" || rawStatus === "completed";
+                  const isDelivered =
+                    rawStatus === "delivered" || rawStatus === "completed";
                   const isShipped = rawStatus === "shipped";
+                  const canCancel =
+                    rawStatus === "pending" || rawStatus === "processing";
 
                   return (
-                    <tr key={rawId || `order-${index}`} className="hover:bg-[#111214]/60 transition">
+                    <tr
+                      key={rawId || `order-${index}`}
+                      className="hover:bg-[#111214]/60 transition"
+                    >
                       <td className="p-3.5 pl-4">
                         <button
                           type="button"
@@ -236,7 +271,11 @@ export default function OrdersPage() {
                           className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-[#111214] border border-[#2A2B30] text-[11px] font-mono text-[#A1A1AA] hover:text-[#F97316] hover:border-[#F97316]/40 transition cursor-pointer"
                         >
                           <span>{displayId}</span>
-                          {isCopied ? <Check size={10} className="text-green-400" /> : <Copy size={10} />}
+                          {isCopied ? (
+                            <Check size={10} className="text-green-400" />
+                          ) : (
+                            <Copy size={10} />
+                          )}
                         </button>
                       </td>
                       <td className="p-3.5 font-bold text-white font-display">
@@ -271,14 +310,31 @@ export default function OrdersPage() {
                         ₹{order.amount.toLocaleString()}
                       </td>
                       <td className="p-3.5 pr-4 text-right">
-                        <button
-                          type="button"
-                          onClick={() => router.push(`/customer/tracking?orderId=${order.id}`)}
-                          className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-[#111214] border border-[#2A2B30] text-xs font-semibold text-[#FDBA74] hover:text-[#F97316] hover:border-[#F97316]/50 transition cursor-pointer"
-                        >
-                          <Eye size={12} />
-                          <span>Track</span>
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          {canCancel && (
+                            <button
+                              type="button"
+                              onClick={() => setCancellingOrderId(rawId)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-red-500/10 border border-red-500/30 text-xs font-semibold text-red-400 hover:text-red-300 hover:bg-red-500/20 transition cursor-pointer"
+                              title="Cancel order and restore stock"
+                            >
+                              <Ban size={12} />
+                              <span>Cancel</span>
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              router.push(
+                                `/customer/tracking?orderId=${order.id}`,
+                              )
+                            }
+                            className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-[#111214] border border-[#2A2B30] text-xs font-semibold text-[#FDBA74] hover:text-[#F97316] hover:border-[#F97316]/50 transition cursor-pointer"
+                          >
+                            <Eye size={12} />
+                            <span>Track</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -290,12 +346,22 @@ export default function OrdersPage() {
               <div className="rounded-2xl border border-[#2A2B30] bg-[#111214] p-10 text-center text-[#A1A1AA] space-y-2 mt-4">
                 <ShoppingBag size={24} className="mx-auto text-[#A1A1AA]/40" />
                 <p className="text-sm font-bold text-white">No orders found</p>
-                <p className="text-xs text-[#A1A1AA]">Try adjusting your search criteria or browse our catalog.</p>
+                <p className="text-xs text-[#A1A1AA]">
+                  Try adjusting your search criteria or browse our catalog.
+                </p>
               </div>
             )}
           </div>
         )}
       </div>
+
+      {/* Cancel Order Modal */}
+      <CancelOrderModal
+        isOpen={Boolean(cancellingOrderId)}
+        onClose={() => setCancellingOrderId(null)}
+        orderId={cancellingOrderId || ""}
+        onOrderCancelled={handleOrderCancelled}
+      />
     </div>
   );
 }

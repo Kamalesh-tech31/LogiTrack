@@ -16,10 +16,13 @@ const OrderItemSchema = new mongoose.Schema(
 const DeliveryAddressSchema = new mongoose.Schema(
   {
     street: { type: String, trim: true },
+    fullAddress: { type: String, trim: true },
+    fullName: { type: String, trim: true },
+    phone: { type: String, trim: true },
     city: { type: String, trim: true },
     state: { type: String, trim: true },
     postalCode: { type: String, trim: true },
-    country: { type: String, trim: true },
+    country: { type: String, trim: true, default: "India" },
     latitude: { type: Number },
     longitude: { type: Number },
   },

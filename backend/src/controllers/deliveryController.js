@@ -75,15 +75,17 @@ function mapOrderToRecord(o, requester = null) {
     o.customerId?.phone || o.customerId?.phoneNumber || o.customerPhone || "";
   let contact = rawPhone || null;
 
-  let addressStr = [
-    addr.street,
-    addr.city,
-    addr.state,
-    addr.postalCode,
-    addr.country,
-  ]
-    .filter(Boolean)
-    .join(", ");
+  let addressStr =
+    addr.fullAddress ||
+    [
+      addr.street,
+      addr.city,
+      addr.state,
+      addr.postalCode,
+      addr.country,
+    ]
+      .filter(Boolean)
+      .join(", ");
 
   if (!addressStr) {
     addressStr = addr.city || "Destination Area";
