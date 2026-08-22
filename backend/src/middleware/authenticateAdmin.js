@@ -1,6 +1,6 @@
 /**
  * Admin authorization middleware.
- * Verifies admin access via x-admin-key or Authorization header.
+ * Verifies admin access via x-admin-key header or Authorization Bearer header.
  * For hackathon purposes, accepts 'aswinabi1' as the admin gate key.
  */
 const authenticateAdmin = (req, res, next) => {

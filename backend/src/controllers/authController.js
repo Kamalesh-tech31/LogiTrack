@@ -238,29 +238,36 @@ const login = async (req, res) => {
       });
     }
 
-    if (user.status === "pending") {
-      const token = jwt.sign(
-        {
-          userId: user._id,
-          role: user.role,
-        },
-        process.env.JWT_SECRET,
-        { expiresIn: "7d" }
-      );
+    // Role-specific verification: Only Business Owner & Delivery Agent require admin KYC approval
+    if (user.role !== "Customer") {
+      if (user.status === "pending") {
+        const token = jwt.sign(
+          {
+            userId: user._id,
+            role: user.role,
+          },
+          process.env.JWT_SECRET,
+          { expiresIn: "7d" }
+        );
 
-      return res.status(403).json({
-        message: "Your account is awaiting approval",
-        status: "pending",
-        token,
-        user: normalizeUserResponse(user),
-      });
-    }
+        return res.status(403).json({
+          message: "Your account is awaiting approval",
+          status: "pending",
+          token,
+          user: normalizeUserResponse(user),
+        });
+      }
 
-    if (user.status === "rejected") {
-      return res.status(403).json({
-        message: "Your account has been rejected",
-        status: "rejected",
-      });
+      if (user.status === "rejected") {
+        return res.status(403).json({
+          message: "Your account has been rejected",
+          status: "rejected",
+        });
+      }
+    } else if (user.status !== "approved") {
+      // Auto-heal customer status if previously set to pending/rejected
+      user.status = "approved";
+      await user.save();
     }
 
     // CHECK PASSWORD
@@ -308,29 +315,25 @@ const requestRegistrationOtp = async (req, res) => {
     });
 
     if (existingUser) {
-
-      if (existingUser.status === "pending") {
+      if (existingUser.role !== "Customer" && existingUser.status === "pending") {
         return res.status(403).json({
           message: "Your account is awaiting approval",
           status: "pending",
         });
       }
 
-      if (existingUser.status === "approved") {
+      if (existingUser.status === "approved" || existingUser.role === "Customer") {
         return res.status(400).json({
           message: "An account with this email already exists",
         });
       }
 
       if (existingUser.status === "rejected") {
-
         await User.deleteOne({
           _id: existingUser._id,
         });
-
-      
-    } 
-  }
+      }
+    }
 
     
     const result = await upsertOtpDocument(normalizedEmail);

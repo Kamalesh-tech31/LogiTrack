@@ -92,17 +92,21 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const token =
     typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const adminKey =
-    typeof window !== "undefined" ? sessionStorage.getItem("admin_auth") || "aswinabi1" : "aswinabi1";
+    typeof window !== "undefined" ? sessionStorage.getItem("admin_auth") : null;
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Authorization: token ? `Bearer ${token}` : "",
+    ...(init?.headers as Record<string, string> || {}),
+  };
+
+  if (adminKey) {
+    headers["x-admin-key"] = adminKey;
+  }
 
   const response = await fetch(`${getApiBaseUrl()}${path}`, {
     ...init,
-
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: token ? `Bearer ${token}` : "",
-      "x-admin-key": adminKey,
-      ...(init?.headers || {}),
-    },
+    headers,
   });
 
   if (!response.ok) {

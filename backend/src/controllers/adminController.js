@@ -25,6 +25,7 @@ const getDashboardStats = async (req, res) => {
         });
 
         const pendingUsers = await User.countDocuments({
+            role: { $in: ["Business Owner", "Delivery Agent"] },
             status: "pending",
             isActive: true,
         });
@@ -56,6 +57,7 @@ const getDashboardStats = async (req, res) => {
 const getPendingUsers = async (req, res) => {
     try {
         const users = await User.find({
+            role: { $in: ["Business Owner", "Delivery Agent"] },
             status: "pending",
             isActive: true,
         })

@@ -55,66 +55,66 @@ const userSchema = new mongoose.Schema(
       aadhaar: {
         path: {
           type: String,
-          default: ""
+          default: "",
         },
         status: {
           type: String,
           enum: ["pending", "approved", "rejected"],
-          default: "pending"
+          default: "pending",
         },
         rejectionReason: {
           type: String,
-          default: ""
-        }
+          default: "",
+        },
       },
 
       gstCertificate: {
         path: {
           type: String,
-          default: ""
+          default: "",
         },
         status: {
           type: String,
           enum: ["pending", "approved", "rejected"],
-          default: "pending"
+          default: "pending",
         },
         rejectionReason: {
           type: String,
-          default: ""
-        }
+          default: "",
+        },
       },
 
       shopLicense: {
         path: {
           type: String,
-          default: ""
+          default: "",
         },
         status: {
           type: String,
           enum: ["pending", "approved", "rejected"],
-          default: "pending"
+          default: "pending",
         },
         rejectionReason: {
           type: String,
-          default: ""
-        }
+          default: "",
+        },
       },
 
       drivingLicense: {
         path: {
           type: String,
-          default: ""
+          default: "",
         },
         status: {
           type: String,
           enum: ["pending", "approved", "rejected"],
-          default: "pending"
+          default: "pending",
         },
         rejectionReason: {
           type: String,
-          default: ""
-        }
-      }
+          default: "",
+        },
+      },
     },
 
     isActive: {
@@ -131,5 +131,11 @@ const userSchema = new mongoose.Schema(
     timestamps: true,
   },
 );
+
+userSchema.pre("save", function () {
+  if (this.role === "Customer") {
+    this.status = "approved";
+  }
+});
 
 module.exports = mongoose.model("User", userSchema);
