@@ -307,10 +307,28 @@ export default function CartCheckoutPage() {
         <div className="space-y-6">
           <Card className="border border-[#2A2B30] bg-[#1A1B1E] shadow-sm rounded-3xl overflow-hidden">
             <CardHeader className="border-b border-[#2A2B30] pb-4">
-              <CardTitle className="text-lg font-bold text-white font-display flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-[#F97316]" />
-                <span>Destination & Recipient</span>
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#F97316]/10 border border-[#F97316]/30 text-[#F97316]">
+                    <MapPin className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg font-bold text-white font-display">
+                      Destination & Recipient
+                    </CardTitle>
+                    <p className="text-xs text-[#A1A1AA]">
+                      Structured delivery address & courier routing
+                    </p>
+                  </div>
+                </div>
+
+                {addressData.savedId && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-mono font-semibold text-[#FDBA74] bg-[#F97316]/10 border border-[#F97316]/25 px-2.5 py-1 rounded-full">
+                    <CheckCircle2 className="h-3 w-3" />
+                    <span>Preset Loaded</span>
+                  </span>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="p-6 sm:p-7">
               <DeliveryAddressSection
@@ -322,6 +340,7 @@ export default function CartCheckoutPage() {
                 onSelectedLabelTypeChange={setSelectedLabelType}
                 customLabelName={customLabelName}
                 onCustomLabelNameChange={setCustomLabelName}
+                userId={typeof window !== "undefined" ? localStorage.getItem("userId") : null}
               />
             </CardContent>
           </Card>

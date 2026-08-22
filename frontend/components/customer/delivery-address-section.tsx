@@ -12,6 +12,10 @@ import {
   Home,
   Users,
   Compass,
+  Hash,
+  Signpost,
+  Sparkles,
+  Check,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -20,7 +24,6 @@ import {
   getSavedAddresses,
   deleteSavedAddress,
   buildFullAddress,
-  parseAddressString,
 } from "@/lib/addressStorage";
 
 export interface DeliveryAddressData {
@@ -50,6 +53,7 @@ interface DeliveryAddressSectionProps {
   customLabelName: string;
   onCustomLabelNameChange: (val: string) => void;
   userId?: string | null;
+  onGpsStatusChange?: (active: boolean) => void;
 }
 
 export function DeliveryAddressSection({
@@ -62,9 +66,11 @@ export function DeliveryAddressSection({
   customLabelName,
   onCustomLabelNameChange,
   userId,
+  onGpsStatusChange,
 }: DeliveryAddressSectionProps) {
   const [savedList, setSavedList] = useState<SavedAddress[]>([]);
   const [isGpsActive, setIsGpsActive] = useState(false);
+  const [isGpsLoading, setIsGpsLoading] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   useEffect(() => {
@@ -99,6 +105,7 @@ export function DeliveryAddressSection({
   const handleSelectSaved = (saved: SavedAddress) => {
     setIsDropdownOpen(false);
     setIsGpsActive(false);
+    if (onGpsStatusChange) onGpsStatusChange(false);
 
     const fullAddr =
       saved.fullAddress?.trim() ||
@@ -145,11 +152,15 @@ export function DeliveryAddressSection({
       return;
     }
 
+    setIsGpsLoading(true);
+
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const lat = pos.coords.latitude;
         const lon = pos.coords.longitude;
         setIsGpsActive(true);
+        setIsGpsLoading(false);
+        if (onGpsStatusChange) onGpsStatusChange(true);
 
         try {
           // Reverse geocode via OSM Nominatim
@@ -203,7 +214,7 @@ export function DeliveryAddressSection({
             return;
           }
         } catch {
-          // Fallback to coordinates
+          // Fallback to coordinates only
         }
 
         onChange({
@@ -214,6 +225,7 @@ export function DeliveryAddressSection({
       },
       (err) => {
         console.warn("Geolocation error:", err.message);
+        setIsGpsLoading(false);
       },
       { timeout: 10000, enableHighAccuracy: true },
     );
@@ -231,56 +243,80 @@ export function DeliveryAddressSection({
   };
 
   return (
-    <div className="space-y-5">
-      {/* Top Controls: Saved Address Selector */}
+    <div className="space-y-6">
+      {/* 1. Saved Addresses Dropdown */}
       {savedList.length > 0 && (
         <div className="relative">
-          <label className="block text-xs font-semibold text-[#A1A1AA] uppercase tracking-wider mb-2">
-            Saved Delivery Addresses
-          </label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs font-semibold text-[#A1A1AA] uppercase tracking-wider flex items-center gap-1.5">
+              <Bookmark className="h-3.5 w-3.5 text-[#F97316]" />
+              <span>Saved Address Preset</span>
+            </label>
+            <span className="text-[11px] text-[#A1A1AA] font-mono">
+              {savedList.length} available
+            </span>
+          </div>
 
           <button
             type="button"
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-[#111214] border border-[#2A2B30] hover:border-[#F97316]/50 text-left transition-all cursor-pointer shadow-sm"
+            className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-[#111214] border border-[#2A2B30] hover:border-[#F97316]/50 focus:border-[#F97316] text-left transition-all cursor-pointer shadow-sm group"
           >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <Bookmark className="h-4 w-4 text-[#F97316] shrink-0" />
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#1A1B1E] border border-[#2A2B30] text-[#F97316] group-hover:border-[#F97316]/40">
+                <Bookmark className="h-4 w-4" />
+              </div>
               {value.savedId ? (
                 <div className="min-w-0">
-                  <span className="text-xs font-bold text-white">
-                    {savedList.find((s) => s.id === value.savedId)?.label ||
-                      "Saved Address"}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-white font-display">
+                      {savedList.find((s) => s.id === value.savedId)?.label ||
+                        "Selected Address"}
+                    </span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#F97316]/15 border border-[#F97316]/30 text-[#FDBA74]">
+                      Active
+                    </span>
+                  </div>
                   <span className="text-xs text-[#A1A1AA] truncate block mt-0.5">
                     {value.fullAddress}
                   </span>
                 </div>
               ) : (
-                <span className="text-xs text-[#A1A1AA]">
-                  Choose from {savedList.length} saved addresses...
-                </span>
+                <div>
+                  <span className="text-xs font-medium text-[#F4F4F5]">
+                    Select a saved destination
+                  </span>
+                  <span className="text-[11px] text-[#A1A1AA] block mt-0.5">
+                    Choose from Home, Work, or Custom addresses...
+                  </span>
+                </div>
               )}
             </div>
-            <ChevronDown
-              className={`h-4 w-4 text-[#A1A1AA] transition-transform ${isDropdownOpen ? "rotate-180" : ""}`}
-            />
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#1A1B1E] border border-[#2A2B30] text-[#A1A1AA]">
+              <ChevronDown
+                className={`h-4 w-4 transition-transform duration-200 ${isDropdownOpen ? "rotate-180 text-[#F97316]" : ""}`}
+              />
+            </div>
           </button>
 
           {/* Dropdown Menu */}
           {isDropdownOpen && (
-            <div className="absolute top-full left-0 right-0 mt-2 z-30 bg-[#111214] border border-[#2A2B30] rounded-2xl shadow-2xl overflow-hidden divide-y divide-[#2A2B30] max-h-60 overflow-y-auto">
+            <div className="absolute top-full left-0 right-0 mt-2 z-30 bg-[#111214] border border-[#2A2B30] rounded-2xl shadow-2xl overflow-hidden divide-y divide-[#2A2B30] max-h-64 overflow-y-auto backdrop-blur-xl">
               {savedList.map((item) => (
                 <div
                   key={item.id}
                   onClick={() => handleSelectSaved(item)}
-                  className="p-3 hover:bg-[#1A1B1E] flex items-center justify-between gap-3 cursor-pointer transition-colors"
+                  className={`p-3.5 hover:bg-[#1A1B1E] flex items-center justify-between gap-3 cursor-pointer transition-colors ${
+                    value.savedId === item.id ? "bg-[#1A1B1E]/80" : ""
+                  }`}
                 >
-                  <div className="min-w-0 flex items-start gap-2.5">
-                    <div className="mt-0.5">{getLabelIcon(item.label)}</div>
+                  <div className="min-w-0 flex items-start gap-3">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#111214] border border-[#2A2B30] mt-0.5">
+                      {getLabelIcon(item.label)}
+                    </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-white">
+                        <span className="text-xs font-bold text-white font-display">
                           {item.label}
                         </span>
                         {item.fullName && (
@@ -288,8 +324,13 @@ export function DeliveryAddressSection({
                             • {item.fullName}
                           </span>
                         )}
+                        {value.savedId === item.id && (
+                          <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                            Selected
+                          </span>
+                        )}
                       </div>
-                      <p className="text-[11px] text-[#A1A1AA] truncate mt-0.5">
+                      <p className="text-[11px] text-[#A1A1AA] truncate mt-0.5 leading-relaxed">
                         {item.fullAddress}
                       </p>
                     </div>
@@ -298,7 +339,7 @@ export function DeliveryAddressSection({
                   <button
                     type="button"
                     onClick={(e) => handleDeleteSaved(e, item.id)}
-                    className="text-[#A1A1AA] hover:text-red-400 p-1.5 rounded-lg hover:bg-[#1A1B1E] transition-colors cursor-pointer shrink-0"
+                    className="text-[#A1A1AA] hover:text-red-400 p-2 rounded-xl hover:bg-[#111214] border border-transparent hover:border-red-500/30 transition-colors cursor-pointer shrink-0"
                     title="Delete saved address"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -310,148 +351,172 @@ export function DeliveryAddressSection({
         </div>
       )}
 
-      {/* Structured Address Form */}
-      <div className="rounded-3xl border border-[#2A2B30] bg-[#111214] p-5 sm:p-6 space-y-4 shadow-sm">
-        <div className="flex items-center justify-between pb-3 border-b border-[#2A2B30]">
-          <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-[#F97316]" />
-            <span className="text-xs font-bold text-white uppercase tracking-wider">
-              Address Coordinates & Fields
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {isGpsActive && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-0.5 rounded-full">
-                <CheckCircle2 className="h-3 w-3" />
-                <span>GPS Location Active</span>
-              </span>
-            )}
-            {value.savedId && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-mono text-[#FDBA74] bg-[#F97316]/10 border border-[#F97316]/25 px-2.5 py-0.5 rounded-full">
-                <CheckCircle2 className="h-3 w-3" />
-                <span>Saved Address Loaded</span>
-              </span>
-            )}
-          </div>
-        </div>
-
+      {/* 2. Structured Form Fields */}
+      <div className="space-y-4">
         {/* Row 1: House / Door No. & Street / Avenue */}
-        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
-          <div>
-            <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
-              House / Door No. *
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-[#A1A1AA] flex items-center gap-1.5">
+              <Hash className="h-3.5 w-3.5 text-[#F97316]" />
+              <span>House / Door No. *</span>
             </label>
             <Input
               placeholder="e.g. Flat 402 or No. 25/38"
               value={value.doorNo || ""}
               onChange={(e) => handleFieldChange("doorNo", e.target.value)}
-              className="bg-[#1A1B1E] border-[#2A2B30] text-white focus:border-[#F97316]/60 rounded-xl h-10 text-xs"
+              className="bg-[#111214] border-[#2A2B30] text-white focus:border-[#F97316] focus:ring-1 focus:ring-[#F97316]/30 rounded-2xl h-11 text-xs px-3.5 transition-all shadow-inner"
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
-              Street / Avenue *
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-[#A1A1AA] flex items-center gap-1.5">
+              <Signpost className="h-3.5 w-3.5 text-[#F97316]" />
+              <span>Street / Avenue *</span>
             </label>
             <Input
               placeholder="e.g. 18th Avenue, Tech Park Road"
               value={value.street || ""}
               onChange={(e) => handleFieldChange("street", e.target.value)}
-              className="bg-[#1A1B1E] border-[#2A2B30] text-white focus:border-[#F97316]/60 rounded-xl h-10 text-xs"
+              className="bg-[#111214] border-[#2A2B30] text-white focus:border-[#F97316] focus:ring-1 focus:ring-[#F97316]/30 rounded-2xl h-11 text-xs px-3.5 transition-all shadow-inner"
             />
           </div>
         </div>
 
         {/* Row 2: Area / Locality */}
-        <div>
-          <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
-            Area / Locality *
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold text-[#A1A1AA] flex items-center gap-1.5">
+            <Compass className="h-3.5 w-3.5 text-[#F97316]" />
+            <span>Area / Locality *</span>
           </label>
           <Input
             placeholder="e.g. Koramangala 4th Block, Banunagar"
             value={value.area || ""}
             onChange={(e) => handleFieldChange("area", e.target.value)}
-            className="bg-[#1A1B1E] border-[#2A2B30] text-white focus:border-[#F97316]/60 rounded-xl h-10 text-xs"
+            className="bg-[#111214] border-[#2A2B30] text-white focus:border-[#F97316] focus:ring-1 focus:ring-[#F97316]/30 rounded-2xl h-11 text-xs px-3.5 transition-all shadow-inner"
           />
         </div>
 
-        {/* Row 3: City, State, PIN Code */}
-        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
-          <div>
-            <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
-              City *
-            </label>
-            <Input
-              placeholder="e.g. Bengaluru"
-              value={value.city || ""}
-              onChange={(e) => handleFieldChange("city", e.target.value)}
-              className="bg-[#1A1B1E] border-[#2A2B30] text-white focus:border-[#F97316]/60 rounded-xl h-10 text-xs"
-            />
-          </div>
+        {/* Row 3: Distinct Clustered Sub-Row for City, State, PIN Code */}
+        <div className="rounded-2xl border border-[#2A2B30]/80 bg-[#111214]/60 p-4 space-y-3 shadow-sm">
+          <p className="text-[10px] font-mono uppercase tracking-wider text-[#A1A1AA] font-semibold flex items-center gap-1.5">
+            <Building2 className="h-3.5 w-3.5 text-[#F97316]" />
+            <span>City, Region & Postal Code</span>
+          </p>
 
-          <div>
-            <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
-              State *
-            </label>
-            <Input
-              placeholder="e.g. Karnataka"
-              value={value.state || ""}
-              onChange={(e) => handleFieldChange("state", e.target.value)}
-              className="bg-[#1A1B1E] border-[#2A2B30] text-white focus:border-[#F97316]/60 rounded-xl h-10 text-xs"
-            />
-          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-[#A1A1AA]">
+                City *
+              </label>
+              <Input
+                placeholder="e.g. Bengaluru"
+                value={value.city || ""}
+                onChange={(e) => handleFieldChange("city", e.target.value)}
+                className="bg-[#1A1B1E] border-[#2A2B30] text-white focus:border-[#F97316] focus:ring-1 focus:ring-[#F97316]/30 rounded-xl h-10 text-xs px-3"
+              />
+            </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
-              PIN Code *
-            </label>
-            <Input
-              placeholder="e.g. 560034"
-              value={value.postalCode || ""}
-              onChange={(e) => handleFieldChange("postalCode", e.target.value)}
-              className="bg-[#1A1B1E] border-[#2A2B30] text-white focus:border-[#F97316]/60 rounded-xl h-10 text-xs font-mono"
-            />
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-[#A1A1AA]">
+                State *
+              </label>
+              <Input
+                placeholder="e.g. Karnataka"
+                value={value.state || ""}
+                onChange={(e) => handleFieldChange("state", e.target.value)}
+                className="bg-[#1A1B1E] border-[#2A2B30] text-white focus:border-[#F97316] focus:ring-1 focus:ring-[#F97316]/30 rounded-xl h-10 text-xs px-3"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-[#A1A1AA]">
+                PIN Code *
+              </label>
+              <Input
+                placeholder="e.g. 560034"
+                value={value.postalCode || ""}
+                onChange={(e) =>
+                  handleFieldChange("postalCode", e.target.value)
+                }
+                className="bg-[#1A1B1E] border-[#2A2B30] text-white focus:border-[#F97316] focus:ring-1 focus:ring-[#F97316]/30 rounded-xl h-10 text-xs font-mono px-3"
+              />
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Compiled Full Address Preview */}
-        {value.fullAddress && (
-          <div className="rounded-2xl border border-[#2A2B30] bg-[#1A1B1E] p-3.5 text-xs text-[#F4F4F5]">
-            <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#A1A1AA] block mb-1">
-              Full Destination Address (Passed to Agent):
+      {/* 3. Intentional Address Preview Card */}
+      {value.fullAddress && (
+        <div className="rounded-2xl border border-emerald-500/25 bg-gradient-to-r from-emerald-500/5 via-[#111214] to-[#111214] p-4 text-xs text-[#F4F4F5] shadow-sm relative overflow-hidden">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
+              <Check className="h-3 w-3" />
             </span>
-            <p className="font-medium leading-relaxed">{value.fullAddress}</p>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-400 font-mono">
+              Address Preview (Visible to Courier)
+            </span>
           </div>
-        )}
+          <p className="font-medium text-white leading-relaxed pl-7 text-[12.5px]">
+            {value.fullAddress}
+          </p>
+        </div>
+      )}
 
-        {/* Action Controls: Use Current Location & Save Address */}
-        <div className="pt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleUseCurrentLocation}
-            className="border-[#2A2B30] bg-[#1A1B1E] hover:border-[#F97316]/50 text-xs text-[#F4F4F5] gap-2 rounded-xl py-2 px-3.5 transition-colors cursor-pointer"
-          >
-            <Navigation className="h-3.5 w-3.5 text-[#F97316]" />
-            <span>Use Current Location (GPS)</span>
-          </Button>
+      {/* 4. Action Row A: Location Detection Action */}
+      <div className="pt-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-[#2A2B30] pt-4">
+        <div>
+          <p className="text-xs font-semibold text-white">
+            Auto-detect My Location
+          </p>
+          <p className="text-[11px] text-[#A1A1AA] mt-0.5">
+            Pinpoint GPS coordinates for courier routing
+          </p>
+        </div>
 
-          {/* Save Address Toggle & Label Selector */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <label className="flex items-center gap-2 text-xs text-[#A1A1AA] cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={saveAddressOnOrder}
-                onChange={(e) => onSaveAddressOnOrderChange(e.target.checked)}
-                className="rounded border-[#2A2B30] bg-[#1A1B1E] text-[#F97316] focus:ring-[#F97316] h-3.5 w-3.5 cursor-pointer accent-[#F97316]"
-              />
-              <span>Save address for future orders</span>
-            </label>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={isGpsLoading}
+          onClick={handleUseCurrentLocation}
+          className="border-[#2A2B30] bg-[#111214] hover:bg-[#1A1B1E] hover:border-[#F97316]/60 text-xs text-white gap-2 rounded-2xl py-2.5 px-4 transition-all cursor-pointer shadow-sm self-start sm:self-auto"
+        >
+          <Navigation
+            className={`h-3.5 w-3.5 text-[#F97316] ${isGpsLoading ? "animate-spin" : ""}`}
+          />
+          <span>{isGpsLoading ? "Locating..." : "Auto-detect Location"}</span>
+        </Button>
+      </div>
 
-            {saveAddressOnOrder && (
-              <div className="flex items-center gap-1 pl-1">
+      {/* 5. Action Row B: Save Address Toggle & Segmented Label Chips */}
+      <div className="rounded-2xl border border-[#2A2B30] bg-[#111214] p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="flex items-center gap-2.5 text-xs font-semibold text-white cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={saveAddressOnOrder}
+              onChange={(e) => onSaveAddressOnOrderChange(e.target.checked)}
+              className="rounded-lg border-[#2A2B30] bg-[#1A1B1E] text-[#F97316] focus:ring-[#F97316] h-4 w-4 cursor-pointer accent-[#F97316]"
+            />
+            <span>Save address for future orders</span>
+          </label>
+
+          {saveAddressOnOrder && (
+            <span className="text-[10px] uppercase font-mono text-[#FDBA74] tracking-wider">
+              Preset Label
+            </span>
+          )}
+        </div>
+
+        {saveAddressOnOrder && (
+          <div className="pt-2 border-t border-[#2A2B30]/60 space-y-3 animate-in fade-in-0 duration-200">
+            <div>
+              <span className="text-[11px] text-[#A1A1AA] font-medium block mb-2">
+                Save this address as:
+              </span>
+
+              {/* Segmented Toggle Group */}
+              <div className="grid grid-cols-4 gap-2 bg-[#1A1B1E] p-1.5 rounded-2xl border border-[#2A2B30]">
                 {(["Home", "Work", "Friend", "Custom"] as const).map((lbl) => {
                   const active = selectedLabelType === lbl;
                   return (
@@ -459,43 +524,46 @@ export function DeliveryAddressSection({
                       type="button"
                       key={lbl}
                       onClick={() => onSelectedLabelTypeChange(lbl)}
-                      className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg border transition-all cursor-pointer ${
+                      className={`py-2 px-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                         active
-                          ? "border-[#F97316] bg-[#F97316]/20 text-white shadow-sm"
-                          : "border-[#2A2B30] bg-[#1A1B1E] text-[#A1A1AA] hover:text-white"
+                          ? "bg-[#F97316] text-white shadow-[0_0_12px_rgba(249,115,22,0.35)]"
+                          : "text-[#A1A1AA] hover:text-white hover:bg-[#111214]/60"
                       }`}
                     >
-                      {lbl}
+                      {lbl === "Home" && <Home className="h-3 w-3" />}
+                      {lbl === "Work" && <Building2 className="h-3 w-3" />}
+                      {lbl === "Friend" && <Users className="h-3 w-3" />}
+                      {lbl === "Custom" && <Bookmark className="h-3 w-3" />}
+                      <span>{lbl}</span>
                     </button>
                   );
                 })}
               </div>
+            </div>
+
+            {/* Custom / Friend Name Field */}
+            {(selectedLabelType === "Friend" ||
+              selectedLabelType === "Custom") && (
+              <div className="pt-1 animate-in fade-in-0 duration-150">
+                <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
+                  {selectedLabelType === "Friend"
+                    ? "Recipient / Friend's Name *"
+                    : "Custom Address Label *"}
+                </label>
+                <Input
+                  placeholder={
+                    selectedLabelType === "Friend"
+                      ? "e.g. Rahul's Apartment or Arun"
+                      : "e.g. Mom's House or Branch Office"
+                  }
+                  value={customLabelName}
+                  onChange={(e) => onCustomLabelNameChange(e.target.value)}
+                  className="bg-[#1A1B1E] border-[#2A2B30] text-xs text-white focus:border-[#F97316] rounded-xl h-10 px-3"
+                />
+              </div>
             )}
           </div>
-        </div>
-
-        {/* Friend Name or Custom Name Input */}
-        {saveAddressOnOrder &&
-          (selectedLabelType === "Friend" ||
-            selectedLabelType === "Custom") && (
-            <div className="pt-2 animate-in fade-in-0 duration-150">
-              <label className="block text-xs font-semibold text-[#A1A1AA] mb-1">
-                {selectedLabelType === "Friend"
-                  ? "Recipient / Friend's Name *"
-                  : "Custom Address Label *"}
-              </label>
-              <Input
-                placeholder={
-                  selectedLabelType === "Friend"
-                    ? "e.g. Rahul's Address or Arun"
-                    : "e.g. Mom's House or Branch Office"
-                }
-                value={customLabelName}
-                onChange={(e) => onCustomLabelNameChange(e.target.value)}
-                className="bg-[#1A1B1E] border-[#2A2B30] text-xs text-white h-10 rounded-xl"
-              />
-            </div>
-          )}
+        )}
       </div>
     </div>
   );
