@@ -756,6 +756,7 @@ module.exports = {
   getAllDeliveries,
   claimOrder,
   assignOrder,
+  assignDelivery: assignOrder,
   acceptOrder,
   updateDeliveryStatus,
   getActiveDeliveries,

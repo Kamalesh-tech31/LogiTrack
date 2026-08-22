@@ -1,4 +1,20 @@
 const Order = require("../models/Order");
+const orderController = require("./orderController");
+
+exports.createOrder = async (req, res, next) => {
+  try {
+    if (!req.body.userId && req.user) {
+      req.body.userId = req.user.id || req.user._id;
+    }
+    return orderController.createOrder(req, res, next);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to create order",
+      error: error.message,
+    });
+  }
+};
 
 exports.getAllOrders = async (req, res) => {
   try {
