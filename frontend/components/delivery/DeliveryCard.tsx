@@ -53,6 +53,14 @@ function formatDisplayId(rawId: string) {
   return `#${rawId}`;
 }
 
+const STEP_DEFINITIONS = [
+  { step: 1, label: "Claimed", shortLabel: "Claim" },
+  { step: 2, label: "Verify Customer", shortLabel: "Verify" },
+  { step: 3, label: "Accept & Dispatch", shortLabel: "Dispatch" },
+  { step: 4, label: "Out for Delivery", shortLabel: "Transit" },
+  { step: 5, label: "Delivered", shortLabel: "Delivered" },
+];
+
 const DeliveryCard = ({
   id,
   orderId,
@@ -80,6 +88,36 @@ const DeliveryCard = ({
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const displayId = formatDisplayId(orderId || id);
+
+  const normalizedStatus = (status || "").toLowerCase();
+  const isAssigned = normalizedStatus === "assigned";
+  const isShipped = normalizedStatus === "shipped";
+  const isOutForDelivery = normalizedStatus === "out-for-delivery";
+  const isDelivered = normalizedStatus === "delivered" || normalizedStatus === "completed";
+
+  // Determine current active step (1 to 5) and progress line width
+  let currentStep = 1;
+  let progressPercent = 0;
+
+  if (isDelivered) {
+    currentStep = 5;
+    progressPercent = 100;
+  } else if (isOutForDelivery) {
+    currentStep = 5; // Awaiting final delivery handoff confirmation
+    progressPercent = 80;
+  } else if (isShipped) {
+    currentStep = 4; // Out for Delivery / In Transit
+    progressPercent = 60;
+  } else if (isAssigned && customerVerified) {
+    currentStep = 3; // Accept & Dispatch
+    progressPercent = 40;
+  } else if (isAssigned && !customerVerified) {
+    currentStep = 2; // Verify Customer OTP
+    progressPercent = 20;
+  } else {
+    currentStep = 1;
+    progressPercent = 0;
+  }
 
   const handleCopyId = () => {
     const fullId = orderId || id;
@@ -163,15 +201,69 @@ const DeliveryCard = ({
     }
   };
 
-  const normalizedStatus = (status || "").toLowerCase();
-  const isAssigned = normalizedStatus === "assigned";
-  const isShipped = normalizedStatus === "shipped";
-  const isOutForDelivery = normalizedStatus === "out-for-delivery";
-  const isDelivered = normalizedStatus === "delivered" || normalizedStatus === "completed";
-
   return (
     <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl p-5 hover:border-[#F97316]/50 transition-all duration-200 shadow-sm flex flex-col justify-between space-y-4">
       <div>
+        {/* Persistent 5-Step Progress Tracker for Active Deliveries */}
+        {isMyDelivery && (
+          <div className="pb-4 mb-4 border-b border-[#2A2B30]/70">
+            <div className="relative flex items-center justify-between">
+              {/* Background Connecting Line */}
+              <div className="absolute top-2.5 left-3 right-3 h-[2px] bg-[#2A2B30] z-0" />
+              {/* Active Progress Fill */}
+              <div
+                className="absolute top-2.5 left-3 h-[2px] bg-gradient-to-r from-emerald-500 via-[#F97316] to-[#F97316] z-0 transition-all duration-500 ease-out"
+                style={{ width: `calc(${progressPercent}% * 0.92)` }}
+              />
+
+              {STEP_DEFINITIONS.map((s) => {
+                const isStepCompleted = isDelivered
+                  ? true
+                  : s.step < currentStep;
+                const isStepActive = !isDelivered && s.step === currentStep;
+
+                return (
+                  <div
+                    key={s.step}
+                    className="relative z-10 flex flex-col items-center group cursor-default"
+                  >
+                    {/* Step Circle Node */}
+                    <div
+                      className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all duration-300 ${
+                        isStepCompleted
+                          ? "bg-emerald-500 text-white shadow-[0_0_8px_rgba(16,185,129,0.4)]"
+                          : isStepActive
+                            ? "bg-[#F97316] text-white border-2 border-[#FDBA74] shadow-[0_0_12px_rgba(249,115,22,0.6)] animate-pulse"
+                            : "bg-[#111214] border border-[#2A2B30] text-[#71717A]"
+                      }`}
+                    >
+                      {isStepCompleted ? (
+                        <Check size={11} strokeWidth={3} />
+                      ) : (
+                        <span>{s.step}</span>
+                      )}
+                    </div>
+
+                    {/* Step Label */}
+                    <span
+                      className={`mt-1.5 text-[9px] font-mono tracking-tight text-center whitespace-nowrap transition-colors duration-200 ${
+                        isStepCompleted
+                          ? "text-emerald-400 font-semibold"
+                          : isStepActive
+                            ? "text-[#FDBA74] font-bold"
+                            : "text-[#71717A]"
+                      }`}
+                    >
+                      <span className="hidden sm:inline">{s.label}</span>
+                      <span className="sm:hidden">{s.shortLabel}</span>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Header: Customer Name, ID & Status Badge */}
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
