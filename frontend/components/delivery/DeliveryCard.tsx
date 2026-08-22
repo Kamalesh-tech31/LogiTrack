@@ -30,6 +30,8 @@ interface Props {
   hasActiveOtp?: boolean;
   isClaimable?: boolean;
   isMyDelivery?: boolean;
+  sequenceOrder?: number | null;
+  batchId?: string | null;
   onClaim?: (id: string) => Promise<void>;
   onRequestOtp?: (id: string) => Promise<void>;
   onVerifyOtp?: (id: string, otp: string) => Promise<void>;
@@ -62,6 +64,8 @@ const DeliveryCard = ({
   hasActiveOtp = false,
   isClaimable = false,
   isMyDelivery = false,
+  sequenceOrder,
+  batchId,
   onClaim,
   onRequestOtp,
   onVerifyOtp,
@@ -153,6 +157,11 @@ const DeliveryCard = ({
               <h3 className="text-base font-bold text-white font-display">
                 {customer || "Valued Customer"}
               </h3>
+              {sequenceOrder && (
+                <span className="px-2 py-0.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[11px] font-bold">
+                  Stop #{sequenceOrder}
+                </span>
+              )}
               <button
                 type="button"
                 onClick={handleCopyId}

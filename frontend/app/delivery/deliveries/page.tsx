@@ -11,6 +11,7 @@ import {
   requestDeliveryOtp,
   verifyCustomerDeliveryOtp,
   acceptDelivery,
+  addOrderToBatch,
   updateDeliveryStatus,
 } from "@/lib/api";
 import DeliveryCard from "@/components/delivery/DeliveryCard";
@@ -58,7 +59,15 @@ export default function DeliveriesPage() {
 
   const handleClaim = async (id: string) => {
     try {
-      const claimed = await claimDelivery(id);
+      const claimed: any = await claimDelivery(id);
+      if (claimed?.batchable) {
+        if (window.confirm(claimed.message || "Order is nearby. Add to batch?")) {
+          const batchRes = await addOrderToBatch(id);
+          toast.success(batchRes.message || "Added to batch!");
+          await loadDeliveries();
+        }
+        return;
+      }
       toast.success("Order claimed! Verification OTP dispatched to customer.");
       await loadDeliveries();
     } catch (err: any) {
@@ -90,7 +99,15 @@ export default function DeliveriesPage() {
 
   const handleAccept = async (id: string) => {
     try {
-      await acceptDelivery(id);
+      const response: any = await acceptDelivery(id);
+      if (response?.batchable) {
+        if (window.confirm(response.message || "Order is nearby. Add to batch?")) {
+          const batchRes = await addOrderToBatch(id);
+          toast.success(batchRes.message || "Added to batch!");
+          await loadDeliveries();
+        }
+        return;
+      }
       toast.success("Delivery accepted! Status updated to Shipped.");
       await loadDeliveries();
     } catch (err: any) {
@@ -224,6 +241,8 @@ export default function DeliveriesPage() {
               lastUpdated={delivery.lastUpdated || "Live"}
               customerVerified={delivery.customerVerified}
               hasActiveOtp={delivery.hasActiveOtp}
+              sequenceOrder={delivery.sequenceOrder || delivery.raw?.sequenceOrder}
+              batchId={delivery.batchId || delivery.raw?.batchId}
               isClaimable={activeTab === "available"}
               isMyDelivery={activeTab === "my"}
               onClaim={handleClaim}

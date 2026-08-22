@@ -34,6 +34,7 @@ type TrackingOrder = {
   status: string;
   amount: number;
   date: string;
+  sequenceOrder?: number | null;
 };
 
 function formatDisplayId(rawId: string | null | undefined) {
@@ -84,6 +85,7 @@ function TrackingContent() {
       order.createdAt ||
       order.updatedAt ||
       new Date().toISOString(),
+    sequenceOrder: order.sequenceOrder || order.raw?.sequenceOrder || null,
   });
 
   const handleCopyId = (id: string) => {
@@ -361,6 +363,12 @@ function TrackingContent() {
                   <p className="text-xs text-[#A1A1AA] mt-1">
                     Customer: {selectedOrder.customer}
                   </p>
+                  {selectedOrder.sequenceOrder && selectedOrder.sequenceOrder > 1 && (
+                    <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#F97316]/10 text-[#FDBA74] border border-[#F97316]/30">
+                      <Truck size={12} className="text-[#F97316]" />
+                      <span>Your order is stop #{selectedOrder.sequenceOrder} on the driver route</span>
+                    </div>
+                  )}
                 </div>
 
                 <button

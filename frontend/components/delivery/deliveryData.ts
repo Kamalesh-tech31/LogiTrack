@@ -42,6 +42,8 @@ export interface DeliveryRecord {
   customerVerified?: boolean;
   verifiedAt?: string | null;
   claimedAt?: string | null;
+  batchId?: string | null;
+  sequenceOrder?: number | null;
   hasActiveOtp?: boolean;
   otpExpiresAt?: string | null;
   location: string | null;

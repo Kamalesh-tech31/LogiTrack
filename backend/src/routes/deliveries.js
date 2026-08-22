@@ -1,6 +1,8 @@
 const express = require("express");
 const authenticateToken = require("../middleware/authenticateToken");
 const {
+  checkAgentAvailability,
+  addOrderToBatch,
   getAllDeliveries,
   getActiveDeliveries,
   getHistoryDeliveries,
@@ -33,8 +35,14 @@ router.get("/history", getHistoryDeliveries);
 // All deliveries
 router.get("/", getAllDeliveries);
 
+// Agent availability & batch info
+router.get("/agent/:agentId/availability", checkAgentAvailability);
+
 // Claim order as delivery agent
 router.post("/orders/:orderId/claim", claimOrder);
+
+// Add order to batch
+router.post("/orders/:orderId/add-to-batch", addOrderToBatch);
 
 // Generate delivery verification OTP
 router.post("/orders/:orderId/generate-otp", generateDeliveryOtp);
