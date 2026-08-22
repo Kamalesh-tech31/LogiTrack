@@ -2,14 +2,10 @@
 
 import { useState } from "react";
 import {
-  Clock3,
   MapPin,
-  Phone,
   Truck,
   Copy,
   Check,
-  Lock,
-  Unlock,
   KeyRound,
   Send,
   AlertCircle,
@@ -27,15 +23,14 @@ interface Props {
   eta: string;
   status: string;
   priority: string;
-  contact: string;
-  location: string;
-  lastUpdated: string;
+  contact?: string;
+  location?: string;
+  lastUpdated?: string;
   customerVerified?: boolean;
   hasActiveOtp?: boolean;
   isClaimable?: boolean;
   isMyDelivery?: boolean;
   onClaim?: (id: string) => Promise<void>;
-  onAccept?: (id: string) => Promise<void>;
   onRequestOtp?: (id: string) => Promise<void>;
   onVerifyOtp?: (id: string, otp: string) => Promise<void>;
   onStatusUpdate?: (id: string, status: string, otp?: string) => Promise<void>;
@@ -54,14 +49,6 @@ function formatDisplayId(rawId: string) {
   return `#${rawId}`;
 }
 
-const STEP_DEFINITIONS = [
-  { step: 1, label: "Claimed", shortLabel: "Claim" },
-  { step: 2, label: "Accepted", shortLabel: "Accept" },
-  { step: 3, label: "In Transit", shortLabel: "Transit" },
-  { step: 4, label: "Out for Delivery", shortLabel: "Out" },
-  { step: 5, label: "Delivered", shortLabel: "Delivered" },
-];
-
 const DeliveryCard = ({
   id,
   orderId,
@@ -70,15 +57,12 @@ const DeliveryCard = ({
   eta,
   status,
   priority,
-  contact,
-  location,
   lastUpdated,
   customerVerified = false,
   hasActiveOtp = false,
   isClaimable = false,
   isMyDelivery = false,
   onClaim,
-  onAccept,
   onRequestOtp,
   onVerifyOtp,
   onStatusUpdate,
@@ -92,34 +76,8 @@ const DeliveryCard = ({
   const displayId = formatDisplayId(orderId || id);
 
   const normalizedStatus = (status || "").toLowerCase();
-  const isAssigned = normalizedStatus === "assigned";
-  const isShipped = normalizedStatus === "shipped";
-  const isOutForDelivery = normalizedStatus === "out-for-delivery";
   const isDelivered =
     normalizedStatus === "delivered" || normalizedStatus === "completed";
-
-  // Calculate 5-Step Stepper state and progress bar
-  let currentStep = 1;
-  let progressPercent = 0;
-
-  if (isDelivered) {
-    currentStep = 5;
-    progressPercent = 100;
-  } else if (isOutForDelivery) {
-    currentStep = 5; // Out for Delivery done, awaiting final doorstep OTP handoff
-    progressPercent = 80;
-  } else if (isShipped) {
-    currentStep = 4; // In Transit, next is Out for Delivery
-    progressPercent = 60;
-  } else if (isAssigned) {
-    currentStep = 2; // Claimed, next is Accept
-    progressPercent = 20;
-  } else {
-    currentStep = 1; // Available / Unassigned
-    progressPercent = 0;
-  }
-
-  const isAcceptedOrBeyond = isShipped || isOutForDelivery || isDelivered;
 
   const handleCopyId = () => {
     const fullId = orderId || id;
@@ -136,24 +94,9 @@ const DeliveryCard = ({
     setActionSuccess(null);
     try {
       await onClaim(id);
-      setActionSuccess("Order claimed! Move to My Deliveries to accept.");
+      setActionSuccess("Order claimed! Moved to My Deliveries.");
     } catch (err: any) {
       setActionError(err?.message || "Failed to claim delivery.");
-    } finally {
-      setLoadingAction(false);
-    }
-  };
-
-  const handleAcceptClick = async () => {
-    if (!onAccept) return;
-    setLoadingAction(true);
-    setActionError(null);
-    setActionSuccess(null);
-    try {
-      await onAccept(id);
-      setActionSuccess("Order accepted! Full address & contact unlocked.");
-    } catch (err: any) {
-      setActionError(err?.message || "Failed to accept order.");
     } finally {
       setLoadingAction(false);
     }
@@ -167,10 +110,10 @@ const DeliveryCard = ({
     try {
       await onRequestOtp(id);
       setOtpRequested(true);
-      setActionSuccess("OTP dispatched to customer email!");
+      setActionSuccess("Passcode dispatched to customer email!");
       setTimeout(() => setActionSuccess(null), 4000);
     } catch (err: any) {
-      setActionError(err?.message || "Failed to generate OTP.");
+      setActionError(err?.message || "Failed to generate passcode.");
     } finally {
       setLoadingAction(false);
     }
@@ -200,82 +143,9 @@ const DeliveryCard = ({
     }
   };
 
-  const handleStatusClick = async (newStatus: string) => {
-    if (!onStatusUpdate) return;
-    setLoadingAction(true);
-    setActionError(null);
-    try {
-      await onStatusUpdate(id, newStatus);
-    } catch (err: any) {
-      setActionError(err?.message || "Failed to update status.");
-    } finally {
-      setLoadingAction(false);
-    }
-  };
-
   return (
     <div className="bg-[#1A1B1E] border border-[#2A2B30] rounded-3xl p-5 hover:border-[#F97316]/50 transition-all duration-200 shadow-sm flex flex-col justify-between space-y-4">
       <div>
-        {/* Persistent 5-Step Stepper for My Deliveries */}
-        {isMyDelivery && (
-          <div className="pb-4 mb-4 border-b border-[#2A2B30]/70">
-            <div className="relative flex items-center justify-between">
-              {/* Background Connecting Bar */}
-              <div className="absolute top-2.5 left-3 right-3 h-[2px] bg-[#2A2B30] z-0" />
-              {/* Active Gradient Fill Line */}
-              <div
-                className="absolute top-2.5 left-3 h-[2px] bg-gradient-to-r from-emerald-500 via-[#F97316] to-[#F97316] z-0 transition-all duration-500 ease-out"
-                style={{ width: `calc(${progressPercent}% * 0.92)` }}
-              />
-
-              {STEP_DEFINITIONS.map((s) => {
-                const isStepCompleted = isDelivered
-                  ? true
-                  : s.step < currentStep;
-                const isStepActive = !isDelivered && s.step === currentStep;
-
-                return (
-                  <div
-                    key={s.step}
-                    className="relative z-10 flex flex-col items-center group cursor-default"
-                  >
-                    {/* Node Circle */}
-                    <div
-                      className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all duration-300 ${
-                        isStepCompleted
-                          ? "bg-emerald-500 text-white shadow-[0_0_8px_rgba(16,185,129,0.4)]"
-                          : isStepActive
-                            ? "bg-[#F97316] text-white border-2 border-[#FDBA74] shadow-[0_0_12px_rgba(249,115,22,0.6)] animate-pulse"
-                            : "bg-[#111214] border border-[#2A2B30] text-[#71717A]"
-                      }`}
-                    >
-                      {isStepCompleted ? (
-                        <Check size={11} strokeWidth={3} />
-                      ) : (
-                        <span>{s.step}</span>
-                      )}
-                    </div>
-
-                    {/* Step Label */}
-                    <span
-                      className={`mt-1.5 text-[9px] font-mono tracking-tight text-center whitespace-nowrap transition-colors duration-200 ${
-                        isStepCompleted
-                          ? "text-emerald-400 font-semibold"
-                          : isStepActive
-                            ? "text-[#FDBA74] font-bold"
-                            : "text-[#71717A]"
-                      }`}
-                    >
-                      <span className="hidden sm:inline">{s.label}</span>
-                      <span className="sm:hidden">{s.shortLabel}</span>
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
         {/* Header: Customer Name, ID & Status Badge */}
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -290,24 +160,17 @@ const DeliveryCard = ({
                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#111214] border border-[#2A2B30] text-[11px] font-mono text-[#A1A1AA] hover:text-[#F97316] hover:border-[#F97316]/40 transition cursor-pointer"
               >
                 <span>{displayId}</span>
-                {copied ? <Check size={11} className="text-green-400" /> : <Copy size={11} />}
+                {copied ? (
+                  <Check size={11} className="text-green-400" />
+                ) : (
+                  <Copy size={11} />
+                )}
               </button>
             </div>
 
-            {/* Security Indicator Pill */}
-            <div className="flex items-center gap-2 mt-1.5">
-              {!isAcceptedOrBeyond ? (
-                <span className="inline-flex items-center gap-1 text-[10px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-full">
-                  <Lock size={10} />
-                  <span>Masked Data (Accept to Unlock)</span>
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-full">
-                  <Unlock size={10} />
-                  <span>Customer Details Unlocked</span>
-                </span>
-              )}
-            </div>
+            <p className="text-[11px] text-[#A1A1AA] mt-1">
+              {isDelivered ? "Delivery Completed" : isMyDelivery ? "Active Delivery Route" : "Available in Network"}
+            </p>
           </div>
 
           <StatusBadge status={status} />
@@ -334,26 +197,23 @@ const DeliveryCard = ({
           </div>
         </div>
 
-        {/* Address & Contact Telemetry List */}
+        {/* Address Telemetry */}
         <div className="mt-4 pt-3.5 border-t border-[#2A2B30]/60 space-y-2.5 text-xs text-[#A1A1AA]">
           <div className="flex items-start gap-2">
             <MapPin size={14} className="text-[#F97316] shrink-0 mt-0.5" />
-            <span className="text-[#F4F4F5] font-medium leading-relaxed">{address}</span>
+            <span className="text-[#F4F4F5] font-medium leading-relaxed">
+              {address || "Address not provided"}
+            </span>
           </div>
-
-          {contact && (
-            <div className="flex items-center gap-2">
-              <Phone size={14} className="text-[#F97316] shrink-0" />
-              <span className="text-[#F4F4F5] font-mono font-medium">{contact}</span>
-            </div>
-          )}
 
           <div className="flex items-center justify-between text-xs text-[#A1A1AA] pt-1">
             <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
               <Truck size={14} />
               <span>Telemetry Linked</span>
             </span>
-            {lastUpdated && <span className="font-mono text-[11px]">Sync: {lastUpdated}</span>}
+            {lastUpdated && (
+              <span className="font-mono text-[11px]">Sync: {lastUpdated}</span>
+            )}
           </div>
         </div>
 
@@ -372,8 +232,8 @@ const DeliveryCard = ({
           </div>
         )}
 
-        {/* Stage 4: Out for Delivery Doorstep OTP Handover Module */}
-        {isMyDelivery && isOutForDelivery && (
+        {/* Doorstep OTP Handover (My Deliveries Tab) */}
+        {isMyDelivery && !isDelivered && (
           <div className="mt-4 rounded-2xl border border-[#F97316]/40 bg-[#F97316]/5 p-3.5 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-xs font-bold text-white">
@@ -401,7 +261,9 @@ const DeliveryCard = ({
                 maxLength={6}
                 placeholder="6-digit PIN"
                 value={otpInput}
-                onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ""))}
+                onChange={(e) =>
+                  setOtpInput(e.target.value.replace(/\D/g, ""))
+                }
                 className="flex-1 px-3 py-2 bg-[#111214] border border-[#2A2B30] rounded-xl text-xs font-mono text-white placeholder-[#A1A1AA]/50 focus:border-[#F97316]/60 focus:outline-none transition tracking-widest text-center"
               />
               <button
@@ -416,10 +278,9 @@ const DeliveryCard = ({
         )}
       </div>
 
-      {/* Action Triggers Bar */}
-      <div className="pt-3 border-t border-[#2A2B30]/60 flex items-center justify-between gap-3">
-        {/* Stage 1: Claim Action (Available to Claim tab) */}
-        {isClaimable && (
+      {/* Action Triggers Bar (Available to Claim Tab) */}
+      {isClaimable && (
+        <div className="pt-3 border-t border-[#2A2B30]/60 flex items-center justify-between gap-3">
           <button
             type="button"
             onClick={handleClaimClick}
@@ -429,34 +290,8 @@ const DeliveryCard = ({
             <span>Claim Delivery</span>
             <ChevronRight size={14} />
           </button>
-        )}
-
-        {/* Stage 2: Accept Action (Directly enabled on claimed orders) */}
-        {isMyDelivery && isAssigned && (
-          <button
-            type="button"
-            onClick={handleAcceptClick}
-            disabled={loadingAction}
-            className="w-full py-2.5 px-4 rounded-2xl bg-[#F97316] hover:bg-[#EA580C] text-xs font-bold text-white transition shadow-[0_0_12px_rgba(249,115,22,0.3)] cursor-pointer flex items-center justify-center gap-1.5"
-          >
-            <span>Accept & Start Dispatch</span>
-            <ChevronRight size={14} />
-          </button>
-        )}
-
-        {/* Stage 3: Shipped / In Transit -> Advance to Out for Delivery */}
-        {isMyDelivery && isShipped && (
-          <button
-            type="button"
-            onClick={() => handleStatusClick("out-for-delivery")}
-            disabled={loadingAction}
-            className="w-full py-2.5 px-4 rounded-2xl bg-amber-500 hover:bg-amber-600 text-xs font-bold text-white transition shadow-[0_0_12px_rgba(245,158,11,0.3)] cursor-pointer flex items-center justify-center gap-1.5"
-          >
-            <span>Mark Out for Delivery</span>
-            <ChevronRight size={14} />
-          </button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

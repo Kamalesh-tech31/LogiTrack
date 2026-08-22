@@ -71,51 +71,9 @@ function mapOrderToRecord(o, requester = null) {
   const addr = o.deliveryAddress || {};
   const isCustomerVerified = Boolean(o.customerVerified);
 
-  const requesterId = requester ? String(requester._id || requester.id) : null;
-  const requesterRole = requester?.role;
-
-  const customerId = o.customerId?._id
-    ? String(o.customerId._id)
-    : String(o.customerId || "");
-  const assignedAgentId = o.assignedAgent?._id
-    ? String(o.assignedAgent._id)
-    : String(o.assignedAgent || "");
-  const ownerId = o.ownerId?._id
-    ? String(o.ownerId._id)
-    : String(o.ownerId || "");
-
-  const isCustomer = customerId && customerId === requesterId;
-  const isOwner =
-    (ownerId && ownerId === requesterId) ||
-    requesterRole === "Business Owner" ||
-    requesterRole === "Owner";
-  const isAssignedAgent = assignedAgentId && assignedAgentId === requesterId;
-
-  // Masking policy:
-  // Customers and Owners always see full address and phone.
-  // Delivery agent sees full address and phone once the order is ACCEPTED (shipped, out-for-delivery, delivered).
-  // Before acceptance (unassigned or claimed), agent sees masked address and phone.
-  const isAcceptedOrBeyond = [
-    "shipped",
-    "out-for-delivery",
-    "completed",
-    "delivered",
-  ].includes(o.status);
-
-  const canSeeFullData =
-    isCustomer || isOwner || (isAssignedAgent && isAcceptedOrBeyond);
-
   let rawPhone =
     o.customerId?.phone || o.customerId?.phoneNumber || o.customerPhone || "";
   let contact = rawPhone || null;
-  if (!canSeeFullData && rawPhone) {
-    const cleanPhone = String(rawPhone);
-    if (cleanPhone.length > 4) {
-      contact = `••••• ••${cleanPhone.slice(-4)}`;
-    } else {
-      contact = "••••••••••";
-    }
-  }
 
   let addressStr = [
     addr.street,
@@ -127,9 +85,8 @@ function mapOrderToRecord(o, requester = null) {
     .filter(Boolean)
     .join(", ");
 
-  if (!canSeeFullData) {
-    const safeCity = addr.city || "Destination Area";
-    addressStr = `•••••••• (Accept order to view), ${safeCity}`;
+  if (!addressStr) {
+    addressStr = addr.city || "Destination Area";
   }
 
   let agent = null;
@@ -311,7 +268,7 @@ const claimOrder = async (req, res, next) => {
     res.json({
       success: true,
       data: mapOrderToRecord(populated, user),
-      message: "Order claimed successfully. Accept to start dispatch.",
+      message: "Order claimed successfully.",
     });
   } catch (err) {
     next(err);
@@ -362,7 +319,7 @@ const assignOrder = async (req, res, next) => {
   }
 };
 
-// POST /api/deliveries/orders/:orderId/accept (agent accepts assigned order -> Shipped, unlocks full details)
+// POST /api/deliveries/orders/:orderId/accept (compatibility handler)
 const acceptOrder = async (req, res, next) => {
   try {
     const user = req.user;
@@ -379,20 +336,6 @@ const acceptOrder = async (req, res, next) => {
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    const terminalStatuses = [
-      "completed",
-      "delivered",
-      "failed",
-      "returned",
-      "cancelled",
-    ];
-
-    if (terminalStatuses.includes(order.status)) {
-      return res.status(400).json({
-        message: `Cannot accept an order in '${order.status}' status`,
-      });
-    }
-
     if (
       !order.assignedAgent ||
       String(order.assignedAgent._id || order.assignedAgent) !== String(userId)
@@ -400,12 +343,8 @@ const acceptOrder = async (req, res, next) => {
       return res.status(403).json({ message: "Order not assigned to you" });
     }
 
-    order.status = "shipped";
-    order.shippedAt = new Date();
+    order.status = "assigned";
     await order.save();
-
-    await createOrderEventNotifications(order, "accepted");
-    await createOrderEventNotifications(order, "shipped");
 
     const populated = await Order.findById(order._id)
       .populate("customerId", "fullName email phone phoneNumber")
@@ -415,7 +354,6 @@ const acceptOrder = async (req, res, next) => {
     res.json({
       success: true,
       data: mapOrderToRecord(populated, user),
-      message: "Order accepted. Full customer contact and address unlocked.",
     });
   } catch (err) {
     next(err);
@@ -461,7 +399,7 @@ const updateDeliveryStatus = async (req, res, next) => {
       return res.status(400).json({ message: "Invalid status" });
     }
 
-    // Gating for Final Handover / Delivery Completion
+    // Gating for Final Handover / Delivery Completion via OTP
     if (status === "completed" || status === "delivered") {
       if (user && user.role === "Delivery Agent") {
         if (!order.customerVerified) {
@@ -483,7 +421,6 @@ const updateDeliveryStatus = async (req, res, next) => {
     }
 
     if (status) order.status = status;
-    if (status === "shipped" && !order.shippedAt) order.shippedAt = new Date();
     await order.save();
 
     if (status) {
