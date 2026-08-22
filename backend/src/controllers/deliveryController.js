@@ -5,8 +5,8 @@ const LocationUpdate = require("../models/LocationUpdate");
 const { getDistanceFromLatLonInKm, computeRouteSequence } = require("../utils/geo");
 
 // Configurable constants for batching
-const BATCH_CAP = 3;
-const PROXIMITY_RADIUS_KM = 2;
+const BATCH_CAP = Infinity;
+const PROXIMITY_RADIUS_KM = 5;
 
 function formatDuration(ms) {
   if (ms <= 0) return "0m";

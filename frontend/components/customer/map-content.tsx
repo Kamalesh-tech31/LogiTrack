@@ -1,188 +1,154 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { LatLngExpression } from "leaflet";
-import "leaflet/dist/leaflet.css";
+import { useEffect, useRef, useState } from "react";
 import { deliveryRoute } from "@/lib/mock-data";
-
-// DO NOT import MapContainer, Marker, etc. at module level
-// DO NOT create Icon objects at module level
+import {
+  Map,
+  type MapRef,
+  MapMarker,
+  MarkerContent,
+  MarkerPopup,
+  MapRoute,
+  MapControls,
+} from "@/components/ui/map";
+import { MapPin, Navigation } from "lucide-react";
 
 export function MapContent({ route }: { route?: any }) {
   const currentRoute = route || deliveryRoute;
-  const [isClient, setIsClient] = useState(false);
-  const [MapComponent, setMapComponent] =
-    useState<React.ComponentType<any> | null>(null);
+  const mapRef = useRef<MapRef>(null);
 
-  // Lazy load Leaflet only after client hydration
+  const originLocation =
+    currentRoute.origin?.lat != null && currentRoute.origin?.lng != null
+      ? currentRoute.origin
+      : currentRoute.currentPosition;
+  const destinationLocation =
+    currentRoute.destination?.lat != null &&
+    currentRoute.destination?.lng != null
+      ? currentRoute.destination
+      : currentRoute.currentPosition;
+
+  // Convert waypoints from [lat, lng] to [lng, lat] for MapLibre
+  const routePath: [number, number][] =
+    Array.isArray(currentRoute.waypoints) && currentRoute.waypoints.length > 0
+      ? currentRoute.waypoints.map((point: { lat: number; lng: number }) => [
+          point.lng,
+          point.lat,
+        ])
+      : originLocation && destinationLocation
+        ? [
+            [originLocation.lng, originLocation.lat],
+            [destinationLocation.lng, destinationLocation.lat],
+          ]
+        : [];
+
+  const center: [number, number] = routePath.length
+    ? routePath[Math.floor(routePath.length / 2)]
+    : originLocation
+      ? [originLocation.lng, originLocation.lat]
+      : [80.2707, 13.0827]; // Longitude, Latitude for Chennai fallback
+
+  const showOriginMarker =
+    !!originLocation && originLocation !== currentRoute.currentPosition;
+  const showCurrentPositionMarker =
+    currentRoute.currentPosition?.lat != null &&
+    currentRoute.currentPosition?.lng != null;
+
+  // Fit bounds whenever routePath changes
   useEffect(() => {
-    setIsClient(true);
+    if (mapRef.current && routePath.length > 1) {
+      // Calculate bounding box: [minLng, minLat, maxLng, maxLat]
+      const minLng = Math.min(...routePath.map((p) => p[0]));
+      const maxLng = Math.max(...routePath.map((p) => p[0]));
+      const minLat = Math.min(...routePath.map((p) => p[1]));
+      const maxLat = Math.max(...routePath.map((p) => p[1]));
 
-    // Dynamic import of Leaflet components - ONLY on client
-    Promise.all([
-      import("react-leaflet").then((m) => m),
-      import("leaflet").then((m) => m),
-    ])
-      .then(async ([leafletModule, leafletLib]) => {
-        const { MapContainer, TileLayer, Marker, Polyline, Popup } =
-          leafletModule;
-        const { Icon } = leafletLib;
+      const bounds: [number, number, number, number] = [
+        minLng,
+        minLat,
+        maxLng,
+        maxLat,
+      ];
+      
+      mapRef.current.fitBounds(bounds, { padding: 50, duration: 1000 });
+    } else if (mapRef.current && center) {
+      mapRef.current.easeTo({ center, zoom: 13, duration: 1000 });
+    }
+  }, [routePath, center]);
 
-        // Create icons ONLY after client-side import
-        const warehouseIcon = new Icon({
-          iconUrl:
-            "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png",
-          shadowUrl:
-            "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-          iconSize: [25, 41],
-          iconAnchor: [12, 41],
-          popupAnchor: [1, -34],
-          shadowSize: [41, 41],
-        });
+  return (
+    <div className="relative h-full w-full">
+      <Map
+        ref={mapRef}
+        center={center}
+        zoom={13}
+        styles={{
+          light: "https://tiles.openfreemap.org/styles/bright",
+          dark: "https://tiles.openfreemap.org/styles/liberty",
+        }}
+      >
+        <MapControls position="top-right" />
 
-        const destinationIcon = new Icon({
-          iconUrl:
-            "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
-          shadowUrl:
-            "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-          iconSize: [25, 41],
-          iconAnchor: [12, 41],
-          popupAnchor: [1, -34],
-          shadowSize: [41, 41],
-        });
+        {showOriginMarker && originLocation && (
+          <MapMarker longitude={originLocation.lng} latitude={originLocation.lat}>
+            <MarkerContent>
+              <div className="relative -mt-6">
+                <MapPin className="text-green-600 fill-green-100 h-8 w-8 drop-shadow-md" />
+              </div>
+            </MarkerContent>
+            <MarkerPopup>
+              <p className="font-medium text-sm text-foreground">
+                {originLocation.name || "Start location"}
+              </p>
+            </MarkerPopup>
+          </MapMarker>
+        )}
 
-        const deliveryIcon = new Icon({
-          iconUrl:
-            "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png",
-          shadowUrl:
-            "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-          iconSize: [25, 41],
-          iconAnchor: [12, 41],
-          popupAnchor: [1, -34],
-          shadowSize: [41, 41],
-        });
+        {destinationLocation && (
+          <MapMarker
+            longitude={destinationLocation.lng}
+            latitude={destinationLocation.lat}
+          >
+            <MarkerContent>
+              <div className="relative -mt-6">
+                <MapPin className="text-red-600 fill-red-100 h-8 w-8 drop-shadow-md" />
+              </div>
+            </MarkerContent>
+            <MarkerPopup>
+              <p className="font-medium text-sm text-foreground">
+                {destinationLocation.name || "Destination"}
+              </p>
+            </MarkerPopup>
+          </MapMarker>
+        )}
 
-        // Create the map component function
-        const MapComponent = () => {
-          const originLocation =
-            currentRoute.origin?.lat != null && currentRoute.origin?.lng != null
-              ? currentRoute.origin
-              : currentRoute.currentPosition;
-          const destinationLocation =
-            currentRoute.destination?.lat != null &&
-            currentRoute.destination?.lng != null
-              ? currentRoute.destination
-              : currentRoute.currentPosition;
+        {showCurrentPositionMarker && (
+          <MapMarker
+            longitude={currentRoute.currentPosition.lng}
+            latitude={currentRoute.currentPosition.lat}
+          >
+            <MarkerContent>
+              <div className="relative flex items-center justify-center bg-blue-500 rounded-full p-2 border-2 border-white shadow-lg animate-pulse">
+                <Navigation className="text-white h-4 w-4" />
+              </div>
+            </MarkerContent>
+            <MarkerPopup>
+              <p className="font-medium text-sm text-foreground">
+                {currentRoute.currentPosition.name ||
+                  "Delivery Partner - In Transit"}
+              </p>
+            </MarkerPopup>
+          </MapMarker>
+        )}
 
-          const routePath: LatLngExpression[] =
-            Array.isArray(currentRoute.waypoints) &&
-            currentRoute.waypoints.length > 0
-              ? currentRoute.waypoints.map(
-                  (point: { lat: number; lng: number }) =>
-                    [point.lat, point.lng] as LatLngExpression,
-                )
-              : originLocation && destinationLocation
-                ? [
-                    [originLocation.lat, originLocation.lng],
-                    [destinationLocation.lat, destinationLocation.lng],
-                  ]
-                : [];
-
-          const center: LatLngExpression = routePath.length
-            ? routePath[Math.floor(routePath.length / 2)]
-            : originLocation
-              ? [originLocation.lat, originLocation.lng]
-              : [13.0827, 80.2707];
-
-          const bounds = routePath.length > 0 ? routePath : undefined;
-          const showOriginMarker =
-            !!originLocation && originLocation !== currentRoute.currentPosition;
-          const showCurrentPositionMarker =
-            currentRoute.currentPosition?.lat != null &&
-            currentRoute.currentPosition?.lng != null;
-
-          return (
-            <MapContainer
-              center={center}
-              zoom={13}
-              bounds={bounds}
-              boundsOptions={{ padding: [50, 50] }}
-              className="h-full w-full"
-              scrollWheelZoom={false}
-            >
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-
-              {showOriginMarker && originLocation && (
-                <Marker
-                  position={[originLocation.lat, originLocation.lng]}
-                  icon={warehouseIcon}
-                >
-                  <Popup>{originLocation.name || "Start location"}</Popup>
-                </Marker>
-              )}
-
-              {destinationLocation && (
-                <Marker
-                  position={[destinationLocation.lat, destinationLocation.lng]}
-                  icon={destinationIcon}
-                >
-                  <Popup>{destinationLocation.name || "Destination"}</Popup>
-                </Marker>
-              )}
-
-              {showCurrentPositionMarker && (
-                <Marker
-                  position={[
-                    currentRoute.currentPosition.lat,
-                    currentRoute.currentPosition.lng,
-                  ]}
-                  icon={deliveryIcon}
-                >
-                  <Popup>
-                    {currentRoute.currentPosition.name ||
-                      "Delivery Partner - In Transit"}
-                  </Popup>
-                </Marker>
-              )}
-
-              {routePath.length > 1 && (
-                <Polyline
-                  positions={routePath}
-                  color="#ef4444"
-                  weight={3}
-                  opacity={0.7}
-                  dashArray="10, 10"
-                />
-              )}
-            </MapContainer>
-          );
-        };
-
-        setMapComponent(() => MapComponent);
-      })
-      .catch((err) => {
-        console.error("Failed to load map:", err);
-      });
-  }, []);
-
-  if (!isClient) {
-    return (
-      <div className="h-full w-full bg-muted flex items-center justify-center">
-        <p>Loading map...</p>
-      </div>
-    );
-  }
-
-  if (!MapComponent) {
-    return (
-      <div className="h-full w-full bg-muted flex items-center justify-center">
-        <p>Loading map...</p>
-      </div>
-    );
-  }
-
-  return <MapComponent />;
+        {routePath.length > 1 && (
+          <MapRoute
+            coordinates={routePath}
+            color="#ef4444"
+            width={4}
+            dashArray={[2, 2]}
+          />
+        )}
+      </Map>
+    </div>
+  );
 }

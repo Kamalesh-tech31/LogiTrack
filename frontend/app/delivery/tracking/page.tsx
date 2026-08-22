@@ -5,6 +5,8 @@ import toast from "react-hot-toast";
 
 import type { DeliveryRecord } from "@/components/delivery/deliveryData";
 import { DeliveryMap } from "@/components/customer/delivery-map";
+import dynamic from "next/dynamic";
+const LeafletOsrmMap = dynamic(() => import("@/components/delivery/leaflet-osrm-map").then(mod => mod.LeafletOsrmMap), { ssr: false });
 import { fetchDashboard, saveLocationUpdate } from "@/lib/api";
 
 interface LocationDetails {
@@ -33,11 +35,33 @@ export default function TrackingPage() {
     useState<LocationDetails | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [activeRoute, setActiveRoute] = useState<DeliveryRecord | null>(null);
+  const [activeRoutes, setActiveRoutes] = useState<DeliveryRecord[]>([]);
   const [showMap, setShowMap] = useState(false);
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
 
   const destinationName =
     activeRoute?.address || activeRoute?.customer || "Customer destination";
+
+  const waypoints = locationDetails ? [{ lat: locationDetails.latitude, lng: locationDetails.longitude, name: "Driver Location" }] : [];
+  
+  if (locationDetails) {
+    activeRoutes.forEach((route: any, idx) => {
+      let lat = Number(route.latitude);
+      let lng = Number(route.longitude);
+      if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+        // Prevent perfect overlap by adding a tiny micro-jitter if coordinates match an existing waypoint
+        while (waypoints.some((wp) => wp.lat === lat && wp.lng === lng)) {
+          lat += (Math.random() - 0.5) * 0.0003; // ~15 meters jitter
+          lng += (Math.random() - 0.5) * 0.0003;
+        }
+        waypoints.push({ 
+          lat, 
+          lng, 
+          name: route.address ? `${route.customer || `Stop ${idx + 1}`} - ${route.address}` : (route.customer || `Stop ${idx + 1}`)
+        });
+      }
+    });
+  }
 
   const deliveryMapRoute =
     activeRoute &&
@@ -92,6 +116,7 @@ export default function TrackingPage() {
         if (isMounted) {
           if (data.activeRoutes && data.activeRoutes.length > 0) {
             setActiveRoute(data.activeRoutes[0]);
+            setActiveRoutes(data.activeRoutes);
           } else {
             toast("No active deliveries. Accept an order to start tracking.", {
               icon: "ℹ️",
@@ -452,8 +477,8 @@ export default function TrackingPage() {
                   </div>
 
                   <div className="flex-1 rounded-xl border border-[#27272A] overflow-hidden">
-                    {deliveryMapRoute ? (
-                      <DeliveryMap route={deliveryMapRoute} />
+                    {waypoints.length >= 2 ? (
+                      <LeafletOsrmMap waypoints={waypoints} />
                     ) : (
                       <iframe
                         width="100%"

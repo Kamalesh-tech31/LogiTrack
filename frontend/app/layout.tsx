@@ -6,6 +6,7 @@ import { Toaster } from "react-hot-toast";
 import { ThemeProvider } from "@/components/theme-provider";
 
 import "./globals.css";
+import "maplibre-gl/dist/maplibre-gl.css";
 
 const geist = Geist({
   subsets: ["latin"],
@@ -66,3 +67,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+// Trigger refresh
