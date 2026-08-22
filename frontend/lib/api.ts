@@ -293,8 +293,48 @@ export async function fetchDashboard(): Promise<DashboardData> {
 }
 
 export async function fetchDeliveries(): Promise<DeliveryRecord[]> {
-  // Fetch only deliveries assigned to the logged-in agent
+  // Fetch deliveries for delivery agent (claimable and assigned)
   return apiRequest<DeliveryRecord[]>("/api/deliveries?mine=true");
+}
+
+export async function claimDelivery(orderId: string): Promise<DeliveryRecord> {
+  return apiRequest<DeliveryRecord>(`/api/deliveries/orders/${orderId}/claim`, {
+    method: "POST",
+  });
+}
+
+export async function verifyCustomerDeliveryOtp(
+  orderId: string,
+  otp: string,
+): Promise<{
+  success: boolean;
+  message: string;
+  orderId: string;
+  customerVerified: boolean;
+  verifiedAt: string;
+}> {
+  return apiRequest<{
+    success: boolean;
+    message: string;
+    orderId: string;
+    customerVerified: boolean;
+    verifiedAt: string;
+  }>(`/api/deliveries/orders/${orderId}/verify-customer`, {
+    method: "POST",
+    body: JSON.stringify({ otp }),
+  });
+}
+
+export async function requestDeliveryOtp(
+  orderId: string,
+): Promise<{ success: boolean; message: string; expiresAt: string }> {
+  return apiRequest<{
+    success: boolean;
+    message: string;
+    expiresAt: string;
+  }>(`/api/deliveries/orders/${orderId}/generate-otp`, {
+    method: "POST",
+  });
 }
 
 export async function acceptDelivery(

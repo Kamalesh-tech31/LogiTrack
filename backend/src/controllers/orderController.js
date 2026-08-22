@@ -181,10 +181,37 @@ exports.createOrder = async (req, res, next) => {
   }
 };
 
-// Get all orders
+// Get all orders scoped to the authenticated user's relationship
 exports.getOrders = async (req, res, next) => {
   try {
-    const orders = await Order.find()
+    const userId = req.user?.id || req.user?._id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const role = req.user?.role;
+    const filter = {};
+
+    if (role === "Customer") {
+      filter.customerId = userId;
+    } else if (role === "Business Owner" || role === "Owner") {
+      filter.ownerId = userId;
+    } else if (role === "Delivery Agent") {
+      filter.$or = [
+        { assignedAgent: userId },
+        { assignedAgent: { $exists: false } },
+        { assignedAgent: null },
+      ];
+    } else {
+      filter.$or = [
+        { customerId: userId },
+        { ownerId: userId },
+        { assignedAgent: userId },
+      ];
+    }
+
+    const orders = await Order.find(filter)
+      .sort({ createdAt: -1 })
       .populate("items.product", "name price images")
       .populate("customerId", "fullName email");
 
@@ -243,14 +270,44 @@ exports.getCustomerOrders = async (req, res, next) => {
   }
 };
 
-// Get order by id
+// Get order by id with relationship authorization
 exports.getOrderById = async (req, res, next) => {
   try {
+    const userId = req.user?.id || req.user?._id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
     const order = await Order.findById(req.params.id)
       .populate("items.product", "name price images")
       .populate("customerId", "fullName email");
 
     if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    const role = req.user?.role;
+    const orderCustomerId = order.customerId?._id
+      ? String(order.customerId._id)
+      : String(order.customerId || "");
+    const orderOwnerId = order.ownerId?._id
+      ? String(order.ownerId._id)
+      : String(order.ownerId || "");
+    const orderAssignedAgent = order.assignedAgent?._id
+      ? String(order.assignedAgent._id)
+      : String(order.assignedAgent || "");
+
+    const isCustomer = orderCustomerId && orderCustomerId === String(userId);
+    const isOwner = orderOwnerId && orderOwnerId === String(userId);
+    const isAssignedAgent =
+      orderAssignedAgent && orderAssignedAgent === String(userId);
+    const isClaimableAgent =
+      !order.assignedAgent && role === "Delivery Agent";
+
+    if (!isCustomer && !isOwner && !isAssignedAgent && !isClaimableAgent) {
       return res.status(404).json({
         success: false,
         message: "Order not found",

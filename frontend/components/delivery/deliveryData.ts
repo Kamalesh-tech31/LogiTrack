@@ -27,6 +27,7 @@ export interface DeliveryRecord {
   orderId?: string;
   customer: string;
   address: string;
+  fullAddress?: string;
   city: string;
   latitude?: number | null;
   longitude?: number | null;
@@ -34,6 +35,10 @@ export interface DeliveryRecord {
   status: DeliveryStatus;
   priority: DeliveryPriority | null;
   contact: string;
+  customerPhone?: string;
+  customerVerified?: boolean;
+  verifiedAt?: string | null;
+  isClaimed?: boolean;
   agent?: {
     _id: string;
     name: string;

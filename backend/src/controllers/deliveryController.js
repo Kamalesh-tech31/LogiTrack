@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Order = require("../models/Order");
 const User = require("../models/User");
+const deliveryOtpService = require("../services/deliveryOtpService");
 
 function formatDuration(ms) {
   if (ms <= 0) return "0m";
@@ -54,7 +55,10 @@ function getEtaMsForOrder(o) {
 
 function mapOrderToRecord(o) {
   const addr = o.deliveryAddress || {};
-  const addressStr = [
+  const isClaimed = Boolean(o.assignedAgent);
+  const isVerified = Boolean(o.customerVerified);
+
+  const fullAddress = [
     addr.street,
     addr.city,
     addr.state,
@@ -63,6 +67,12 @@ function mapOrderToRecord(o) {
   ]
     .filter(Boolean)
     .join(", ");
+
+  const areaAddress =
+    [addr.city, addr.state, addr.postalCode].filter(Boolean).join(", ") ||
+    addr.city ||
+    "Destination Area";
+
   // Normalize assigned agent if present
   let agent = null;
   if (o.assignedAgent) {
@@ -81,23 +91,73 @@ function mapOrderToRecord(o) {
     }
   }
 
+  // Resolve customerPhone: Order has no direct phone field.
+  // It lives on the populated customerId User document.
+  const resolvedPhone =
+    o.customerId?.phone || o.customerId?.phoneNumber || null;
+
+  // Masking based on claim & verification state:
+  // - Unassigned: mask customer name, street address, and contact
+  // - Claimed & Unverified: show general area, mask street address & contact
+  // - Verified: reveal full customer name, full address, and contact
+  let customer =
+    o.customerName ||
+    (o.customerId ? o.customerId.fullName || o.customerId.toString() : "Customer");
+  let address = fullAddress;
+  let contact = resolvedPhone || "Contact on file";
+
+  if (!isClaimed) {
+    customer = "Available Order";
+    address = areaAddress;
+    contact = "Hidden";
+  } else if (!isVerified) {
+    customer = o.customerName || "Customer";
+    address = areaAddress;
+    contact = "Hidden until OTP verified";
+  }
+
+  // Build a safe raw object — strip OTP internal fields before sending to client
+  const safeRaw = {
+    _id: o._id,
+    orderId: o.orderId,
+    customerId: o.customerId,
+    ownerId: o.ownerId,
+    assignedAgent: o.assignedAgent,
+    status: o.status,
+    customerName: o.customerName,
+    customerVerified: o.customerVerified,
+    verifiedAt: o.verifiedAt,
+    items: o.items,
+    totalPrice: o.totalPrice,
+    deliveryAddress: isVerified ? o.deliveryAddress : undefined,
+    shippedAt: o.shippedAt,
+    deliveredAt: o.deliveredAt,
+    createdAt: o.createdAt,
+    updatedAt: o.updatedAt,
+    // intentionally omitting: deliveryOtp (contains bcrypt hash)
+  };
+
   return {
     id: o._id.toString(),
     orderId: o.orderId,
-    customer:
-      o.customerName || (o.customerId ? o.customerId.toString() : "Unknown"),
+    customer,
     city: addr.city || null,
-    address: addressStr,
+    address,
+    fullAddress: isVerified ? fullAddress : undefined,
     latitude: addr.latitude || null,
     longitude: addr.longitude || null,
     eta: getEtaForOrder(o),
     status: o.status,
     priority: o.priority || null,
-    contact: o.customerPhone || null,
+    contact,
+    customerPhone: isVerified ? resolvedPhone : undefined,
+    customerVerified: isVerified,
+    verifiedAt: o.verifiedAt ? o.verifiedAt.toISOString() : null,
+    isClaimed,
     agent,
     location: null,
     lastUpdated: o.updatedAt ? o.updatedAt.toISOString() : null,
-    raw: o,
+    raw: safeRaw,
   };
 }
 
@@ -148,7 +208,7 @@ const getAllDeliveries = async (req, res, next) => {
 
     const orders = await Order.find(filter)
       .populate("items.product", "name price images")
-      .populate("customerId", "fullName email")
+      .populate("customerId", "fullName email phone phoneNumber")
       .populate("assignedAgent", "fullName email role")
       .sort({ createdAt: -1 });
 
@@ -164,6 +224,81 @@ const getAllDeliveries = async (req, res, next) => {
       }
     }
     res.json({ success: true, count: mapped.length, data: mapped });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/deliveries/orders/:orderId/claim (agent claims an available order)
+const claimOrder = async (req, res, next) => {
+  try {
+    const user = req.user;
+    if (!user) return res.status(401).json({ message: "Unauthorized" });
+    if (user.role !== "Delivery Agent") {
+      return res
+        .status(403)
+        .json({ message: "Only delivery agents can claim orders" });
+    }
+
+    const { orderId } = req.params;
+    const userId = user._id || user.id;
+
+    const order = await Order.findById(orderId);
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    const terminalStatuses = [
+      "completed",
+      "delivered",
+      "failed",
+      "returned",
+      "cancelled",
+    ];
+
+    if (terminalStatuses.includes(order.status)) {
+      return res.status(400).json({
+        message: `Cannot claim an order in '${order.status}' status`,
+      });
+    }
+
+    if (order.assignedAgent) {
+      return res.status(400).json({
+        message: "This order is already assigned or claimed by an agent.",
+      });
+    }
+
+    const activeAssignedOrders = await Order.countDocuments({
+      assignedAgent: userId,
+      status: { $nin: terminalStatuses },
+      _id: { $ne: order._id },
+    });
+
+    if (activeAssignedOrders > 0) {
+      return res.status(403).json({
+        message:
+          "Complete your current delivery before claiming another order.",
+      });
+    }
+
+    order.assignedAgent = userId;
+    order.status = "assigned";
+    order.customerVerified = false;
+    order.verifiedAt = null;
+    await order.save();
+
+    // Generate and dispatch customer verification OTP
+    await deliveryOtpService.generateDeliveryOtp(order._id, user);
+
+    const populated = await Order.findById(order._id)
+      .populate("customerId", "fullName email phone phoneNumber")
+      .populate("assignedAgent", "fullName email role")
+      .populate("items.product", "name");
+
+    res.status(200).json({
+      success: true,
+      message:
+        "Order claimed successfully. Verification OTP dispatched to customer.",
+      data: mapOrderToRecord(populated),
+    });
   } catch (err) {
     next(err);
   }
@@ -212,7 +347,7 @@ const assignOrder = async (req, res, next) => {
   }
 };
 
-// POST /api/deliveries/orders/:orderId/accept  (agent accepts assigned order -> Shipped)
+// POST /api/deliveries/orders/:orderId/accept  (agent accepts verified order -> Shipped)
 const acceptOrder = async (req, res, next) => {
   try {
     const user = req.user;
@@ -236,9 +371,22 @@ const acceptOrder = async (req, res, next) => {
       "cancelled",
     ];
 
+    if (terminalStatuses.includes(order.status)) {
+      return res.status(400).json({
+        message: `Cannot accept an order in '${order.status}' status`,
+      });
+    }
+
+    if (
+      !order.assignedAgent ||
+      String(order.assignedAgent._id || order.assignedAgent) !== String(userId)
+    ) {
+      return res.status(403).json({ message: "Order not assigned to you" });
+    }
+
     const activeAssignedOrders = await Order.countDocuments({
       assignedAgent: userId,
-      status: { $nin: terminalStatuses },
+      status: { $in: ["shipped", "out-for-delivery"] },
       _id: { $ne: order._id },
     });
 
@@ -249,22 +397,18 @@ const acceptOrder = async (req, res, next) => {
       });
     }
 
-    if (
-      !order.assignedAgent ||
-      String(order.assignedAgent) !== String(userId)
-    ) {
-      // If the order is unassigned, allow the agent to claim it by assigning themselves
-      if (!order.assignedAgent) {
-        order.assignedAgent = userId;
-      } else if (String(order.assignedAgent) !== String(userId)) {
-        return res.status(403).json({ message: "Order not assigned to you" });
-      }
+    if (!order.customerVerified) {
+      return res.status(403).json({
+        message:
+          "Customer OTP verification required before accepting delivery.",
+      });
     }
 
     order.status = "shipped";
     order.shippedAt = new Date();
     await order.save();
     const populated = await Order.findById(order._id)
+      .populate("customerId", "fullName email phone phoneNumber")
       .populate("assignedAgent", "fullName email role")
       .populate("items.product", "name");
     res.json({ success: true, data: mapOrderToRecord(populated) });
@@ -569,8 +713,53 @@ const getDeliveries = async (req, res, next) => {
   }
 };
 
+const generateDeliveryOtp = async (req, res, next) => {
+  try {
+    const { orderId } = req.params;
+    const user = req.user;
+    const result = await deliveryOtpService.generateDeliveryOtp(orderId, user);
+    res.status(200).json(result);
+  } catch (err) {
+    if (err.statusCode) {
+      return res
+        .status(err.statusCode)
+        .json({ success: false, message: err.message });
+    }
+    next(err);
+  }
+};
+
+const verifyCustomerOtp = async (req, res, next) => {
+  try {
+    const { orderId } = req.params;
+    const { otp } = req.body;
+    const user = req.user;
+
+    if (!otp) {
+      return res
+        .status(400)
+        .json({ success: false, message: "OTP is required" });
+    }
+
+    const result = await deliveryOtpService.verifyDeliveryOtp(
+      orderId,
+      otp,
+      user,
+    );
+    res.status(200).json(result);
+  } catch (err) {
+    if (err.statusCode) {
+      return res
+        .status(err.statusCode)
+        .json({ success: false, message: err.message });
+    }
+    next(err);
+  }
+};
+
 module.exports = {
   getAllDeliveries,
+  claimOrder,
   assignOrder,
   acceptOrder,
   updateDeliveryStatus,
@@ -582,4 +771,6 @@ module.exports = {
   updateDelivery,
   deleteDelivery,
   getDeliveries,
+  generateDeliveryOtp,
+  verifyCustomerOtp,
 };

@@ -62,9 +62,16 @@ exports.getAllOrders = async (req, res) => {
 
 exports.getOrderById = async (req, res) => {
   try {
-    const order = await CustomerOrder.findById(req.params.id).populate(
-      "items.product",
-    );
+    const customerId = req.user?.id || req.user?._id;
+    if (!customerId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const order = await Order.findOne({
+      _id: req.params.id,
+      customerId,
+    }).populate("items.product");
+
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
@@ -126,8 +133,16 @@ exports.createOrder = async (req, res) => {
 
 exports.updateOrder = async (req, res) => {
   try {
-    const updatedOrder = await CustomerOrder.findByIdAndUpdate(
-      req.params.id,
+    const customerId = req.user?.id || req.user?._id;
+    if (!customerId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const updatedOrder = await Order.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        customerId,
+      },
       req.body,
       {
         new: true,
@@ -149,7 +164,15 @@ exports.updateOrder = async (req, res) => {
 
 exports.deleteOrder = async (req, res) => {
   try {
-    const deletedOrder = await CustomerOrder.findByIdAndDelete(req.params.id);
+    const customerId = req.user?.id || req.user?._id;
+    if (!customerId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const deletedOrder = await Order.findOneAndDelete({
+      _id: req.params.id,
+      customerId,
+    });
     if (!deletedOrder) {
       return res.status(404).json({ message: "Order not found" });
     }

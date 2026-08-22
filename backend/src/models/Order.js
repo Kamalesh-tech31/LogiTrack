@@ -78,6 +78,20 @@ const OrderSchema = new mongoose.Schema(
       default: null,
       trim: true,
     },
+    customerVerified: {
+      type: Boolean,
+      default: false,
+    },
+    verifiedAt: {
+      type: Date,
+      default: null,
+    },
+    deliveryOtp: {
+      codeHash: { type: String, default: null },
+      expiresAt: { type: Date, default: null },
+      attempts: { type: Number, default: 0 },
+      createdAt: { type: Date, default: null },
+    },
   },
   { timestamps: true },
 );

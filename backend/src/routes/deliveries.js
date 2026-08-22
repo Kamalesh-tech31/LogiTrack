@@ -10,9 +10,12 @@ const {
   createDelivery,
   updateDelivery,
   deleteDelivery,
+  claimOrder,
   acceptOrder,
   assignOrder,
   getDeliveries,
+  generateDeliveryOtp,
+  verifyCustomerOtp,
 } = require("../controllers/deliveryController.js");
 
 const router = express.Router();
@@ -29,6 +32,15 @@ router.get("/history", getHistoryDeliveries);
 
 // All deliveries
 router.get("/", getAllDeliveries);
+
+// Claim order as delivery agent
+router.post("/orders/:orderId/claim", claimOrder);
+
+// Generate delivery verification OTP
+router.post("/orders/:orderId/generate-otp", generateDeliveryOtp);
+
+// Verify customer delivery OTP (delivery agent)
+router.post("/orders/:orderId/verify-customer", verifyCustomerOtp);
 
 // Accept order as delivery agent
 router.post("/orders/:orderId/accept", acceptOrder);
