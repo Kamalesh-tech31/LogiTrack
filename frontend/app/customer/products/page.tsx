@@ -140,9 +140,16 @@ export default function ProductsPage() {
   };
 
   const handleOrderNow = async (product: NormalizedProduct) => {
-    setSelectedProduct(product);
-    setShowAddressForm(true);
-    setOrderMessage(null);
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      category: product.category,
+    });
+    router.push(
+      `/customer/cart/checkout?itemId=${encodeURIComponent(product.id)}`,
+    );
   };
 
   const handleAddToCart = (product: NormalizedProduct) => {

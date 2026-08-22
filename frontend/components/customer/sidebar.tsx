@@ -21,7 +21,8 @@ import {
 const links = [
   { name: "Dashboard", href: "/customer", icon: LayoutDashboard },
   { name: "Products", href: "/customer/products", icon: Package },
-  { name: "My Orders", href: "/customer/orders", icon: ShoppingCart },
+  { name: "Cart", href: "/customer/cart", icon: ShoppingCart },
+  { name: "My Orders", href: "/customer/orders", icon: ShoppingBag },
   { name: "Track Order", href: "/customer/tracking", icon: MapPin },
   { name: "Analytics", href: "/customer/analytics", icon: BarChart3 },
   { name: "Profile", href: "/customer/profile", icon: User },
