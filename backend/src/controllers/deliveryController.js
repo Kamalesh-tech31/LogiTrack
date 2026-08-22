@@ -3,18 +3,11 @@ const bcrypt = require("bcryptjs");
 const nodemailer = require("nodemailer");
 const Order = require("../models/Order");
 const User = require("../models/User");
+const deliveryOtpService = require("../services/deliveryOtpService");
 const {
   createOrderEventNotifications,
   createNotificationForRecipients,
 } = require("../services/notificationService");
-
-// Make delivery OTP valid for 1 day by default (in minutes)
-const DELIVERY_OTP_EXPIRY_MINUTES = Number(
-  process.env.DELIVERY_OTP_EXPIRY_MINUTES || 24 * 60,
-);
-const DELIVERY_OTP_MAX_ATTEMPTS = Number(
-  process.env.DELIVERY_OTP_MAX_ATTEMPTS || 5,
-);
 
 function formatDuration(ms) {
   if (ms <= 0) return "0m";
@@ -71,123 +64,53 @@ function getEtaMsForOrder(o) {
     return Math.max(0, Date.now() - shippedAt) + bufferMs;
   }
 
-  // fallback estimate for orders not yet shipped
   return bufferMs;
 }
 
-function generateOtpCode() {
-  return String(Math.floor(100000 + Math.random() * 900000));
-}
-
-async function sendDeliveryOtpToCustomer(order) {
-  let customerEmail = null;
-  if (order.customerId && typeof order.customerId === "object") {
-    customerEmail = order.customerId.email;
-  }
-  if (!customerEmail && order.customerId) {
-    const customer = await User.findById(order.customerId);
-    customerEmail = customer?.email;
-  }
-
-  if (!customerEmail) {
-    throw new Error("Customer email not found to send delivery OTP.");
-  }
-
-  const otp = generateOtpCode();
-  const otpHash = await bcrypt.hash(otp, 10);
-  const now = new Date();
-  const expiresAt = new Date(
-    now.getTime() + DELIVERY_OTP_EXPIRY_MINUTES * 60 * 1000,
-  );
-
-  order.completionOtpHash = otpHash;
-  order.completionOtpExpiresAt = expiresAt;
-  order.completionOtpSentAt = now;
-  order.completionOtpAttempts = 0;
-  order.completionOtpVerified = false;
-  order.completionOtpUsedAt = null;
-
-  const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_SMTP_HOST || "smtp-relay.brevo.com",
-    port: Number(process.env.EMAIL_SMTP_PORT || 2525),
-    secure: false,
-    auth: {
-      user: process.env.BREVO_USER,
-      pass: process.env.BREVO_PASS,
-    },
-  });
-
-  const expiryLabel =
-    DELIVERY_OTP_EXPIRY_MINUTES >= 60
-      ? `${Math.round(DELIVERY_OTP_EXPIRY_MINUTES / 60)} hours`
-      : `${DELIVERY_OTP_EXPIRY_MINUTES} minutes`;
-
-  await transporter.sendMail({
-    from: process.env.EMAIL_FROM || "LogiTrack <logitrack862@gmail.com>",
-    to: customerEmail,
-    subject: "Your delivery OTP",
-    html: `
-      <div style="font-family: Arial, sans-serif; background:#0b0b0b; color:#ffffff; padding:32px;">
-        <div style="max-width:560px; margin:0 auto; background:#111111; border:1px solid #27272a; border-radius:24px; padding:32px;">
-          <h1 style="margin:0 0 16px; font-size:32px; line-height:1.1;">Logi<span style="color:#7F1D1D;">Track</span></h1>
-          <p style="margin:0 0 24px; color:#d4d4d8; font-size:16px;">Your delivery OTP is below. Share it only with the delivery agent when the order is ready to complete.</p>
-          <div style="background:#1a1a1a; border:1px solid #7F1D1D; border-radius:18px; padding:20px; text-align:center; margin:0 0 24px;">
-            <div style="font-size:12px; letter-spacing:0.2em; text-transform:uppercase; color:#a1a1aa; margin-bottom:10px;">One-time delivery code</div>
-            <div style="font-size:36px; font-weight:700; letter-spacing:0.3em; color:#ffffff;">${otp}</div>
-          </div>
-          <p style="margin:0; color:#a1a1aa; font-size:14px;">This code expires in ${expiryLabel}.</p>
-        </div>
-      </div>
-    `,
-  });
-}
-
-// POST /api/deliveries/orders/:orderId/resend-otp
-const resendDeliveryOtp = async (req, res, next) => {
-  try {
-    const user = req.user;
-    const { orderId } = req.params;
-
-    if (!orderId) return res.status(400).json({ message: "orderId required" });
-
-    const order = await Order.findById(orderId).populate(
-      "customerId",
-      "fullName email",
-    );
-    if (!order) return res.status(404).json({ message: "Order not found" });
-
-    const userId = user && (user._id || user.id);
-    // allow resend for assigned agent, owner of order, or Owner role
-    if (
-      order.assignedAgent &&
-      userId &&
-      String(order.assignedAgent) !== String(userId) &&
-      String(order.ownerId) !== String(userId) &&
-      user.role !== "Owner"
-    ) {
-      return res.status(403).json({ message: "Not authorized to resend OTP" });
-    }
-
-    // send and persist
-    await sendDeliveryOtpToCustomer(order);
-    await order.save();
-
-    // create notifications to involved parties
-    await createNotificationForRecipients(order, {
-      type: "otp-resent",
-      title: "Delivery OTP resent",
-      message: `A new OTP has been sent for order ${order.orderId || order._id}`,
-    });
-
-    res.json({ success: true, message: "OTP resent to customer email." });
-  } catch (err) {
-    next(err);
-  }
-};
-
-function mapOrderToRecord(o) {
+function mapOrderToRecord(o, requester = null) {
   const addr = o.deliveryAddress || {};
-  const addressStr = [
+  const isCustomerVerified = Boolean(o.customerVerified);
+
+  const requesterId = requester ? String(requester._id || requester.id) : null;
+  const requesterRole = requester?.role;
+
+  const customerId = o.customerId?._id
+    ? String(o.customerId._id)
+    : String(o.customerId || "");
+  const assignedAgentId = o.assignedAgent?._id
+    ? String(o.assignedAgent._id)
+    : String(o.assignedAgent || "");
+  const ownerId = o.ownerId?._id
+    ? String(o.ownerId._id)
+    : String(o.ownerId || "");
+
+  const isCustomer = customerId && customerId === requesterId;
+  const isOwner =
+    (ownerId && ownerId === requesterId) ||
+    requesterRole === "Business Owner" ||
+    requesterRole === "Owner";
+  const isAssignedAgent = assignedAgentId && assignedAgentId === requesterId;
+
+  // Masking policy:
+  // Customers and Owners always see full address and phone.
+  // Delivery agent sees full address and phone ONLY after customerVerified === true.
+  // Before verification, agent sees masked address and masked phone.
+  const canSeeFullData =
+    isCustomer || isOwner || (isAssignedAgent && isCustomerVerified);
+
+  let rawPhone =
+    o.customerId?.phone || o.customerId?.phoneNumber || o.customerPhone || "";
+  let contact = rawPhone || null;
+  if (!canSeeFullData && rawPhone) {
+    const cleanPhone = String(rawPhone);
+    if (cleanPhone.length > 4) {
+      contact = `••••• ••${cleanPhone.slice(-4)}`;
+    } else {
+      contact = "••••••••••";
+    }
+  }
+
+  let addressStr = [
     addr.street,
     addr.city,
     addr.state,
@@ -196,7 +119,12 @@ function mapOrderToRecord(o) {
   ]
     .filter(Boolean)
     .join(", ");
-  // Normalize assigned agent if present
+
+  if (!canSeeFullData) {
+    const safeCity = addr.city || "Destination Area";
+    addressStr = `•••••••• (Verify OTP to view), ${safeCity}`;
+  }
+
   let agent = null;
   if (o.assignedAgent) {
     if (typeof o.assignedAgent === "object") {
@@ -214,11 +142,22 @@ function mapOrderToRecord(o) {
     }
   }
 
+  const rawObj = o.toObject ? o.toObject() : { ...o };
+  // Remove sensitive OTP hashes from raw payload
+  if (rawObj.deliveryOtp) {
+    rawObj.deliveryOtp = {
+      expiresAt: rawObj.deliveryOtp.expiresAt,
+      attempts: rawObj.deliveryOtp.attempts,
+    };
+  }
+  delete rawObj.completionOtpHash;
+
   return {
     id: o._id.toString(),
     orderId: o.orderId,
     customer:
-      o.customerName || (o.customerId ? o.customerId.toString() : "Unknown"),
+      o.customerName ||
+      (o.customerId?.fullName ? o.customerId.fullName : "Customer"),
     city: addr.city || null,
     address: addressStr,
     latitude: addr.latitude || null,
@@ -226,11 +165,19 @@ function mapOrderToRecord(o) {
     eta: getEtaForOrder(o),
     status: o.status,
     priority: o.priority || null,
-    contact: o.customerPhone || null,
+    contact,
     agent,
+    customerVerified: isCustomerVerified,
+    verifiedAt: o.verifiedAt || null,
+    claimedAt: o.claimedAt || null,
+    hasActiveOtp: Boolean(
+      o.deliveryOtp?.expiresAt &&
+        new Date(o.deliveryOtp.expiresAt).getTime() > Date.now(),
+    ),
+    otpExpiresAt: o.deliveryOtp?.expiresAt || null,
     location: null,
     lastUpdated: o.updatedAt ? o.updatedAt.toISOString() : null,
-    raw: o,
+    raw: rawObj,
   };
 }
 
@@ -241,14 +188,7 @@ const getAllDeliveries = async (req, res, next) => {
     const user = req.user;
     const { owner, mine, status } = req.query;
 
-    // Debug: log requester and query to help trace missing results
-    console.debug("getAllDeliveries called", {
-      requester: user,
-      query: req.query,
-    });
-
     const filter = {};
-    // By default exclude terminal/completed statuses from the general deliveries listing
     const terminalStatuses = [
       "completed",
       "delivered",
@@ -271,7 +211,6 @@ const getAllDeliveries = async (req, res, next) => {
     if (mine === "true") {
       if (!user) return res.status(401).json({ message: "Unauthorized" });
       const userId = user._id || user.id;
-      // show only orders assigned to this agent, or unassigned orders if the agent can claim them
       filter.$or = [
         { assignedAgent: userId },
         { assignedAgent: { $exists: false } },
@@ -281,18 +220,15 @@ const getAllDeliveries = async (req, res, next) => {
 
     const orders = await Order.find(filter)
       .populate("items.product", "name price images")
-      .populate("customerId", "fullName email")
+      .populate("customerId", "fullName email phone phoneNumber")
       .populate("assignedAgent", "fullName email role")
       .sort({ createdAt: -1 });
 
-    const mapped = orders.map(mapOrderToRecord);
-    // If this is the agent's route (mine=true) compute cumulative ETA starting at 0
+    const mapped = orders.map((o) => mapOrderToRecord(o, user));
     if (mine === "true") {
       let cumulative = 0;
       for (let i = 0; i < orders.length; i++) {
-        // each mapped entry's eta should show time until that stop from route start
         mapped[i].eta = formatDuration(cumulative);
-        // add this order's expected duration for the next stops
         cumulative += getEtaMsForOrder(orders[i]);
       }
     }
@@ -302,7 +238,88 @@ const getAllDeliveries = async (req, res, next) => {
   }
 };
 
-// POST /api/deliveries/orders/:orderId/assign  (owner assigns an agent)
+// POST /api/deliveries/orders/:orderId/claim (delivery agent claims an unassigned order)
+const claimOrder = async (req, res, next) => {
+  try {
+    const user = req.user;
+    if (!user) return res.status(401).json({ message: "Unauthorized" });
+    if (user.role !== "Delivery Agent") {
+      return res
+        .status(403)
+        .json({ message: "Only delivery agents can claim orders" });
+    }
+
+    const { orderId } = req.params;
+    const userId = user._id || user.id;
+
+    const order = await Order.findById(orderId);
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    const terminalStatuses = [
+      "completed",
+      "delivered",
+      "failed",
+      "returned",
+      "cancelled",
+    ];
+
+    if (terminalStatuses.includes(order.status)) {
+      return res.status(400).json({
+        message: `Cannot claim an order in '${order.status}' status`,
+      });
+    }
+
+    if (order.assignedAgent && String(order.assignedAgent) !== String(userId)) {
+      return res.status(409).json({
+        message: "Order has already been claimed or assigned to another agent",
+      });
+    }
+
+    const activeAssignedOrders = await Order.countDocuments({
+      assignedAgent: userId,
+      status: { $in: ["assigned", "shipped", "out-for-delivery"] },
+      _id: { $ne: order._id },
+    });
+
+    if (activeAssignedOrders > 0) {
+      return res.status(403).json({
+        message:
+          "Complete your current active delivery before claiming another order.",
+      });
+    }
+
+    order.assignedAgent = userId;
+    order.claimedBy = userId;
+    order.claimedAt = new Date();
+    order.status = "assigned";
+    await order.save();
+
+    await createOrderEventNotifications(order, "claimed");
+
+    // Automatically generate and dispatch delivery verification OTP to customer
+    try {
+      await deliveryOtpService.generateDeliveryOtp(order._id, user);
+    } catch (otpErr) {
+      console.warn("Auto OTP generation on claim:", otpErr.message);
+    }
+
+    const populated = await Order.findById(order._id)
+      .populate("customerId", "fullName email phone phoneNumber")
+      .populate("assignedAgent", "fullName email role")
+      .populate("items.product", "name");
+
+    res.json({
+      success: true,
+      data: mapOrderToRecord(populated, user),
+      message:
+        "Order claimed successfully. Verification OTP dispatched to customer.",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/deliveries/orders/:orderId/assign (owner assigns an agent)
 const assignOrder = async (req, res, next) => {
   try {
     const user = req.user;
@@ -317,7 +334,6 @@ const assignOrder = async (req, res, next) => {
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    // Only owner of the product(s) or an Owner role can assign
     const userId = user._id || user.id;
     if (String(order.ownerId) !== String(userId) && user.role !== "Owner") {
       return res
@@ -338,23 +354,25 @@ const assignOrder = async (req, res, next) => {
     await createOrderEventNotifications(order, "assigned");
 
     const populated = await Order.findById(order._id)
+      .populate("customerId", "fullName email phone phoneNumber")
       .populate("assignedAgent", "fullName email role")
       .populate("items.product", "name");
-    res.json({ success: true, data: mapOrderToRecord(populated) });
+    res.json({ success: true, data: mapOrderToRecord(populated, user) });
   } catch (err) {
     next(err);
   }
 };
 
-// POST /api/deliveries/orders/:orderId/accept  (agent accepts assigned order -> Shipped)
+// POST /api/deliveries/orders/:orderId/accept (agent accepts verified order -> Shipped)
 const acceptOrder = async (req, res, next) => {
   try {
     const user = req.user;
     if (!user) return res.status(401).json({ message: "Unauthorized" });
-    if (user.role !== "Delivery Agent")
+    if (user.role !== "Delivery Agent") {
       return res
         .status(403)
         .json({ message: "Only delivery agents can accept orders" });
+    }
 
     const { orderId } = req.params;
     const userId = user._id || user.id;
@@ -370,60 +388,50 @@ const acceptOrder = async (req, res, next) => {
       "cancelled",
     ];
 
-    const activeAssignedOrders = await Order.countDocuments({
-      assignedAgent: userId,
-      status: { $nin: terminalStatuses },
-      _id: { $ne: order._id },
-    });
-
-    if (activeAssignedOrders > 0) {
-      return res.status(403).json({
-        message:
-          "Complete your current delivery before accepting another order.",
+    if (terminalStatuses.includes(order.status)) {
+      return res.status(400).json({
+        message: `Cannot accept an order in '${order.status}' status`,
       });
     }
 
     if (
       !order.assignedAgent ||
-      String(order.assignedAgent) !== String(userId)
+      String(order.assignedAgent._id || order.assignedAgent) !== String(userId)
     ) {
-      // If the order is unassigned, allow the agent to claim it by assigning themselves
-      if (!order.assignedAgent) {
-        order.assignedAgent = userId;
-      } else if (String(order.assignedAgent) !== String(userId)) {
-        return res.status(403).json({ message: "Order not assigned to you" });
-      }
+      return res.status(403).json({ message: "Order not assigned to you" });
+    }
+
+    if (!order.customerVerified) {
+      return res.status(403).json({
+        message:
+          "Customer OTP verification required before accepting delivery.",
+      });
     }
 
     order.status = "shipped";
     order.shippedAt = new Date();
-    await sendDeliveryOtpToCustomer(order);
     await order.save();
+
     await createOrderEventNotifications(order, "accepted");
     await createOrderEventNotifications(order, "shipped");
 
     const populated = await Order.findById(order._id)
+      .populate("customerId", "fullName email phone phoneNumber")
       .populate("assignedAgent", "fullName email role")
-      .populate("customerId", "fullName email")
       .populate("items.product", "name");
 
-    res.json({
-      success: true,
-      data: mapOrderToRecord(populated),
-      message:
-        "OTP sent to customer email. Complete delivery after customer provides the code.",
-    });
+    res.json({ success: true, data: mapOrderToRecord(populated, user) });
   } catch (err) {
     next(err);
   }
 };
 
-// PATCH /api/deliveries/:id/status  - update status (owner or agent)
+// PATCH /api/deliveries/:id/status - update status (owner or agent)
 const updateDeliveryStatus = async (req, res, next) => {
   try {
     const user = req.user;
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, completionPhoto } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id))
       return res.status(400).json({ message: "Invalid order id" });
@@ -433,7 +441,6 @@ const updateDeliveryStatus = async (req, res, next) => {
 
     const userId = user ? user._id || user.id : null;
 
-    // Only assigned agent or Owner can update certain statuses
     if (
       order.assignedAgent &&
       userId &&
@@ -445,7 +452,6 @@ const updateDeliveryStatus = async (req, res, next) => {
           .json({ message: "Not authorized to update this order" });
     }
 
-    // Validate simple allowed transitions
     const allowed = [
       "pending",
       "assigned",
@@ -459,47 +465,9 @@ const updateDeliveryStatus = async (req, res, next) => {
     }
 
     if (status === "completed" || status === "delivered") {
-      const completionOtp = req.body.completionOtp;
-      if (!completionOtp || typeof completionOtp !== "string") {
-        return res.status(400).json({
-          message: "A valid delivery OTP is required to complete the order.",
-        });
+      if (completionPhoto) {
+        order.completionPhoto = completionPhoto;
       }
-
-      const now = new Date();
-      if (
-        !order.completionOtpHash ||
-        !order.completionOtpExpiresAt ||
-        new Date(order.completionOtpExpiresAt).getTime() < now.getTime()
-      ) {
-        return res.status(400).json({
-          message:
-            "Delivery OTP is missing or has expired. Re-accept the order to send a new code.",
-        });
-      }
-
-      if ((order.completionOtpAttempts || 0) >= DELIVERY_OTP_MAX_ATTEMPTS) {
-        return res.status(429).json({
-          message: "Too many incorrect OTP attempts. Request a new code.",
-        });
-      }
-
-      const isMatch = await bcrypt.compare(
-        completionOtp.trim(),
-        order.completionOtpHash,
-      );
-
-      if (!isMatch) {
-        order.completionOtpAttempts = (order.completionOtpAttempts || 0) + 1;
-        await order.save();
-        return res.status(400).json({ message: "Invalid delivery OTP." });
-      }
-
-      order.completionOtpVerified = true;
-      order.completionOtpUsedAt = now;
-      order.completionOtpHash = "";
-      order.completionOtpAttempts = 0;
-      order.completionOtpExpiresAt = now;
       order.deliveredAt = new Date();
     }
 
@@ -512,9 +480,10 @@ const updateDeliveryStatus = async (req, res, next) => {
     }
 
     const populated = await Order.findById(order._id)
+      .populate("customerId", "fullName email phone phoneNumber")
       .populate("assignedAgent", "fullName email role")
       .populate("items.product", "name");
-    res.json({ success: true, data: mapOrderToRecord(populated) });
+    res.json({ success: true, data: mapOrderToRecord(populated, user) });
   } catch (err) {
     next(err);
   }
@@ -522,12 +491,14 @@ const updateDeliveryStatus = async (req, res, next) => {
 
 const getActiveDeliveries = async (req, res, next) => {
   try {
+    const user = req.user;
     const active = await Order.find({
       status: { $in: ["assigned", "shipped", "out-for-delivery"] },
     })
       .populate("items.product")
+      .populate("customerId", "fullName email phone phoneNumber")
       .populate("assignedAgent", "fullName");
-    const mapped = active.map(mapOrderToRecord);
+    const mapped = active.map((o) => mapOrderToRecord(o, user));
     res.json({ success: true, count: mapped.length, data: mapped });
   } catch (err) {
     next(err);
@@ -536,26 +507,24 @@ const getActiveDeliveries = async (req, res, next) => {
 
 const getHistoryDeliveries = async (req, res, next) => {
   try {
+    const user = req.user;
     const agentId = req.user?.id || req.user?._id;
     const filter = {
       status: { $in: ["completed", "delivered", "failed", "returned"] },
     };
-    // Filter by current agent's completed deliveries
     if (agentId) {
       filter.assignedAgent = agentId;
     }
     const history = await Order.find(filter)
       .populate("items.product")
+      .populate("customerId", "fullName email phone phoneNumber")
       .populate("assignedAgent", "fullName")
       .sort({ deliveredAt: -1 });
-    const mapped = history.map(mapOrderToRecord);
+    const mapped = history.map((o) => mapOrderToRecord(o, user));
 
-    // Compute cumulative ETA: start at 0, add each order's delivery time
     let cumulative = 0;
     for (let i = 0; i < history.length; i++) {
-      // Each order shows when it was reached from route start
       mapped[i].eta = formatDuration(cumulative);
-      // Add this order's delivery time for next cumulative
       cumulative += getEtaMsForOrder(history[i]);
     }
 
@@ -568,8 +537,6 @@ const getHistoryDeliveries = async (req, res, next) => {
 const getDashboard = async (req, res, next) => {
   try {
     const user = req.user;
-
-    // If the requester is a delivery agent, scope dashboard numbers to that agent
     const agentId = user && (user._id || user.id);
     const isAgent = user && user.role === "Delivery Agent";
 
@@ -592,15 +559,15 @@ const getDashboard = async (req, res, next) => {
 
     const activeDeliveries = await Order.find(activeFilter)
       .populate("items.product")
+      .populate("customerId", "fullName email phone phoneNumber")
       .limit(20)
       .sort({ updatedAt: -1 });
 
-    const activeRoutes = activeDeliveries.map(mapOrderToRecord);
+    const activeRoutes = activeDeliveries.map((o) =>
+      mapOrderToRecord(o, user),
+    );
 
-    // Compute average time taken for completed deliveries (deliveredAt - shippedAt)
-    // Include a 20 minute buffer per delivery update as requested
     const completedForEtaFilter = { ...completedFilter };
-    // fetch recent completed/delivered orders with timestamps
     const completedOrdersForEta = await Order.find(completedForEtaFilter)
       .select("shippedAt deliveredAt createdAt")
       .limit(100)
@@ -646,21 +613,17 @@ const getEarnings = async (req, res, next) => {
   try {
     const agentId = req.user?._id || req.user?.id;
     if (!agentId) return res.status(401).json({ message: "Unauthorized" });
-    // Consider both completed and delivered as payable
     const deliveries = await Order.find({
       assignedAgent: agentId,
       status: { $in: ["completed", "delivered"] },
     }).select("totalPrice");
 
-    // Earnings policy: ₹100 per order, ₹200 if order totalPrice > 5000
     let totalEarned = 0;
     deliveries.forEach((d) => {
       const price = Number(d.totalPrice || 0);
       totalEarned += price > 5000 ? 200 : 100;
     });
 
-    // Earnings policy: ₹100 per order, ₹200 if order totalPrice > 5000
-    // Bonus policy: ₹100 for each ₹1000 earned
     const bonusStep = 1000;
     const bonusAmount = Math.floor(totalEarned / bonusStep) * 100;
     const totalWithBonus = totalEarned + bonusAmount;
@@ -691,7 +654,6 @@ const getEarnings = async (req, res, next) => {
   }
 };
 
-// Deprecated: creating standalone Delivery documents is not allowed in the new flow
 const createDelivery = async (req, res, next) => {
   res.status(400).json({
     success: false,
@@ -716,9 +678,9 @@ const deleteDelivery = async (req, res, next) => {
 
 const getDeliveries = async (req, res, next) => {
   try {
+    const user = req.user;
     const { orderId, agentId } = req.query;
     const filter = {};
-    // Exclude completed/terminal orders by default when fetching deliveries
     const terminalStatuses = [
       "completed",
       "delivered",
@@ -731,16 +693,68 @@ const getDeliveries = async (req, res, next) => {
     if (agentId) filter.assignedAgent = agentId;
     const orders = await Order.find(filter)
       .populate("items.product")
+      .populate("customerId", "fullName email phone phoneNumber")
       .populate("assignedAgent", "fullName");
-    const mapped = orders.map(mapOrderToRecord);
+    const mapped = orders.map((o) => mapOrderToRecord(o, user));
     res.json({ success: true, count: mapped.length, data: mapped });
   } catch (err) {
     next(err);
   }
 };
 
+const generateDeliveryOtp = async (req, res, next) => {
+  try {
+    const { orderId } = req.params;
+    const user = req.user;
+    const result = await deliveryOtpService.generateDeliveryOtp(orderId, user);
+    res.status(200).json(result);
+  } catch (err) {
+    if (err.statusCode) {
+      return res
+        .status(err.statusCode)
+        .json({ success: false, message: err.message });
+    }
+    next(err);
+  }
+};
+
+const verifyCustomerOtp = async (req, res, next) => {
+  try {
+    const { orderId } = req.params;
+    const { otp } = req.body;
+    const user = req.user;
+
+    if (!otp) {
+      return res
+        .status(400)
+        .json({ success: false, message: "OTP is required" });
+    }
+
+    const result = await deliveryOtpService.verifyDeliveryOtp(
+      orderId,
+      otp,
+      user,
+    );
+
+    const order = await Order.findById(orderId);
+    if (order) {
+      await createOrderEventNotifications(order, "verified");
+    }
+
+    res.status(200).json(result);
+  } catch (err) {
+    if (err.statusCode) {
+      return res
+        .status(err.statusCode)
+        .json({ success: false, message: err.message });
+    }
+    next(err);
+  }
+};
+
 module.exports = {
   getAllDeliveries,
+  claimOrder,
   assignOrder,
   acceptOrder,
   updateDeliveryStatus,
@@ -752,5 +766,6 @@ module.exports = {
   updateDelivery,
   deleteDelivery,
   getDeliveries,
-  resendDeliveryOtp,
+  generateDeliveryOtp,
+  verifyCustomerOtp,
 };

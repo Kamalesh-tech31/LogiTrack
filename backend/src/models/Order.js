@@ -63,6 +63,41 @@ const OrderSchema = new mongoose.Schema(
       ref: "User",
       default: null,
     },
+    claimedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    claimedAt: {
+      type: Date,
+      default: null,
+    },
+    customerVerified: {
+      type: Boolean,
+      default: false,
+    },
+    verifiedAt: {
+      type: Date,
+      default: null,
+    },
+    deliveryOtp: {
+      codeHash: {
+        type: String,
+        default: null,
+      },
+      expiresAt: {
+        type: Date,
+        default: null,
+      },
+      attempts: {
+        type: Number,
+        default: 0,
+      },
+      createdAt: {
+        type: Date,
+        default: null,
+      },
+    },
     completionPhoto: {
       type: String,
       default: null,

@@ -130,6 +130,16 @@ async function createOrderEventNotifications(order, eventType) {
       title: "Order shipped",
       message: `Order ${orderCode} is on the move and has been shipped.`,
     },
+    claimed: {
+      type: "order-claimed",
+      title: "Delivery claimed",
+      message: `Order ${orderCode} has been claimed by a delivery agent.`,
+    },
+    verified: {
+      type: "customer-verified",
+      title: "Customer OTP verified",
+      message: `Customer identity verified for Order ${orderCode}. Ready for dispatch handoff.`,
+    },
     delivered: {
       type: "order-delivered",
       title: "Order delivered",
@@ -156,6 +166,8 @@ async function createOrderEventNotifications(order, eventType) {
     includeAgent:
       eventType === "assigned" ||
       eventType === "accepted" ||
+      eventType === "claimed" ||
+      eventType === "verified" ||
       eventType === "cancelled",
   };
 

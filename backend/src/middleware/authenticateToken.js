@@ -5,11 +5,6 @@ const User = require("../models/User");
 const authenticateToken = async (req, res, next) => {
   try {
     const authHeader = req.headers["authorization"];
-    console.log("ALL HEADERS:");
-    console.log(req.headers);
-
-    console.log("AUTH HEADER:");
-    console.log(authHeader);
     const token = authHeader && authHeader.split(" ")[1];
 
     if (!token) {
@@ -18,11 +13,7 @@ const authenticateToken = async (req, res, next) => {
       });
     }
 
-    console.log("TOKEN RECEIVED:", token);
-
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    console.log("DECODED:", decoded);
 
     // decoded should contain { id: user._id } per authController
     const userId = decoded?.id || decoded?._id || decoded?.userId;
@@ -30,13 +21,7 @@ const authenticateToken = async (req, res, next) => {
       return res.status(401).json({ message: "Invalid token payload" });
     }
 
-    console.log("USER ID:", userId);
-
-    const user = await User.findById(userId);
-
-    console.log("USER FOUND:", user);
-
-    console.log("MONGOOSE CONNECTION STATE:", require("mongoose").connection.readyState);
+    const user = await User.findById(userId).select("-password");
 
     if (!user) {
       return res.status(401).json({
@@ -51,9 +36,6 @@ const authenticateToken = async (req, res, next) => {
 
     next();
   } catch (error) {
-    console.log("FULL ERROR:");
-    console.log(error);
-
     return res.status(403).json({
       message: "Invalid token",
     });

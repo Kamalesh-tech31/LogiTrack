@@ -39,6 +39,11 @@ export interface DeliveryRecord {
     name: string;
     email?: string | null;
   };
+  customerVerified?: boolean;
+  verifiedAt?: string | null;
+  claimedAt?: string | null;
+  hasActiveOtp?: boolean;
+  otpExpiresAt?: string | null;
   location: string | null;
   lastUpdated: string | null;
   raw?: any;

@@ -366,6 +366,46 @@ export async function fetchDeliveries(): Promise<DeliveryRecord[]> {
   return apiRequest<DeliveryRecord[]>("/api/deliveries?mine=true");
 }
 
+export async function claimDelivery(orderId: string): Promise<DeliveryRecord> {
+  return apiRequest<DeliveryRecord>(`/api/deliveries/orders/${orderId}/claim`, {
+    method: "POST",
+  });
+}
+
+export async function requestDeliveryOtp(
+  orderId: string,
+): Promise<{ success: boolean; message: string; expiresAt: string }> {
+  return apiRequest<{
+    success: boolean;
+    message: string;
+    expiresAt: string;
+  }>(`/api/deliveries/orders/${orderId}/generate-otp`, {
+    method: "POST",
+  });
+}
+
+export async function verifyCustomerDeliveryOtp(
+  orderId: string,
+  otp: string,
+): Promise<{
+  success: boolean;
+  message: string;
+  orderId: string;
+  customerVerified: boolean;
+  verifiedAt: string;
+}> {
+  return apiRequest<{
+    success: boolean;
+    message: string;
+    orderId: string;
+    customerVerified: boolean;
+    verifiedAt: string;
+  }>(`/api/deliveries/orders/${orderId}/verify-customer`, {
+    method: "POST",
+    body: JSON.stringify({ otp }),
+  });
+}
+
 export async function acceptDelivery(
   orderOrDeliveryId: string,
 ): Promise<DeliveryRecord> {
@@ -374,15 +414,6 @@ export async function acceptDelivery(
     {
       method: "POST",
     },
-  );
-}
-
-export async function resendDeliveryOtp(
-  orderId: string,
-): Promise<{ success: boolean; message?: string }> {
-  return apiRequest<{ success: boolean; message?: string }>(
-    `/api/deliveries/orders/${orderId}/resend-otp`,
-    { method: "POST" },
   );
 }
 
