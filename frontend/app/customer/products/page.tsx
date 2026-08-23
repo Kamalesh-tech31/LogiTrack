@@ -61,6 +61,7 @@ export default function ProductsPage() {
       (Array.isArray(product.images) && product.images[0]) ||
       "/placeholder.png",
     category: product.category || "General",
+    stock: typeof product.stock === "number" ? product.stock : 0,
   });
 
   const handleAddressChange = (field: keyof DeliveryAddress, value: any) => {
@@ -487,8 +488,16 @@ export default function ProductsPage() {
                     <span className="text-lg font-extrabold text-white font-display">
                       ₹{product.price.toLocaleString()}
                     </span>
-                    <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-full">
-                      Ready to Ship
+                    <span
+                      className={`text-[10px] font-mono border px-2 py-0.5 rounded-full ${
+                        (product.stock ?? 0) > 0
+                          ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/25"
+                          : "text-red-400 bg-red-500/10 border-red-500/25"
+                      }`}
+                    >
+                      {(product.stock ?? 0) > 0
+                        ? `${product.stock} in stock`
+                        : "Out of Stock"}
                     </span>
                   </div>
 
@@ -496,8 +505,9 @@ export default function ProductsPage() {
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
+                      disabled={(product.stock ?? 0) <= 0}
                       onClick={() => handleAddToCart(product)}
-                      className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-[#111214] border border-[#2A2B30] hover:border-[#F97316]/50 text-xs font-medium text-[#F4F4F5] transition cursor-pointer"
+                      className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-[#111214] border border-[#2A2B30] hover:border-[#F97316]/50 text-xs font-medium text-[#F4F4F5] transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       {isAdded ? <Check size={13} className="text-emerald-400" /> : <ShoppingCart size={13} />}
                       <span>{isAdded ? "Added" : "Add to Cart"}</span>
@@ -505,12 +515,15 @@ export default function ProductsPage() {
 
                     <button
                       type="button"
+                      disabled={
+                        (product.stock ?? 0) <= 0 ||
+                        (showAddressForm && selectedProduct?.id === product.id)
+                      }
                       onClick={() => handleOrderNow(product)}
-                      disabled={showAddressForm && selectedProduct?.id === product.id}
-                      className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-[#F97316] hover:bg-[#EA580C] text-xs font-bold text-white transition shadow-[0_0_10px_rgba(249,115,22,0.25)] cursor-pointer disabled:opacity-50"
+                      className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-[#F97316] hover:bg-[#EA580C] text-xs font-bold text-white transition shadow-[0_0_10px_rgba(249,115,22,0.25)] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       <Zap size={13} />
-                      <span>Order Now</span>
+                      <span>{(product.stock ?? 0) > 0 ? "Order Now" : "Sold Out"}</span>
                     </button>
                   </div>
                 </div>

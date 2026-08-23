@@ -56,6 +56,8 @@ export default function LoginPage() {
         localStorage.setItem("token", data.token);
         localStorage.setItem("userName", data.user.fullName);
         localStorage.setItem("userId", data.user._id);
+        localStorage.setItem("userRole", data.user.role);
+        localStorage.setItem("userEmail", data.user.email);
 
         if (selectedRole === "Business Owner") {
           router.push("/owner");
@@ -65,10 +67,12 @@ export default function LoginPage() {
           router.push("/delivery/dashboard");
         }
       } else {
-        if (data.status === "pending") {
+        if (data.status === "pending" && selectedRole !== "Customer" && data.user?.role !== "Customer") {
           localStorage.setItem("token", data.token);
-          localStorage.setItem("userName", data.user.fullName);
-          localStorage.setItem("userId", data.user._id);
+          if (data.user) {
+            localStorage.setItem("userName", data.user.fullName);
+            localStorage.setItem("userId", data.user._id);
+          }
           router.push("/awaiting_approval");
           return;
         }

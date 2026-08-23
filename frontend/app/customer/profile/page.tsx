@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fetchCurrentUser, updateCurrentPassword, updateCurrentUser } from "@/lib/api";
 import { AccountDeletionDialog } from "@/components/common/account-deletion-dialog";
+import { UniversalLocationPicker, LocationData } from "@/components/common/UniversalLocationPicker";
 import { useLogout } from "@/lib/logout";
 import { User, Lock, ArrowLeft, LogOut, CheckCircle2, AlertCircle } from "lucide-react";
 
@@ -20,6 +21,16 @@ export default function CustomerProfilePage() {
     gstNumber: "",
     businessAddress: "",
     role: "",
+  });
+  const [defaultAddress, setDefaultAddress] = useState<LocationData>({
+    doorNo: "",
+    street: "",
+    area: "",
+    city: "",
+    state: "",
+    postalCode: "",
+    country: "India",
+    fullAddress: "",
   });
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
@@ -46,6 +57,11 @@ export default function CustomerProfilePage() {
           businessAddress: user.businessAddress || "",
           role: user.role || "Customer",
         });
+        if (user.defaultAddress) {
+          setDefaultAddress({
+            ...user.defaultAddress,
+          });
+        }
       } catch {
         if (isMounted) {
           setMessage({ text: "Unable to load profile data.", type: "error" });
@@ -72,6 +88,7 @@ export default function CustomerProfilePage() {
         businessName: profile.businessName,
         gstNumber: profile.gstNumber,
         businessAddress: profile.businessAddress,
+        defaultAddress: defaultAddress.fullAddress ? { label: "Home", ...defaultAddress } : null,
       });
       setProfile((current) => ({
         ...current,
@@ -242,14 +259,42 @@ export default function CustomerProfilePage() {
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold text-[#A1A1AA] uppercase tracking-wider">Default Delivery Address</label>
-                <textarea
-                  rows={3}
-                  placeholder="Street, City, Postal Code"
-                  value={profile.businessAddress}
-                  onChange={(e) => setProfile((c) => ({ ...c, businessAddress: e.target.value }))}
-                  className="w-full px-3.5 py-2.5 bg-[#111214] border border-[#2A2B30] rounded-xl text-xs text-white placeholder-[#A1A1AA]/50 focus:border-[#F97316]/60 focus:outline-none transition resize-none"
+              <div className="pt-2 border-t border-[#2A2B30]/60 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-semibold text-[#A1A1AA] uppercase tracking-wider">
+                    Home / Default Address (Optional)
+                  </label>
+                  {defaultAddress.fullAddress && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setDefaultAddress({
+                          doorNo: "",
+                          street: "",
+                          area: "",
+                          city: "",
+                          state: "",
+                          postalCode: "",
+                          country: "India",
+                          fullAddress: "",
+                          latitude: undefined,
+                          longitude: undefined,
+                        })
+                      }
+                      className="text-[10px] text-red-400 hover:text-red-300 transition cursor-pointer"
+                    >
+                      Remove Home Address
+                    </button>
+                  )}
+                </div>
+
+                <UniversalLocationPicker
+                  value={defaultAddress}
+                  onChange={setDefaultAddress}
+                  title="Home Location Details"
+                  subtitle="Used as a convenient suggestion during checkout."
+                  roleContext="customer"
+                  required={false}
                 />
               </div>
 

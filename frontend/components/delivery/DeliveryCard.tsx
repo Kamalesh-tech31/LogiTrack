@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   MapPin,
   Truck,
@@ -12,6 +12,8 @@ import {
   CheckCircle2,
   ChevronRight,
   ShieldCheck,
+  Store,
+  Navigation,
 } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 
@@ -30,9 +32,14 @@ interface Props {
   hasActiveOtp?: boolean;
   isClaimable?: boolean;
   isMyDelivery?: boolean;
+  deliveryStage?: string;
+  pickupName?: string | null;
+  pickupAddress?: any;
   sequenceOrder?: number | null;
   batchId?: string | null;
   onClaim?: (id: string) => Promise<void>;
+  onReachedWarehouse?: (id: string) => Promise<void>;
+  onReachedCustomer?: (id: string) => Promise<void>;
   onRequestOtp?: (id: string) => Promise<void>;
   onVerifyOtp?: (id: string, otp: string) => Promise<void>;
   onStatusUpdate?: (id: string, status: string, otp?: string) => Promise<void>;
@@ -64,24 +71,39 @@ const DeliveryCard = ({
   hasActiveOtp = false,
   isClaimable = false,
   isMyDelivery = false,
+  deliveryStage = "UNCLAIMED",
+  pickupName,
+  pickupAddress,
   sequenceOrder,
   batchId,
   onClaim,
+  onReachedWarehouse,
+  onReachedCustomer,
   onRequestOtp,
   onVerifyOtp,
   onStatusUpdate,
 }: Props) => {
   const [copied, setCopied] = useState(false);
   const [otpInput, setOtpInput] = useState("");
-  const [otpRequested, setOtpRequested] = useState(hasActiveOtp);
   const [loadingAction, setLoadingAction] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const displayId = formatDisplayId(orderId || id);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => (prev > 1 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   const normalizedStatus = (status || "").toLowerCase();
   const isDelivered =
-    normalizedStatus === "delivered" || normalizedStatus === "completed";
+    normalizedStatus === "delivered" ||
+    normalizedStatus === "completed" ||
+    deliveryStage === "DELIVERED";
 
   const handleCopyId = () => {
     const fullId = orderId || id;
@@ -98,22 +120,52 @@ const DeliveryCard = ({
     setActionSuccess(null);
     try {
       await onClaim(id);
-      setActionSuccess("Order claimed! Moved to My Deliveries.");
+      setActionSuccess("Order claimed! Head to merchant warehouse for pickup.");
     } catch (err: any) {
-      setActionError(err?.message || "Failed to claim delivery.");
+      setActionError(err?.message || "Failed to claim order.");
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
+  const handleReachedWarehouseClick = async () => {
+    if (!onReachedWarehouse) return;
+    setLoadingAction(true);
+    setActionError(null);
+    setActionSuccess(null);
+    try {
+      await onReachedWarehouse(id);
+      setActionSuccess("Reached warehouse! Package picked up. Navigate to customer.");
+    } catch (err: any) {
+      setActionError(err?.message || "Failed to update pickup status.");
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
+  const handleReachedCustomerClick = async () => {
+    if (!onReachedCustomer) return;
+    setLoadingAction(true);
+    setActionError(null);
+    setActionSuccess(null);
+    try {
+      await onReachedCustomer(id);
+      setActionSuccess("Arrived at customer location! You can now request the OTP.");
+    } catch (err: any) {
+      setActionError(err?.message || "Failed to update arrival status.");
     } finally {
       setLoadingAction(false);
     }
   };
 
   const handleRequestOtpClick = async () => {
-    if (!onRequestOtp) return;
+    if (!onRequestOtp || loadingAction || resendCooldown > 0) return;
     setLoadingAction(true);
     setActionError(null);
     setActionSuccess(null);
     try {
       await onRequestOtp(id);
-      setOtpRequested(true);
+      setResendCooldown(30);
       setActionSuccess("Passcode dispatched to customer email!");
       setTimeout(() => setActionSuccess(null), 4000);
     } catch (err: any) {
@@ -178,7 +230,11 @@ const DeliveryCard = ({
             </div>
 
             <p className="text-[11px] text-[#A1A1AA] mt-1">
-              {isDelivered ? "Delivery Completed" : isMyDelivery ? "Active Delivery Route" : "Available in Network"}
+              {isDelivered
+                ? "Delivery Completed"
+                : isMyDelivery
+                  ? "Active Live Tracking"
+                  : "Available in Fleet Pool"}
             </p>
           </div>
 
@@ -206,19 +262,34 @@ const DeliveryCard = ({
           </div>
         </div>
 
-        {/* Address Telemetry */}
-        <div className="mt-4 pt-3.5 border-t border-[#2A2B30]/60 space-y-2.5 text-xs text-[#A1A1AA]">
+        {/* Warehouse Pickup Info (if present) */}
+        {(pickupName || pickupAddress?.fullAddress) && (
+          <div className="mt-3 p-3 rounded-2xl border border-sky-500/20 bg-sky-500/5 text-xs text-[#A1A1AA] flex items-start gap-2">
+            <Store size={14} className="text-sky-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-white font-semibold">
+                Pickup: {pickupName || "Merchant Warehouse"}
+              </p>
+              <p className="text-[11px] text-[#A1A1AA] mt-0.5 truncate">
+                {pickupAddress?.fullAddress || "Verified Merchant Location"}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Customer Address Telemetry */}
+        <div className="mt-3 pt-3 border-t border-[#2A2B30]/60 space-y-2 text-xs text-[#A1A1AA]">
           <div className="flex items-start gap-2">
             <MapPin size={14} className="text-[#F97316] shrink-0 mt-0.5" />
             <span className="text-[#F4F4F5] font-medium leading-relaxed">
-              {address || "Address not provided"}
+              Drop-off: {address || "Address not provided"}
             </span>
           </div>
 
           <div className="flex items-center justify-between text-xs text-[#A1A1AA] pt-1">
             <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
               <Truck size={14} />
-              <span>Telemetry Linked</span>
+              <span>Live GPS Active</span>
             </span>
             {lastUpdated && (
               <span className="font-mono text-[11px]">Sync: {lastUpdated}</span>
@@ -241,48 +312,129 @@ const DeliveryCard = ({
           </div>
         )}
 
-        {/* Doorstep OTP Handover (My Deliveries Tab) */}
+        {/* Dynamic Delivery Stage Progression Controls (My Deliveries) */}
         {isMyDelivery && !isDelivered && (
-          <div className="mt-4 rounded-2xl border border-[#F97316]/40 bg-[#F97316]/5 p-3.5 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-white">
-                <ShieldCheck size={14} className="text-[#F97316]" />
-                <span>Doorstep OTP Verification</span>
+          <div className="mt-4 rounded-2xl border border-[#2A2B30] bg-[#111214] p-4 space-y-3">
+            {/* Stage 1: En route to Pickup Warehouse */}
+            {deliveryStage === "TO_WAREHOUSE" && (
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-2 text-xs font-bold text-[#FDBA74]">
+                  <Store size={15} className="text-[#F97316]" />
+                  <span>Stage 1: En Route to Pickup Warehouse</span>
+                </div>
+                <p className="text-[11px] text-[#A1A1AA] leading-relaxed">
+                  Drive to the merchant warehouse to collect the order items. Confirm upon arrival.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleReachedWarehouseClick}
+                  disabled={loadingAction}
+                  className="w-full py-2 px-3 rounded-xl bg-[#F97316] hover:bg-[#EA580C] text-xs font-bold text-white transition flex items-center justify-center gap-2 shadow-[0_0_12px_rgba(249,115,22,0.3)] cursor-pointer disabled:opacity-50"
+                >
+                  <Check size={14} />
+                  <span>{loadingAction ? "Updating..." : "Reached Pickup / Warehouse"}</span>
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={handleRequestOtpClick}
-                disabled={loadingAction}
-                className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#FDBA74] hover:text-[#F97316] transition cursor-pointer"
-              >
-                <Send size={10} />
-                <span>{otpRequested ? "Resend OTP" : "Request OTP"}</span>
-              </button>
-            </div>
+            )}
 
-            <p className="text-[11px] text-[#A1A1AA] leading-relaxed">
-              Ask customer for their 6-digit delivery passcode to confirm handoff.
-            </p>
+            {/* Stage 2: Heading to Customer */}
+            {(deliveryStage === "TO_CUSTOMER" ||
+              deliveryStage === "AT_WAREHOUSE") && (
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
+                  <Navigation size={15} className="text-emerald-400" />
+                  <span>Stage 2: En Route to Customer Location</span>
+                </div>
+                <p className="text-[11px] text-[#A1A1AA] leading-relaxed">
+                  Items collected from warehouse. Travel to the customer drop-off address.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleReachedCustomerClick}
+                  disabled={loadingAction}
+                  className="w-full py-2 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-xs font-bold text-white transition flex items-center justify-center gap-2 shadow-[0_0_12px_rgba(16,185,129,0.3)] cursor-pointer disabled:opacity-50"
+                >
+                  <MapPin size={14} />
+                  <span>{loadingAction ? "Updating..." : "Reached Customer Location"}</span>
+                </button>
+              </div>
+            )}
 
-            <form onSubmit={handleCompleteDeliveryClick} className="flex gap-2">
-              <input
-                type="text"
-                maxLength={6}
-                placeholder="6-digit PIN"
-                value={otpInput}
-                onChange={(e) =>
-                  setOtpInput(e.target.value.replace(/\D/g, ""))
-                }
-                className="flex-1 px-3 py-2 bg-[#111214] border border-[#2A2B30] rounded-xl text-xs font-mono text-white placeholder-[#A1A1AA]/50 focus:border-[#F97316]/60 focus:outline-none transition tracking-widest text-center"
-              />
-              <button
-                type="submit"
-                disabled={loadingAction || otpInput.length < 6}
-                className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-xs font-bold text-white transition disabled:opacity-40 cursor-pointer shadow-[0_0_12px_rgba(16,185,129,0.3)]"
-              >
-                {loadingAction ? "Verifying..." : "Confirm & Deliver"}
-              </button>
-            </form>
+            {/* Stage 3: Arrived at Customer Location (Ready to request OTP) */}
+            {deliveryStage === "AT_CUSTOMER" && (
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-2 text-xs font-bold text-purple-400">
+                  <MapPin size={15} className="text-purple-400" />
+                  <span>Stage 3: Arrived at Destination</span>
+                </div>
+                <p className="text-[11px] text-[#A1A1AA] leading-relaxed">
+                  You have arrived at the customer doorstep. Request a single-use verification OTP to be sent to the customer email.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleRequestOtpClick}
+                  disabled={loadingAction}
+                  className="w-full py-2.5 px-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-xs font-bold text-white transition flex items-center justify-center gap-2 shadow-[0_0_12px_rgba(147,51,234,0.3)] cursor-pointer disabled:opacity-50"
+                >
+                  <KeyRound size={14} />
+                  <span>{loadingAction ? "Generating..." : "Request Delivery OTP"}</span>
+                </button>
+              </div>
+            )}
+
+            {/* Stage 4: OTP Requested (Awaiting Verification) */}
+            {deliveryStage === "OTP_REQUESTED" && (
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+                    <ShieldCheck size={14} className="text-[#F97316]" />
+                    <span>Doorstep OTP Verification</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRequestOtpClick}
+                    disabled={loadingAction || resendCooldown > 0}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#FDBA74] hover:text-[#F97316] transition cursor-pointer disabled:opacity-50"
+                  >
+                    <Send size={10} />
+                    <span>
+                      {resendCooldown > 0
+                        ? `Resend OTP (${resendCooldown}s)`
+                        : loadingAction
+                          ? "Sending..."
+                          : "Resend OTP"}
+                    </span>
+                  </button>
+                </div>
+
+                <p className="text-[11px] text-[#A1A1AA] leading-relaxed">
+                  Enter the 6-digit passcode provided by the customer to confirm handoff.
+                </p>
+
+                <form
+                  onSubmit={handleCompleteDeliveryClick}
+                  className="flex gap-2"
+                >
+                  <input
+                    type="text"
+                    maxLength={6}
+                    placeholder="6-digit PIN"
+                    value={otpInput}
+                    onChange={(e) =>
+                      setOtpInput(e.target.value.replace(/\D/g, ""))
+                    }
+                    className="flex-1 px-3 py-2 bg-[#111214] border border-[#2A2B30] rounded-xl text-xs font-mono text-white placeholder-[#A1A1AA]/50 focus:border-[#F97316]/60 focus:outline-none transition tracking-widest text-center"
+                  />
+                  <button
+                    type="submit"
+                    disabled={loadingAction || otpInput.length < 6}
+                    className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-xs font-bold text-white transition disabled:opacity-40 cursor-pointer shadow-[0_0_12px_rgba(16,185,129,0.3)]"
+                  >
+                    {loadingAction ? "Verifying..." : "Verify & Complete"}
+                  </button>
+                </form>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -296,7 +448,7 @@ const DeliveryCard = ({
             disabled={loadingAction}
             className="w-full py-2.5 px-4 rounded-2xl bg-[#F97316] hover:bg-[#EA580C] text-xs font-bold text-white transition shadow-[0_0_12px_rgba(249,115,22,0.3)] cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
           >
-            <span>Claim Delivery</span>
+            <span>Claim Order (GPS Required)</span>
             <ChevronRight size={14} />
           </button>
         </div>

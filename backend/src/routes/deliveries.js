@@ -13,11 +13,16 @@ const {
   updateDelivery,
   deleteDelivery,
   claimOrder,
+  reachedWarehouse,
+  reachedCustomer,
+  updateAgentTelemetry,
   acceptOrder,
   assignOrder,
   getDeliveries,
   generateDeliveryOtp,
   verifyCustomerOtp,
+  getNearbyOrders,
+  bulkClaimOrders,
 } = require("../controllers/deliveryController.js");
 
 const router = express.Router();
@@ -38,13 +43,25 @@ router.get("/", getAllDeliveries);
 // Agent availability & batch info
 router.get("/agent/:agentId/availability", checkAgentAvailability);
 
-// Claim order as delivery agent
+// Nearby eligible orders for bulk delivery
+router.get("/orders/:orderId/nearby", getNearbyOrders);
+
+// Bulk claim orders
+router.post("/bulk-claim", bulkClaimOrders);
+router.post("/orders/:orderId/bulk-claim", bulkClaimOrders);
+
+// Claim order as delivery agent (requires GPS in body)
 router.post("/orders/:orderId/claim", claimOrder);
+
+// Agent milestone updates
+router.post("/orders/:orderId/reached-warehouse", reachedWarehouse);
+router.post("/orders/:orderId/reached-customer", reachedCustomer);
+router.post("/orders/:orderId/telemetry", updateAgentTelemetry);
 
 // Add order to batch
 router.post("/orders/:orderId/add-to-batch", addOrderToBatch);
 
-// Generate delivery verification OTP
+// Generate delivery verification OTP (after reaching customer)
 router.post("/orders/:orderId/generate-otp", generateDeliveryOtp);
 
 // Verify customer delivery OTP (delivery agent)

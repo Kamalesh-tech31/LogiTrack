@@ -21,6 +21,10 @@ import { Button } from "@/components/ui/button";
 import { FloatingAuthCards } from "@/components/landing/FloatingAuthCards";
 import { TruckLoader } from "@/components/ui/TruckLoader";
 import {
+  UniversalLocationPicker,
+  LocationData,
+} from "@/components/common/UniversalLocationPicker";
+import {
   API_BASE_URL,
   completeRegistration,
   requestRegistrationOtp,
@@ -68,6 +72,21 @@ export default function RegisterPage() {
   const [drivingLicense, setDrivingLicense] = useState<File | null>(null);
   const [gstCertificate, setGstCertificate] = useState<File | null>(null);
   const [shopLicense, setShopLicense] = useState<File | null>(null);
+
+  // Business Owner Warehouse/Shop Location state
+  const [businessName, setBusinessName] = useState("");
+  const [warehouseAddress, setWarehouseAddress] = useState<LocationData>({
+    doorNo: "",
+    street: "",
+    area: "",
+    city: "Chennai",
+    state: "Tamil Nadu",
+    postalCode: "",
+    country: "India",
+    fullAddress: "",
+    latitude: 13.0827,
+    longitude: 80.2707,
+  });
 
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
@@ -260,6 +279,7 @@ export default function RegisterPage() {
       formData.append("fullName", fullName);
       formData.append("email", email.trim().toLowerCase());
       formData.append("password", password);
+      formData.append("confirmPassword", confirmPassword);
       formData.append("role", selectedRole);
 
       if (selectedRole === "Delivery Agent") {
@@ -278,6 +298,19 @@ export default function RegisterPage() {
           setIsSubmitting(false);
           return;
         }
+        if (!warehouseAddress.street || !warehouseAddress.city) {
+          setError("Please specify your Shop / Warehouse location.");
+          setIsSubmitting(false);
+          return;
+        }
+        formData.append("businessName", businessName || fullName);
+        formData.append(
+          "warehouseAddress",
+          JSON.stringify({
+            ...warehouseAddress,
+            businessName: businessName || fullName,
+          })
+        );
         formData.append("gstCertificate", gstCertificate);
         formData.append("shopLicense", shopLicense);
       }
@@ -288,7 +321,10 @@ export default function RegisterPage() {
         localStorage.setItem("token", response.token);
       }
 
-      if (response.status === "approved" || response.data?.status === "approved") {
+      const isCustomer = selectedRole === "Customer" || response.user?.role === "Customer";
+      const isApproved = response.status === "approved" || response.user?.status === "approved" || response.data?.status === "approved";
+
+      if (isCustomer || isApproved) {
         toast.success("Account registered successfully! Redirecting to login...");
         setTimeout(() => {
           router.push("/login");
@@ -646,29 +682,54 @@ export default function RegisterPage() {
             )}
 
             {selectedRole === "Business Owner" && (
-              <div className="space-y-4">
+              <div className="space-y-5 rounded-2xl border border-[#2A2B30] bg-[#111214]/60 p-5">
                 <div>
                   <label className="mb-2 block text-sm text-[#A1A1AA]">
-                    GST Certificate (Image or PDF)
+                    Business / Store Name *
                   </label>
                   <input
-                    type="file"
-                    onChange={(e) => setGstCertificate(e.target.files?.[0] || null)}
-                    className="w-full rounded-2xl border border-[#2A2B30] bg-[#111214] px-5 py-4 text-[#A1A1AA]"
+                    type="text"
+                    placeholder="e.g. Metro Retailers Pvt Ltd"
+                    value={businessName}
+                    onChange={(e) => setBusinessName(e.target.value)}
+                    className="w-full rounded-2xl border border-[#2A2B30] bg-[#111214] px-5 py-4 text-[#F4F4F5] outline-none transition focus:border-[#F97316]"
                     required
                   />
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-sm text-[#A1A1AA]">
-                    Shop License (Image or PDF)
-                  </label>
-                  <input
-                    type="file"
-                    onChange={(e) => setShopLicense(e.target.files?.[0] || null)}
-                    className="w-full rounded-2xl border border-[#2A2B30] bg-[#111214] px-5 py-4 text-[#A1A1AA]"
-                    required
-                  />
+                <UniversalLocationPicker
+                  value={warehouseAddress}
+                  onChange={setWarehouseAddress}
+                  title="Shop / Warehouse Pickup Location"
+                  subtitle="Pinpoint your merchant warehouse origin for courier dispatch routing."
+                  roleContext="owner"
+                  required={true}
+                />
+
+                <div className="pt-2 border-t border-[#2A2B30]/80 space-y-4">
+                  <div>
+                    <label className="mb-2 block text-sm text-[#A1A1AA]">
+                      GST Certificate (Image or PDF) *
+                    </label>
+                    <input
+                      type="file"
+                      onChange={(e) => setGstCertificate(e.target.files?.[0] || null)}
+                      className="w-full rounded-2xl border border-[#2A2B30] bg-[#111214] px-5 py-4 text-[#A1A1AA]"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm text-[#A1A1AA]">
+                      Shop License (Image or PDF) *
+                    </label>
+                    <input
+                      type="file"
+                      onChange={(e) => setShopLicense(e.target.files?.[0] || null)}
+                      className="w-full rounded-2xl border border-[#2A2B30] bg-[#111214] px-5 py-4 text-[#A1A1AA]"
+                      required
+                    />
+                  </div>
                 </div>
               </div>
             )}

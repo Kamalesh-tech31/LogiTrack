@@ -8,6 +8,7 @@ const {
     approveUser,
     rejectUser,
     updateDocumentStatus,
+    updateLocationStatus,
     getDashboardStats,
 } = require("../controllers/adminController");
 
@@ -27,6 +28,8 @@ router.patch("/approve/:id", approveUser);
 router.patch("/reject/:id", rejectUser);
 
 router.patch("/:id/document", updateDocumentStatus);
+
+router.patch("/:id/location", updateLocationStatus);
 
 router.get("/stats", getDashboardStats);
 

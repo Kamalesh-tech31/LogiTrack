@@ -37,7 +37,7 @@ exports.createOrder = async (req, res, next) => {
         .json({ success: false, message: "User not found" });
     }
 
-    // Validate products and calculate total
+    // Validate products and calculate total with atomic stock deduction & rollback safety
     let total = 0;
     const orderItems = [];
     let ownerId = null;
@@ -46,35 +46,49 @@ exports.createOrder = async (req, res, next) => {
       const { productId, quantity } = it;
 
       if (!productId || !quantity || quantity < 1) {
+        for (const rolledItem of orderItems) {
+          await Product.findByIdAndUpdate(rolledItem.product, {
+            $inc: { stock: rolledItem.quantity },
+          });
+        }
         return res
           .status(400)
-          .json({ success: false, message: "Invalid item in order" });
+          .json({ success: false, message: "Invalid item or quantity in order" });
       }
 
-      const product = await Product.findById(productId);
-      if (!product) {
-        return res
-          .status(404)
-          .json({ success: false, message: "Product not found" });
-      }
+      // Atomic stock check & deduction (prevents race condition overselling)
+      const updatedProduct = await Product.findOneAndUpdate(
+        { _id: productId, stock: { $gte: quantity }, isActive: true },
+        { $inc: { stock: -quantity } },
+        { new: true },
+      );
 
-      if (product.stock < quantity) {
+      if (!updatedProduct) {
+        // Rollback any previously decremented items in this multi-item order
+        for (const rolledItem of orderItems) {
+          await Product.findByIdAndUpdate(rolledItem.product, {
+            $inc: { stock: rolledItem.quantity },
+          });
+        }
+
+        const existingProd = await Product.findById(productId);
+        if (!existingProd) {
+          return res
+            .status(404)
+            .json({ success: false, message: "Product not found" });
+        }
+
         return res.status(400).json({
           success: false,
-          message: `Insufficient stock for ${product.name}`,
+          message: `Insufficient stock for "${existingProd.name}". Available: ${existingProd.stock}, requested: ${quantity}`,
         });
       }
 
-      if (!ownerId) ownerId = product.ownerId;
+      if (!ownerId) ownerId = updatedProduct.ownerId;
 
-      await Product.updateOne(
-        { _id: product._id },
-        { $inc: { stock: -quantity } },
-      );
-
-      const price = product.price;
+      const price = updatedProduct.price;
       total += price * quantity;
-      orderItems.push({ product: product._id, quantity, price });
+      orderItems.push({ product: updatedProduct._id, quantity, price });
     }
 
     // Process & enrich delivery address with fullAddress and geocoding if needed
@@ -126,6 +140,64 @@ exports.createOrder = async (req, res, next) => {
       processedAddress.phone = user.phone || user.phoneNumber;
     }
 
+    // Snapshot Business Owner verified warehouse/shop location as pickupAddress
+    let pickupAddress = null;
+    if (ownerId) {
+      const ownerUser = await User.findById(ownerId);
+      if (
+        ownerUser?.warehouseAddress &&
+        (ownerUser.warehouseAddress.latitude != null ||
+          ownerUser.warehouseAddress.fullAddress)
+      ) {
+        pickupAddress = {
+          doorNo: ownerUser.warehouseAddress.doorNo || "",
+          street: ownerUser.warehouseAddress.street || "",
+          area: ownerUser.warehouseAddress.area || "",
+          fullAddress:
+            ownerUser.warehouseAddress.fullAddress ||
+            ownerUser.businessAddress ||
+            "Merchant Warehouse",
+          fullName:
+            ownerUser.warehouseAddress.businessName ||
+            ownerUser.businessName ||
+            ownerUser.fullName,
+          phone: ownerUser.phone || "",
+          city: ownerUser.warehouseAddress.city || "",
+          state: ownerUser.warehouseAddress.state || "",
+          postalCode: ownerUser.warehouseAddress.postalCode || "",
+          country: ownerUser.warehouseAddress.country || "India",
+          latitude: ownerUser.warehouseAddress.latitude || null,
+          longitude: ownerUser.warehouseAddress.longitude || null,
+        };
+      } else if (ownerUser?.businessAddress) {
+        pickupAddress = {
+          fullAddress: ownerUser.businessAddress,
+          fullName: ownerUser.businessName || ownerUser.fullName,
+          phone: ownerUser.phone || "",
+          city: "Chennai",
+          country: "India",
+        };
+      }
+    }
+
+    // Optional: Save this address as customer's default/home address only if explicitly requested
+    if (req.body.saveAsDefaultAddress || req.body.saveAsHome) {
+      user.defaultAddress = {
+        label: req.body.addressLabel || "Home",
+        doorNo: processedAddress.doorNo || "",
+        street: processedAddress.street || "",
+        area: processedAddress.area || "",
+        fullAddress: processedAddress.fullAddress || "",
+        city: processedAddress.city || "",
+        state: processedAddress.state || "",
+        postalCode: processedAddress.postalCode || "",
+        country: processedAddress.country || "India",
+        latitude: processedAddress.latitude || null,
+        longitude: processedAddress.longitude || null,
+      };
+      await user.save();
+    }
+
     const orderId = generateOrderId();
     const order = new Order({
       orderId,
@@ -134,6 +206,7 @@ exports.createOrder = async (req, res, next) => {
       customerName: user.fullName,
       items: orderItems,
       totalPrice: total,
+      pickupAddress: pickupAddress || undefined,
       deliveryAddress: processedAddress,
       status: "pending",
     });

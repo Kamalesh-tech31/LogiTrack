@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Truck, CheckCircle2, Clock, XCircle, AlertTriangle, FileText, ArrowRight } from "lucide-react";
+import { Truck, CheckCircle2, Clock, XCircle, AlertTriangle, FileText, ArrowRight, MapPin } from "lucide-react";
 import Link from "next/link";
 import { API_BASE_URL } from "@/lib/api";
 import { FloatingAuthCards } from "@/components/landing/FloatingAuthCards";
@@ -17,6 +17,19 @@ interface UserData {
   status: string;
   fullName?: string;
   role?: string;
+  warehouseAddress?: {
+    fullAddress?: string;
+    street?: string;
+    area?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    latitude?: number;
+    longitude?: number;
+    status?: "pending" | "approved" | "rejected";
+    isVerified?: boolean;
+    rejectionReason?: string;
+  };
   documents: {
     aadhaar: DocumentType;
     drivingLicense: DocumentType;
@@ -47,22 +60,27 @@ export default function AwaitingApprovalPage() {
 
         const data = await response.json();
 
-        if (!data.success) return;
+        if (!data.success || !data.data) return;
 
-        setUserData(data.data);
+        const user = data.data;
+        setUserData(user);
 
-        if (data.data.status === "approved") {
-          setTimeout(() => {
-            localStorage.removeItem("token");
-            router.push("/login");
-          }, 3000);
+        // Customers never require approval
+        if (user.role === "Customer") {
+          router.push("/customer");
+          return;
         }
 
-        if (data.data.status === "rejected") {
+        if (user.status === "approved") {
           setTimeout(() => {
-            localStorage.removeItem("token");
-            router.push("/login");
-          }, 3000);
+            if (user.role === "Business Owner") {
+              router.push("/owner");
+            } else if (user.role === "Delivery Agent") {
+              router.push("/delivery/dashboard");
+            } else {
+              router.push("/customer");
+            }
+          }, 2500);
         }
       } catch (error) {
         console.log(error);
@@ -117,6 +135,67 @@ export default function AwaitingApprovalPage() {
               {document.rejectionReason && (
                 <p className="text-xs text-red-300 mt-1">
                   Reason: {document.rejectionReason}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  function renderLocationStatus() {
+    if (userData?.role !== "Business Owner" && !userData?.warehouseAddress) {
+      return null;
+    }
+
+    const warehouse = userData.warehouseAddress;
+    const status = warehouse?.status || (warehouse?.isVerified ? "approved" : "pending");
+    const addressPreview =
+      warehouse?.fullAddress ||
+      warehouse?.street ||
+      (warehouse?.latitude && warehouse?.longitude
+        ? `GPS: ${Number(warehouse.latitude).toFixed(4)}, ${Number(warehouse.longitude).toFixed(4)}`
+        : "Address / Warehouse Location Verification");
+
+    return (
+      <div className="rounded-2xl p-5 border border-[#2A2B30] bg-[#111214] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1A1B1E] border border-[#2A2B30] text-[#F97316]">
+            <MapPin size={20} />
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-white">Business Location</h3>
+            <p className="text-xs text-[#A1A1AA] line-clamp-1 max-w-sm">
+              {addressPreview}
+            </p>
+          </div>
+        </div>
+
+        <div>
+          {status === "pending" && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-medium">
+              <Clock size={14} className="animate-spin" />
+              <span>Pending Review</span>
+            </span>
+          )}
+
+          {status === "approved" && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium">
+              <CheckCircle2 size={14} />
+              <span>Verified & Approved</span>
+            </span>
+          )}
+
+          {status === "rejected" && (
+            <div className="text-right">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium">
+                <XCircle size={14} />
+                <span>Location Rejected</span>
+              </span>
+              {warehouse?.rejectionReason && (
+                <p className="text-xs text-red-300 mt-1">
+                  Reason: {warehouse.rejectionReason}
                 </p>
               )}
             </div>
@@ -186,6 +265,7 @@ export default function AwaitingApprovalPage() {
             <>
               {renderDocument("GST Certificate", userData.documents.gstCertificate)}
               {renderDocument("Shop License", userData.documents.shopLicense)}
+              {renderLocationStatus()}
               {renderDocument("Aadhaar Card", userData.documents.aadhaar)}
               {renderDocument("Driving License", userData.documents.drivingLicense)}
             </>

@@ -63,6 +63,8 @@ function applyProfileUpdates(targetUser, payload) {
     "businessName",
     "gstNumber",
     "businessAddress",
+    "defaultAddress",
+    "warehouseAddress",
   ];
 
   fields.forEach((field) => {
@@ -153,9 +155,25 @@ const register = async (req, res) => {
       fullName,
       email,
       password,
-      confirmPassword,
+      confirmPassword = req.body.confirm_password,
       role,
+      businessName,
+      businessAddress,
     } = req.body;
+
+    let warehouseAddress = req.body.warehouseAddress;
+    if (typeof warehouseAddress === "string") {
+      try {
+        warehouseAddress = JSON.parse(warehouseAddress);
+      } catch {}
+    }
+
+    let defaultAddress = req.body.defaultAddress;
+    if (typeof defaultAddress === "string") {
+      try {
+        defaultAddress = JSON.parse(defaultAddress);
+      } catch {}
+    }
 
     const files = req.files || {};
 
@@ -182,6 +200,10 @@ const register = async (req, res) => {
       password,
       confirmPassword,
       role,
+      businessName,
+      businessAddress,
+      warehouseAddress,
+      defaultAddress,
       passwordValidator: validatePassword,
 
       documents: {
@@ -189,17 +211,20 @@ const register = async (req, res) => {
         drivingLicense: drivingLicenseUrl,
         gstCertificate: gstCertificateUrl,
         shopLicense: shopLicenseUrl,
-    },
+      },
     });
 
     // CREATE TOKEN
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
-    });
+    const token = jwt.sign(
+      { id: user._id, userId: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
 
     res.status(201).json({
       message: "User Registered Successfully",
       token,
+      status: user.status,
       user: normalizeUserResponse(user),
     });
   } catch (error) {
@@ -243,6 +268,7 @@ const login = async (req, res) => {
       if (user.status === "pending") {
         const token = jwt.sign(
           {
+            id: user._id,
             userId: user._id,
             role: user.role,
           },
@@ -280,9 +306,19 @@ const login = async (req, res) => {
     }
 
     // TOKEN
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
-    });
+    const token = jwt.sign(
+      {
+        id: user._id,
+        _id: user._id,
+        userId: user._id,
+        role: user.role,
+        email: user.email,
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "7d",
+      },
+    );
 
     res.status(200).json({
       message: "Login Successful",

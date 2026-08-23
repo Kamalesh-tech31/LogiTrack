@@ -16,14 +16,14 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  DeliveryAddressSection,
-  DeliveryAddressData,
-} from "@/components/customer/delivery-address-section";
+  UniversalLocationPicker,
+  LocationData,
+} from "@/components/common/UniversalLocationPicker";
 import { OrderCompletionPill } from "@/components/customer/order-completion-pill";
 import { OrderSuccessModal } from "@/components/customer/order-success-modal";
 import { loadCart, removeFromCart, clearCart, CartItem } from "@/lib/cart";
 import { saveAddressItem } from "@/lib/addressStorage";
-import { API_BASE_URL } from "@/lib/api";
+import { API_BASE_URL, fetchCurrentUser } from "@/lib/api";
 
 export default function CartCheckoutPage() {
   const router = useRouter();
@@ -33,25 +33,23 @@ export default function CartCheckoutPage() {
   const [singleItemId, setSingleItemId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [placingOrder, setPlacingOrder] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   // Address state
-  const [addressData, setAddressData] = useState<DeliveryAddressData>({
+  const [addressData, setAddressData] = useState<LocationData>({
     doorNo: "",
     street: "",
     area: "",
-    city: "",
-    state: "",
+    city: "Chennai",
+    state: "Tamil Nadu",
     postalCode: "",
+    country: "India",
     fullAddress: "",
     latitude: 13.0827,
     longitude: 80.2707,
   });
 
-  const [saveAddressOnOrder, setSaveAddressOnOrder] = useState(true);
-  const [selectedLabelType, setSelectedLabelType] = useState<
-    "Home" | "Work" | "Friend" | "Custom"
-  >("Home");
-  const [customLabelName, setCustomLabelName] = useState("");
+  const [saveAsHome, setSaveAsHome] = useState(false);
 
   // Post-order modal state
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -60,6 +58,8 @@ export default function CartCheckoutPage() {
     totalAmount: number;
     itemsCount: number;
     deliveryAddress: string;
+    latitude?: number;
+    longitude?: number;
   } | null>(null);
 
   useEffect(() => {
@@ -81,7 +81,16 @@ export default function CartCheckoutPage() {
     } else {
       setItemsToCheckout(cart);
     }
-    setLoading(false);
+
+    // Load current user profile to obtain optional default/home address suggestion
+    fetchCurrentUser()
+      .then((user) => {
+        if (user) {
+          setCurrentUser(user);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   const totalAmount = useMemo(() => {
@@ -108,7 +117,7 @@ export default function CartCheckoutPage() {
       !addressData.postalCode?.trim()
     ) {
       toast.error(
-        "Please fill in all required address fields (Street, City, State, PIN).",
+        "Please specify your delivery address (Street, City, State, PIN).",
       );
       return false;
     }
@@ -127,7 +136,7 @@ export default function CartCheckoutPage() {
     setPlacingOrder(true);
 
     try {
-      // 1. Prepare delivery address payload
+      // 1. Prepare delivery address payload snapshotted for THIS ORDER
       const fullAddressCompiled =
         addressData.fullAddress?.trim() ||
         [
@@ -157,11 +166,11 @@ export default function CartCheckoutPage() {
           postalCode: addressData.postalCode?.trim() || "",
           country: "India",
           fullAddress: fullAddressCompiled,
-          fullName: addressData.recipientName || undefined,
-          phone: addressData.recipientPhone || undefined,
+          fullName: addressData.businessName || undefined,
           latitude: Number(addressData.latitude) || 13.0827,
           longitude: Number(addressData.longitude) || 80.2707,
         },
+        saveAsDefaultAddress: saveAsHome,
       };
 
       const response = await fetch(`${API_BASE_URL}/api/orders`, {
@@ -181,38 +190,7 @@ export default function CartCheckoutPage() {
       const createdOrder = await response.json();
       const orderData = createdOrder.data || createdOrder;
 
-      // 2. Save address to addressStorage if requested
-      if (saveAddressOnOrder) {
-        let label = selectedLabelType as string;
-        if (
-          (selectedLabelType === "Friend" || selectedLabelType === "Custom") &&
-          customLabelName.trim()
-        ) {
-          label = customLabelName.trim();
-        }
-
-        saveAddressItem(
-          {
-            id: addressData.savedId,
-            label,
-            fullName: addressData.recipientName || "",
-            phone: addressData.recipientPhone || "",
-            doorNo: addressData.doorNo,
-            street: addressData.street,
-            area: addressData.area,
-            city: addressData.city,
-            state: addressData.state,
-            postalCode: addressData.postalCode,
-            fullAddress: fullAddressCompiled,
-            latitude: Number(addressData.latitude) || 13.0827,
-            longitude: Number(addressData.longitude) || 80.2707,
-            country: "India",
-          },
-          userId,
-        );
-      }
-
-      // 3. Clear checkout items from cart
+      // 2. Clear checkout items from cart
       if (isSingleItemMode && singleItemId) {
         removeFromCart(singleItemId);
       } else {
@@ -224,6 +202,8 @@ export default function CartCheckoutPage() {
         totalAmount: orderData.totalPrice || totalAmount,
         itemsCount: totalItemsCount,
         deliveryAddress: fullAddressCompiled,
+        latitude: Number(addressData.latitude) || 13.0827,
+        longitude: Number(addressData.longitude) || 80.2707,
       });
 
       return true;
@@ -332,16 +312,23 @@ export default function CartCheckoutPage() {
               </div>
             </CardHeader>
             <CardContent className="p-6 sm:p-7">
-              <DeliveryAddressSection
+              <UniversalLocationPicker
                 value={addressData}
                 onChange={setAddressData}
-                saveAddressOnOrder={saveAddressOnOrder}
-                onSaveAddressOnOrderChange={setSaveAddressOnOrder}
-                selectedLabelType={selectedLabelType}
-                onSelectedLabelTypeChange={setSelectedLabelType}
-                customLabelName={customLabelName}
-                onCustomLabelNameChange={setCustomLabelName}
-                userId={typeof window !== "undefined" ? localStorage.getItem("userId") : null}
+                title="Where should we deliver this order?"
+                subtitle="Select or confirm the exact delivery destination for this specific order."
+                defaultSuggestion={currentUser?.defaultAddress}
+                defaultSuggestionLabel="Saved Home Address"
+                onUseDefaultSuggestion={() => {
+                  if (currentUser?.defaultAddress) {
+                    setAddressData({ ...currentUser.defaultAddress });
+                    toast.success("Loaded saved Home Address for this order!");
+                  }
+                }}
+                showSaveAsHome={true}
+                saveAsHomeChecked={saveAsHome}
+                onSaveAsHomeChange={setSaveAsHome}
+                roleContext="customer"
               />
             </CardContent>
           </Card>
@@ -454,6 +441,8 @@ export default function CartCheckoutPage() {
         totalAmount={placedOrderInfo?.totalAmount}
         itemsCount={placedOrderInfo?.itemsCount}
         deliveryAddress={placedOrderInfo?.deliveryAddress}
+        latitude={placedOrderInfo?.latitude}
+        longitude={placedOrderInfo?.longitude}
       />
     </div>
   );

@@ -51,6 +51,42 @@ const userSchema = new mongoose.Schema(
       type: String,
     },
 
+    defaultAddress: {
+      label: { type: String, default: "Home" },
+      fullAddress: { type: String, trim: true },
+      street: { type: String, trim: true },
+      doorNo: { type: String, trim: true },
+      area: { type: String, trim: true },
+      city: { type: String, trim: true },
+      state: { type: String, trim: true },
+      postalCode: { type: String, trim: true },
+      country: { type: String, trim: true, default: "India" },
+      latitude: { type: Number },
+      longitude: { type: Number },
+    },
+
+    warehouseAddress: {
+      businessName: { type: String, trim: true },
+      fullAddress: { type: String, trim: true },
+      street: { type: String, trim: true },
+      doorNo: { type: String, trim: true },
+      area: { type: String, trim: true },
+      city: { type: String, trim: true },
+      state: { type: String, trim: true },
+      postalCode: { type: String, trim: true },
+      country: { type: String, trim: true, default: "India" },
+      latitude: { type: Number },
+      longitude: { type: Number },
+      status: {
+        type: String,
+        enum: ["pending", "approved", "rejected"],
+        default: "pending",
+      },
+      isVerified: { type: Boolean, default: false },
+      rejectionReason: { type: String, default: "" },
+      verifiedAt: { type: Date, default: null },
+    },
+
     documents: {
       aadhaar: {
         path: {

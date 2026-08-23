@@ -71,23 +71,26 @@ exports.updateStock = async (req, res, next) => {
     let action;
     let quantity = 0;
 
-    if (typeof set === "number") {
+    if (typeof set === "number" && !isNaN(set)) {
       if (set < 0)
         return res
           .status(400)
-          .json({ success: false, message: "Stock cannot be negative" });
+          .json({ success: false, message: "Stock quantity cannot be negative" });
       quantity = set - product.stock;
       action = `Set stock to ${set}`;
       product.stock = set;
-    } else if (typeof delta === "number") {
+    } else if (typeof delta === "number" && !isNaN(delta)) {
+      if (delta <= 0)
+        return res
+          .status(400)
+          .json({ success: false, message: "Restock quantity must be a positive number" });
       quantity = delta;
-      action = delta >= 0 ? `Restocked ${delta}` : `Removed ${Math.abs(delta)}`;
+      action = `Restocked ${delta}`;
       product.stock += delta;
-      if (product.stock < 0) product.stock = 0;
     } else {
       return res
         .status(400)
-        .json({ success: false, message: "set or delta required" });
+        .json({ success: false, message: "Valid set or delta positive number is required" });
     }
 
     const wasLowStock = isLowStock(product);

@@ -167,3 +167,19 @@
     letter-spacing: -0.02em;
   }
 }
+
+/* Scoped Leaflet container isolation to prevent z-index leaking over modals */
+.leaflet-container {
+  isolation: isolate;
+  z-index: 0 !important;
+}
+
+.leaflet-pane {
+  z-index: 10 !important;
+}
+
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 20 !important;
+}
+

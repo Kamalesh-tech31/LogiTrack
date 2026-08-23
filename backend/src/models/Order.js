@@ -15,7 +15,9 @@ const OrderItemSchema = new mongoose.Schema(
 
 const DeliveryAddressSchema = new mongoose.Schema(
   {
+    doorNo: { type: String, trim: true },
     street: { type: String, trim: true },
+    area: { type: String, trim: true },
     fullAddress: { type: String, trim: true },
     fullName: { type: String, trim: true },
     phone: { type: String, trim: true },
@@ -44,6 +46,7 @@ const OrderSchema = new mongoose.Schema(
     },
     items: { type: [OrderItemSchema], required: true },
     totalPrice: { type: Number, required: true, min: 0 },
+    pickupAddress: { type: DeliveryAddressSchema },
     deliveryAddress: { type: DeliveryAddressSchema },
     status: {
       type: String,
@@ -82,6 +85,27 @@ const OrderSchema = new mongoose.Schema(
     claimedAt: {
       type: Date,
       default: null,
+    },
+    deliveryStage: {
+      type: String,
+      enum: [
+        "UNCLAIMED",
+        "TO_WAREHOUSE",
+        "AT_WAREHOUSE",
+        "TO_CUSTOMER",
+        "AT_CUSTOMER",
+        "OTP_REQUESTED",
+        "DELIVERED",
+      ],
+      default: "UNCLAIMED",
+    },
+    agentLocation: {
+      latitude: { type: Number, default: null },
+      longitude: { type: Number, default: null },
+      accuracy: { type: Number, default: null },
+      speed: { type: Number, default: null },
+      heading: { type: Number, default: null },
+      updatedAt: { type: Date, default: null },
     },
     customerVerified: {
       type: Boolean,

@@ -30,6 +30,28 @@ export interface DeliveryRecord {
   city: string;
   latitude?: number | null;
   longitude?: number | null;
+  pickupLatitude?: number | null;
+  pickupLongitude?: number | null;
+  pickupName?: string | null;
+  pickupAddress?: any;
+  deliveryAddress?: any;
+  deliveryStage?:
+    | "UNCLAIMED"
+    | "TO_WAREHOUSE"
+    | "AT_WAREHOUSE"
+    | "TO_CUSTOMER"
+    | "AT_CUSTOMER"
+    | "OTP_REQUESTED"
+    | "DELIVERED";
+  isClaimed?: boolean;
+  isMyDelivery?: boolean;
+  isClaimable?: boolean;
+  agentLocation?: {
+    latitude: number;
+    longitude: number;
+    accuracy?: number | null;
+    updatedAt?: string | null;
+  } | null;
   eta: string;
   status: DeliveryStatus;
   priority: DeliveryPriority | null;

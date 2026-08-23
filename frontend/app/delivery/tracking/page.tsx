@@ -1,389 +1,363 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import toast from "react-hot-toast";
-import { MapPin, Navigation, Compass, Radio, Map, RotateCcw } from "lucide-react";
+import {
+  MapPin,
+  Navigation,
+  Compass,
+  Radio,
+  RotateCcw,
+  CheckCircle2,
+  Store,
+  Truck,
+  KeyRound,
+  ShieldCheck,
+  Send,
+} from "lucide-react";
 
-import dynamic from "next/dynamic";
 import type { DeliveryRecord } from "@/components/delivery/deliveryData";
-import { DeliveryMap } from "@/components/customer/delivery-map";
-import { fetchDashboard, saveLocationUpdate } from "@/lib/api";
-
-const LeafletOsrmMap = dynamic(
-  () =>
-    import("@/components/delivery/leaflet-osrm-map").then(
-      (mod) => mod.LeafletOsrmMap,
-    ),
-  { ssr: false },
-);
-
-interface LocationDetails {
-  displayName: string;
-  formattedAddress: string;
-  city: string;
-  state: string;
-  country: string;
-  postalCode: string;
-  latitude: number;
-  longitude: number;
-  source: "manual" | "browser";
-  timestamp: string;
-}
-
-interface RouteInfo {
-  distance: number;
-  duration: number;
-  polyline: string;
-}
+import { TwoStageDeliveryMap } from "@/components/customer/TwoStageDeliveryMap";
+import { BulkTwoStageDeliveryMap } from "@/components/delivery/BulkTwoStageDeliveryMap";
+import type { BulkMapStop } from "@/components/delivery/BulkTwoStageDeliveryMapInner";
+import {
+  fetchDeliveries,
+  sendAgentTelemetry,
+  reachedPickupWarehouse,
+  reachedCustomerLocation,
+  requestDeliveryOtp,
+  verifyCustomerDeliveryOtp,
+  updateDeliveryStatus,
+} from "@/lib/api";
 
 export default function TrackingPage() {
-  const [latitude, setLatitude] = useState("");
-  const [longitude, setLongitude] = useState("");
-  const [locationDetails, setLocationDetails] =
-    useState<LocationDetails | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [activeRoute, setActiveRoute] = useState<DeliveryRecord | null>(null);
   const [activeRoutes, setActiveRoutes] = useState<DeliveryRecord[]>([]);
-  const [showMap, setShowMap] = useState(false);
-  const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
-
-  const destinationName =
-    activeRoute?.address || activeRoute?.customer || "Customer destination";
-
-  const waypoints: Array<{ lat: number; lng: number; name?: string }> =
-    locationDetails
-      ? [
-          {
-            lat: locationDetails.latitude,
-            lng: locationDetails.longitude,
-            name: "Driver Location",
-          },
-        ]
-      : [];
-
-  if (locationDetails && activeRoutes.length > 0) {
-    activeRoutes.forEach((route: any, idx) => {
-      let lat = Number(route.latitude);
-      let lng = Number(route.longitude);
-      if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
-        // Prevent overlapping markers with micro-jittering (~15m)
-        while (
-          waypoints.some(
-            (wp) =>
-              Math.abs(wp.lat - lat) < 0.00005 &&
-              Math.abs(wp.lng - lng) < 0.00005,
-          )
-        ) {
-          lat += (Math.random() - 0.5) * 0.0003;
-          lng += (Math.random() - 0.5) * 0.0003;
-        }
-        waypoints.push({
-          lat,
-          lng,
-          name: route.address
-            ? `${route.customer || `Stop ${idx + 1}`} — ${route.address}`
-            : route.customer || `Stop ${idx + 1}`,
-        });
-      }
-    });
-  }
-
-  const deliveryMapRoute =
-    activeRoute &&
-    typeof activeRoute.latitude === "number" &&
-    typeof activeRoute.longitude === "number"
-      ? {
-          origin:
-            locationDetails != null
-              ? {
-                  lat: locationDetails.latitude,
-                  lng: locationDetails.longitude,
-                  name: locationDetails.displayName,
-                }
-              : undefined,
-          destination: {
-            lat: activeRoute.latitude,
-            lng: activeRoute.longitude,
-            name: destinationName,
-          },
-          currentPosition:
-            locationDetails != null
-              ? {
-                  lat: locationDetails.latitude,
-                  lng: locationDetails.longitude,
-                  name: locationDetails.displayName,
-                }
-              : undefined,
-          waypoints:
-            locationDetails != null
-              ? [
-                  {
-                    lat: locationDetails.latitude,
-                    lng: locationDetails.longitude,
-                  },
-                  {
-                    lat: activeRoute.latitude,
-                    lng: activeRoute.longitude,
-                  },
-                ]
-              : [],
-        }
-      : null;
+  const [currentCoords, setCurrentCoords] = useState<{
+    latitude: number;
+    longitude: number;
+    accuracy?: number;
+  } | null>(null);
+  const [isLiveWatching, setIsLiveWatching] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [otpInput, setOtpInput] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const watchIdRef = useRef<number | null>(null);
 
   useEffect(() => {
-    let isMounted = true;
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => (prev > 1 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
-    async function loadActiveRoute() {
-      try {
-        const data = await fetchDashboard();
-
-        if (isMounted) {
-          if (data.activeRoutes && data.activeRoutes.length > 0) {
-            setActiveRoute(data.activeRoutes[0]);
-            setActiveRoutes(data.activeRoutes);
-          } else {
-            toast("No active deliveries. Accept an order to start tracking.", {
-              icon: "ℹ️",
-            });
-          }
-        }
-      } catch (err) {
-        if (isMounted) {
-          console.error("Error loading deliveries:", err);
-          toast("Unable to load active deliveries.", {
-            icon: "ℹ️",
-          });
-        }
-      }
-    }
-
-    void loadActiveRoute();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const fetchRoute = async (
-    agentLat: number,
-    agentLon: number,
-    customerLat: number,
-    customerLon: number,
-  ) => {
-    const routeUrl = `https://router.project-osrm.org/route/v1/driving/${agentLon},${agentLat};${customerLon},${customerLat}?overview=false&geometries=geojson&steps=true`;
-    try {
-      const response = await fetch(routeUrl, {
-        headers: {
-          Accept: "application/json",
-          "User-Agent": "Devfusion-LogiTrack/1.0",
-        },
-      });
-
-      if (!response.ok) {
-        const body = await response.text().catch(() => "");
-        console.error("OSRM route failed", response.status, body, routeUrl);
-        toast.error("Route calculation failed. Showing map only.");
-        setRouteInfo(null);
-        return;
-      }
-
-      const data = (await response.json()) as {
-        routes?: Array<{
-          distance: number;
-          duration: number;
-          geometry?: string;
-        }>;
-      };
-
-      if (!data.routes || data.routes.length === 0) {
-        console.error("OSRM returned no route", data, routeUrl);
-        toast.error("No route found. Showing map only.");
-        setRouteInfo(null);
-        return;
-      }
-
-      const route = data.routes[0];
-      setRouteInfo({
-        distance: Math.round((route.distance / 1000) * 10) / 10,
-        duration: Math.round(route.duration / 60),
-        polyline: route.geometry || "",
-      });
-    } catch (error) {
-      console.error("Route error:", error);
-      toast.error("Unable to calculate route");
-    }
+  const isAssignedToCurrentUser = (delivery: DeliveryRecord) => {
+    if (delivery.isMyDelivery) return true;
+    if (typeof window === "undefined") return false;
+    const currentUserId = localStorage.getItem("userId");
+    if (!currentUserId) return false;
+    const agent =
+      delivery.agent ||
+      delivery.raw?.assignedAgent ||
+      delivery.raw?.claimedBy;
+    if (!agent) return false;
+    if (typeof agent === "string") return String(agent) === currentUserId;
+    if (agent._id) return String(agent._id) === currentUserId;
+    if (agent.id) return String(agent.id) === currentUserId;
+    return false;
   };
 
-  const resolveLocation = async (
-    lat: number,
-    lon: number,
-    source: "manual" | "browser",
-  ) => {
-    setIsLoading(true);
-
+  const loadActiveDeliveries = async () => {
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`,
-        {
-          headers: {
-            Accept: "application/json",
-            "User-Agent": "Devfusion-LogiTrack/1.0",
-          },
-        },
-      );
+      setIsLoading(true);
+      const deliveries = await fetchDeliveries();
+      // MUST only include deliveries assigned to THIS agent and currently active, sorted by sequenceOrder
+      const myActive = deliveries
+        .filter((d) => {
+          const isMine = d.isMyDelivery || isAssignedToCurrentUser(d);
+          const isOngoing =
+            d.status !== "delivered" &&
+            d.status !== "completed" &&
+            d.deliveryStage !== "DELIVERED";
+          return isMine && isOngoing && !d.isClaimable;
+        })
+        .sort((a, b) => (a.sequenceOrder || 1) - (b.sequenceOrder || 1));
 
-      if (!response.ok) {
-        throw new Error("Reverse geocoding request failed");
-      }
-
-      const data = (await response.json()) as {
-        display_name?: string;
-        address?: {
-          city?: string;
-          town?: string;
-          village?: string;
-          state?: string;
-          country?: string;
-          postcode?: string;
-          neighbourhood?: string;
-        };
-      };
-
-      const address = data.address ?? {};
-      const city =
-        address.city ||
-        address.town ||
-        address.village ||
-        address.neighbourhood ||
-        "Unknown city";
-      const state = address.state || "Unknown state";
-      const country = address.country || "Unknown country";
-      const postalCode = address.postcode || "N/A";
-
-      const result: LocationDetails = {
-        displayName: data.display_name || `${city}, ${state}`,
-        formattedAddress: `${city}, ${state}, ${country}${
-          postalCode !== "N/A" ? ` ${postalCode}` : ""
-        }`,
-        city,
-        state,
-        country,
-        postalCode,
-        latitude: lat,
-        longitude: lon,
-        source,
-        timestamp: new Date().toLocaleString(),
-      };
-
-      setLocationDetails(result);
-
-      if (!activeRoute) {
-        toast.success("Location resolved!");
-        setShowMap(true);
-        return;
-      }
-
-      setShowMap(true);
-
-      if (
-        activeRoute.latitude &&
-        activeRoute.longitude &&
-        typeof activeRoute.latitude === "number" &&
-        typeof activeRoute.longitude === "number"
-      ) {
-        await fetchRoute(lat, lon, activeRoute.latitude, activeRoute.longitude);
-        toast.success("Location resolved and route calculated!");
+      setActiveRoutes(myActive);
+      if (myActive.length > 0) {
+        setActiveRoute((prev) => {
+          if (prev) {
+            const found = myActive.find((d) => d.id === prev.id);
+            if (
+              found &&
+              found.status !== "delivered" &&
+              found.deliveryStage !== "DELIVERED"
+            ) {
+              return found;
+            }
+          }
+          // Active assignment is always the first uncompleted stop in sequence (Stop 1, Customer 1)
+          return myActive[0];
+        });
+        const selected = myActive[0];
+        if (selected.agentLocation?.latitude && selected.agentLocation?.longitude) {
+          setCurrentCoords({
+            latitude: selected.agentLocation.latitude,
+            longitude: selected.agentLocation.longitude,
+          });
+        }
       } else {
-        toast(
-          "Delivery address coordinates not available. Showing your location only.",
-          {
-            icon: "ℹ️",
-          },
-        );
+        setActiveRoute(null);
       }
-
-      await saveLocationUpdate({
-        deliveryId: activeRoute.id,
-        latitude: lat,
-        longitude: lon,
-        source,
-        displayName: result.displayName,
-        formattedAddress: result.formattedAddress,
-        city: result.city,
-        state: result.state,
-        country: result.country,
-        postalCode: result.postalCode,
-        timestamp: result.timestamp,
-      });
-    } catch (error) {
-      console.error("Location resolution error:", error);
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Unable to resolve this location. Check the coordinates and try again.",
-      );
-      setLocationDetails(null);
+    } catch (err) {
+      console.error("Error loading deliveries:", err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleUpdateLocation = async () => {
-    const lat = Number(latitude);
-    const lon = Number(longitude);
+  useEffect(() => {
+    void loadActiveDeliveries();
+  }, []);
 
-    if (!latitude || !longitude) {
-      toast.error("Please enter both latitude and longitude.");
+  // Continuous live GPS watch
+  const startLiveGps = () => {
+    if (typeof window === "undefined" || !("geolocation" in navigator)) {
+      toast.error("Geolocation not supported on this device.");
       return;
     }
 
-    if (Number.isNaN(lat) || Number.isNaN(lon)) {
-      toast.error("Latitude and longitude must be valid numbers.");
-      return;
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
     }
 
-    if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
-      toast.error(
-        "Coordinates are out of range. Use valid latitude and longitude values.",
-      );
-      return;
-    }
+    setIsLiveWatching(true);
+    toast.success("Live GPS broadcasting activated!");
 
-    setShowMap(true);
-    await resolveLocation(lat, lon, "manual");
-  };
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      async (pos) => {
+        const coords = {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          accuracy: pos.coords.accuracy,
+          speed: pos.coords.speed || undefined,
+          heading: pos.coords.heading || undefined,
+        };
+        setCurrentCoords(coords);
 
-  const handleUseCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      toast.error("Geolocation is not supported in this browser.");
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
-
-        setLatitude(lat.toFixed(6));
-        setLongitude(lon.toFixed(6));
-        toast.success(
-          "Current location coordinates loaded. Click 'Preview Route' to update map.",
-        );
+        if (activeRoute?.id) {
+          try {
+            await sendAgentTelemetry(activeRoute.id, coords);
+          } catch (e) {
+            // Silently retry next tick
+          }
+        }
       },
-      () => {
-        toast.error(
-          "Unable to access your current location. Try entering coordinates manually.",
-        );
+      (err) => {
+        console.warn("GPS watch error:", err);
       },
-      {
-        enableHighAccuracy: true,
-      },
+      { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 },
     );
   };
 
-  const mapBbox = locationDetails
-    ? `${Math.min(locationDetails.longitude, activeRoute?.longitude || locationDetails.longitude) - 0.02},${Math.min(locationDetails.latitude, activeRoute?.latitude || locationDetails.latitude) - 0.02},${Math.max(locationDetails.longitude, activeRoute?.longitude || locationDetails.longitude) + 0.02},${Math.max(locationDetails.latitude, activeRoute?.latitude || locationDetails.latitude) + 0.02}`
-    : null;
+  const stopLiveGps = () => {
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+    setIsLiveWatching(false);
+    toast("Live GPS broadcast stopped.", { icon: "ℹ️" });
+  };
+
+  useEffect(() => {
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    };
+  }, []);
+
+  const handleAcquireCurrentLocation = () => {
+    if (typeof window === "undefined" || !("geolocation" in navigator)) {
+      toast.error("Geolocation is not supported by your browser.");
+      return;
+    }
+
+    toast.loading("Acquiring GPS fix...", { id: "gps-fix" });
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const coords = {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          accuracy: pos.coords.accuracy,
+        };
+        setCurrentCoords(coords);
+        toast.dismiss("gps-fix");
+        toast.success("GPS location updated!");
+
+        if (activeRoute?.id) {
+          try {
+            await sendAgentTelemetry(activeRoute.id, coords);
+          } catch (err: any) {
+            console.error("Telemetry push failed:", err);
+          }
+        }
+      },
+      (err) => {
+        toast.dismiss("gps-fix");
+        toast.error("Failed to acquire GPS. Please allow location access.");
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+    );
+  };
+
+  const handleReachedWarehouse = async () => {
+    if (!activeRoute?.id) return;
+    setActionLoading(true);
+    try {
+      await reachedPickupWarehouse(activeRoute.id);
+      toast.success("Confirmed pickup arrival! Now heading to customer.");
+      await loadActiveDeliveries();
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to update status.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReachedCustomer = async () => {
+    if (!activeRoute?.id) return;
+    setActionLoading(true);
+    try {
+      await reachedCustomerLocation(activeRoute.id);
+      toast.success("Arrived at customer location! You can now request OTP.");
+      await loadActiveDeliveries();
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to update status.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRequestOtp = async () => {
+    if (!activeRoute?.id || actionLoading || resendCooldown > 0) return;
+    setActionLoading(true);
+    try {
+      const res = await requestDeliveryOtp(activeRoute.id);
+      setResendCooldown(30);
+      toast.success(res?.message || "OTP dispatched to customer email!");
+      await loadActiveDeliveries();
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to request OTP.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeRoute?.id || !otpInput.trim()) {
+      toast.error("Please enter 6-digit OTP.");
+      return;
+    }
+    setActionLoading(true);
+    try {
+      await verifyCustomerDeliveryOtp(activeRoute.id, otpInput.trim());
+      toast.success("OTP verified! Delivery completed successfully.");
+      setOtpInput("");
+      await loadActiveDeliveries();
+    } catch (err: any) {
+      toast.error(err?.message || "Invalid OTP code.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const stage =
+    activeRoute?.deliveryStage ||
+    (activeRoute?.status === "delivered" || activeRoute?.status === "completed"
+      ? "DELIVERED"
+      : activeRoute?.status === "out-for-delivery"
+        ? "AT_CUSTOMER"
+        : activeRoute?.status === "shipped"
+          ? "TO_CUSTOMER"
+          : "TO_WAREHOUSE");
+
+  // Derive the agent marker position from the persisted delivery stage.
+  // This is what makes the marker move when stage transitions happen —
+  // we do NOT depend on live GPS or local React state for this.
+  const agentPositionForMap = useMemo(() => {
+    if (!activeRoute) return null;
+
+    const wLat = activeRoute.pickupLatitude ? Number(activeRoute.pickupLatitude) : null;
+    const wLng = activeRoute.pickupLongitude ? Number(activeRoute.pickupLongitude) : null;
+    const cLat = activeRoute.latitude ? Number(activeRoute.latitude) : null;
+    const cLng = activeRoute.longitude ? Number(activeRoute.longitude) : null;
+
+    // AT_CUSTOMER or OTP stage → snap to customer location
+    if (stage === "AT_CUSTOMER" || stage === "OTP_REQUESTED" || stage === "DELIVERED") {
+      if (cLat != null && cLng != null && !isNaN(cLat) && !isNaN(cLng)) {
+        return { lat: cLat, lng: cLng, name: "At Customer" };
+      }
+    }
+
+    // In a multi-stop bulk batch:
+    // If activeRoute is Stop > 1 and en route (TO_CUSTOMER), origin is the last delivered customer location!
+    if ((activeRoute.sequenceOrder || 1) > 1 && stage === "TO_CUSTOMER") {
+      if (
+        activeRoute.agentLocation?.latitude != null &&
+        activeRoute.agentLocation?.longitude != null &&
+        !isNaN(Number(activeRoute.agentLocation.latitude)) &&
+        !isNaN(Number(activeRoute.agentLocation.longitude))
+      ) {
+        return {
+          lat: Number(activeRoute.agentLocation.latitude),
+          lng: Number(activeRoute.agentLocation.longitude),
+          name: "En route from previous stop",
+        };
+      }
+
+      const prevOrder = activeRoutes.find(
+        (r) => (r.sequenceOrder || 1) === (activeRoute.sequenceOrder || 1) - 1,
+      );
+      if (prevOrder && prevOrder.latitude && prevOrder.longitude) {
+        return {
+          lat: Number(prevOrder.latitude),
+          lng: Number(prevOrder.longitude),
+          name: `Departed from ${prevOrder.customer}`,
+        };
+      }
+    }
+
+    // AT_WAREHOUSE or en-route to FIRST customer (Stop 1) → snap to warehouse
+    if (
+      stage === "AT_WAREHOUSE" ||
+      (stage === "TO_CUSTOMER" && (activeRoute.sequenceOrder || 1) === 1)
+    ) {
+      if (wLat != null && wLng != null && !isNaN(wLat) && !isNaN(wLng)) {
+        return { lat: wLat, lng: wLng, name: "At Warehouse" };
+      }
+    }
+
+    // TO_WAREHOUSE / UNCLAIMED → use the persisted agentLocation from DB
+    if (activeRoute.agentLocation?.latitude && activeRoute.agentLocation?.longitude) {
+      return {
+        lat: Number(activeRoute.agentLocation.latitude),
+        lng: Number(activeRoute.agentLocation.longitude),
+        name: "Delivery Partner",
+      };
+    }
+
+    // Final fallback: warehouse coords
+    if (wLat != null && wLng != null && !isNaN(wLat) && !isNaN(wLng)) {
+      return { lat: wLat, lng: wLng, name: "Delivery Partner" };
+    }
+
+    return null;
+  }, [activeRoute, activeRoutes, stage]);
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
@@ -391,212 +365,304 @@ export default function TrackingPage() {
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
           <p className="text-[11px] uppercase tracking-[0.25em] text-[#A1A1AA] font-mono">
-            Telemetry Stream
+            Navigation & Routing
           </p>
           <h1 className="text-3xl font-extrabold text-white font-display tracking-tight mt-1">
-            Live GPS & Route Telemetry
+            Active Route Telemetry
           </h1>
           <p className="text-[#A1A1AA] mt-1.5 text-sm max-w-2xl leading-relaxed">
-            Synchronize real-time driver coordinates with the customer live tracking map and compute turn-by-turn routes.
+            Live two-stage navigation from your GPS position to merchant warehouse and customer destination.
           </p>
         </div>
 
-        <div className="rounded-2xl border border-[#2A2B30] bg-[#1A1B1E] px-4 py-2.5 flex items-center gap-3">
-          <span className="flex h-2 w-2 rounded-full bg-[#F97316] animate-pulse" />
-          <span className="text-xs text-[#A1A1AA]">Active Target:</span>
-          <span className="text-xs font-bold text-white truncate max-w-44">
-            {activeRoute?.customer || "No Active Target"}
-          </span>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleAcquireCurrentLocation}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-[#1A1B1E] border border-[#2A2B30] text-xs font-bold text-[#FDBA74] hover:text-white hover:border-[#F97316]/50 transition cursor-pointer"
+          >
+            <Compass size={14} className="text-[#F97316]" />
+            <span>Update GPS Fix</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={isLiveWatching ? stopLiveGps : startLiveGps}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-bold transition cursor-pointer ${
+              isLiveWatching
+                ? "bg-emerald-500 text-white shadow-[0_0_12px_rgba(16,185,129,0.4)] animate-pulse"
+                : "bg-[#F97316] text-white hover:bg-[#EA580C] shadow-[0_0_12px_rgba(249,115,22,0.3)]"
+            }`}
+          >
+            <Radio size={14} />
+            <span>{isLiveWatching ? "Live GPS Active" : "Start Live Broadcast"}</span>
+          </button>
         </div>
       </div>
 
-      {/* Main Grid: Map View + Telemetry Console */}
-      <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
-        {/* Left Column: Interactive Map Preview */}
-        <div className="rounded-3xl bg-[#1A1B1E] border border-[#2A2B30] p-6 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between pb-4 border-b border-[#2A2B30]/60">
-              <div>
-                <h2 className="text-lg font-bold text-white font-display">
-                  Live Navigation Map
-                </h2>
-                <p className="text-xs text-[#A1A1AA] mt-0.5">
-                  {locationDetails
-                    ? `Resolved: ${locationDetails.city}, ${locationDetails.state}`
-                    : "Awaiting coordinate telemetry"}
-                </p>
-              </div>
-
-              {locationDetails && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#F97316]/10 text-[#FDBA74] border border-[#F97316]/30">
-                  <Radio size={12} className="animate-pulse text-[#F97316]" />
-                  <span>GPS Active</span>
-                </span>
-              )}
-            </div>
-
-            {/* Map Box or Styled Empty Radar State */}
-            <div className="mt-5 rounded-2xl border border-[#2A2B30] bg-[#111214] overflow-hidden min-h-[380px] flex flex-col items-center justify-center relative">
-              {showMap && locationDetails ? (
-                <div className="w-full h-full flex flex-col">
-                  {/* Route Summary Pill if Available */}
-                  {activeRoute && routeInfo && (
-                    <div className="p-3 bg-[#1A1B1E]/90 backdrop-blur-md border-b border-[#2A2B30] flex items-center justify-around text-xs">
-                      <div>
-                        <span className="text-[#A1A1AA]">Est. Distance:</span>{" "}
-                        <strong className="text-[#F97316] font-bold">{routeInfo.distance} km</strong>
-                      </div>
-                      <div className="h-3 w-px bg-[#2A2B30]" />
-                      <div>
-                        <span className="text-[#A1A1AA]">Duration:</span>{" "}
-                        <strong className="text-[#F97316] font-bold">{routeInfo.duration} mins</strong>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex-1 w-full min-h-[340px]">
-                    {waypoints.length >= 2 ? (
-                      <LeafletOsrmMap waypoints={waypoints} />
-                    ) : deliveryMapRoute ? (
-                      <DeliveryMap route={deliveryMapRoute} />
-                    ) : (
-                      <iframe
-                        width="100%"
-                        height="100%"
-                        frameBorder="0"
-                        src={
-                          mapBbox
-                            ? `https://www.openstreetmap.org/export/embed.html?bbox=${mapBbox}&layer=mapnik&marker=${locationDetails.latitude},${locationDetails.longitude}`
-                            : `https://www.openstreetmap.org/export/embed.html?bbox=${locationDetails.longitude - 0.01},${locationDetails.latitude - 0.01},${locationDetails.longitude + 0.01}&layer=mapnik&marker=${locationDetails.latitude},${locationDetails.longitude}`
-                        }
-                        className="w-full h-full min-h-[340px]"
-                        title="Route Map"
-                      />
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center p-8 max-w-sm mx-auto space-y-3">
-                  <div className="relative inline-flex items-center justify-center">
-                    <div className="w-16 h-16 rounded-full bg-[#F97316]/10 border border-[#F97316]/30 flex items-center justify-center text-[#F97316] animate-pulse">
-                      <Compass size={28} />
-                    </div>
-                  </div>
-                  <h3 className="text-sm font-bold text-white">Awaiting Telemetry Stream</h3>
-                  <p className="text-xs text-[#A1A1AA] leading-relaxed">
-                    Capture your device coordinates or input custom latitude/longitude to stream real-time telemetry to the customer map.
+      {isLoading ? (
+        <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-12 text-center text-[#A1A1AA]">
+          Loading active route telemetry...
+        </div>
+      ) : activeRoute ? (
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Left: Active Delivery Details & Stage Controls */}
+          <div className="space-y-4 lg:col-span-1">
+            {/* Active Order Card */}
+            <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-6 space-y-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#F97316]">
+                    Active Assignment
+                  </span>
+                  <h2 className="text-lg font-bold text-white font-display mt-0.5">
+                    Order #{activeRoute.orderId || activeRoute.id.slice(-6)}
+                  </h2>
+                  <p className="text-xs text-[#A1A1AA]">
+                    Customer: {activeRoute.customer}
                   </p>
                 </div>
-              )}
-            </div>
-          </div>
 
-          {/* Location Summary Strip */}
-          {locationDetails && (
-            <div className="mt-4 pt-3 border-t border-[#2A2B30]/60 flex flex-wrap items-center justify-between text-xs text-[#A1A1AA] gap-2">
-              <div className="flex items-center gap-1.5 text-white">
-                <MapPin size={13} className="text-[#F97316]" />
-                <span className="truncate max-w-md">{locationDetails.formattedAddress}</span>
-              </div>
-              <span className="font-mono text-[11px] text-[#A1A1AA]">{locationDetails.timestamp}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Right Column: Coordinate Input & Telemetry Controls */}
-        <div className="space-y-6">
-          <div className="rounded-3xl bg-[#1A1B1E] border border-[#2A2B30] p-6 shadow-sm space-y-5">
-            <div>
-              <h2 className="text-lg font-bold text-white font-display">
-                GPS Position Input
-              </h2>
-              <p className="text-xs text-[#A1A1AA] mt-0.5">
-                Set manual coordinates or trigger device geolocation
-              </p>
-            </div>
-
-            {/* Inputs */}
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-[#A1A1AA] uppercase tracking-wider mb-1.5">
-                  Latitude
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. 12.971598"
-                  value={latitude}
-                  onChange={(e) => setLatitude(e.target.value)}
-                  className="w-full bg-[#111214] border border-[#2A2B30] focus:border-[#F97316] rounded-2xl px-4 py-3 text-xs text-white outline-none transition font-mono"
-                />
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-semibold bg-[#F97316]/10 text-[#FDBA74] border border-[#F97316]/30">
+                  {stage}
+                </span>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-[#A1A1AA] uppercase tracking-wider mb-1.5">
-                  Longitude
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. 77.594566"
-                  value={longitude}
-                  onChange={(e) => setLongitude(e.target.value)}
-                  className="w-full bg-[#111214] border border-[#2A2B30] focus:border-[#F97316] rounded-2xl px-4 py-3 text-xs text-white outline-none transition font-mono"
-                />
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="space-y-2.5 pt-1">
-              <button
-                type="button"
-                onClick={handleUseCurrentLocation}
-                disabled={isLoading}
-                className="w-full flex items-center justify-center gap-2 rounded-2xl bg-[#F97316] hover:bg-[#EA580C] py-3 px-4 text-xs font-bold text-white shadow-[0_0_15px_rgba(249,115,22,0.3)] transition cursor-pointer disabled:opacity-50"
-              >
-                <Navigation size={14} />
-                <span>{isLoading ? "Locating Device..." : "Use Current GPS"}</span>
-              </button>
-
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => void handleUpdateLocation()}
-                  disabled={isLoading || !latitude || !longitude}
-                  className="flex-1 flex items-center justify-center gap-1.5 rounded-2xl bg-[#111214] border border-[#2A2B30] hover:border-[#F97316]/50 py-2.5 text-xs font-semibold text-white transition cursor-pointer disabled:opacity-40"
-                >
-                  <Map size={13} />
-                  <span>Preview Route</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLatitude("");
-                    setLongitude("");
-                    setLocationDetails(null);
-                    setShowMap(false);
-                    setRouteInfo(null);
-                  }}
-                  className="px-3 rounded-2xl bg-[#111214] border border-[#2A2B30] hover:border-red-500/40 text-[#A1A1AA] hover:text-white text-xs transition cursor-pointer"
-                  title="Clear telemetry"
-                >
-                  <RotateCcw size={13} />
-                </button>
-              </div>
-            </div>
-
-            {/* Target Delivery Spec Card */}
-            {activeRoute && (
-              <div className="rounded-2xl border border-[#2A2B30] bg-[#111214] p-4 space-y-1.5">
-                <p className="text-[11px] uppercase font-semibold tracking-wider text-[#A1A1AA]">
-                  Target Destination
+              {/* Waypoint 1: Warehouse */}
+              <div className="p-3.5 rounded-2xl border border-sky-500/20 bg-sky-500/5 space-y-1 text-xs">
+                <div className="flex items-center gap-1.5 text-sky-400 font-bold">
+                  <Store size={14} />
+                  <span>Pickup Origin</span>
+                </div>
+                <p className="text-white font-medium truncate">
+                  {activeRoute.pickupName || "Merchant Warehouse"}
                 </p>
-                <p className="text-sm font-bold text-white">{activeRoute.customer}</p>
-                <p className="text-xs text-[#A1A1AA] line-clamp-2">{activeRoute.address}</p>
+                <p className="text-[11px] text-[#A1A1AA] truncate">
+                  {activeRoute.pickupAddress?.fullAddress || "Verified Business Location"}
+                </p>
+              </div>
+
+              {/* Waypoint 2: Customer */}
+              <div className="p-3.5 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 space-y-1 text-xs">
+                <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                  <MapPin size={14} />
+                  <span>Customer Destination</span>
+                </div>
+                <p className="text-white font-medium truncate">
+                  {activeRoute.customer}
+                </p>
+                <p className="text-[11px] text-[#A1A1AA] truncate">
+                  {activeRoute.address}
+                </p>
+              </div>
+
+              {/* Active Stage Action Box */}
+              <div className="pt-3 border-t border-[#2A2B30]/60 space-y-3">
+                <p className="text-xs font-mono font-bold uppercase tracking-wider text-white">
+                  Workflow Progression
+                </p>
+
+                {stage === "TO_WAREHOUSE" && (
+                  <button
+                    type="button"
+                    onClick={handleReachedWarehouse}
+                    disabled={actionLoading}
+                    className="w-full py-3 px-4 rounded-2xl bg-[#F97316] hover:bg-[#EA580C] text-xs font-bold text-white transition flex items-center justify-center gap-2 shadow-[0_0_14px_rgba(249,115,22,0.35)] cursor-pointer disabled:opacity-50"
+                  >
+                    <CheckCircle2 size={16} />
+                    <span>{actionLoading ? "Updating..." : "Confirm: Reached Warehouse"}</span>
+                  </button>
+                )}
+
+                {(stage === "TO_CUSTOMER" || stage === "AT_WAREHOUSE") && (
+                  <button
+                    type="button"
+                    onClick={handleReachedCustomer}
+                    disabled={actionLoading}
+                    className="w-full py-3 px-4 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-xs font-bold text-white transition flex items-center justify-center gap-2 shadow-[0_0_14px_rgba(16,185,129,0.35)] cursor-pointer disabled:opacity-50"
+                  >
+                    <MapPin size={16} />
+                    <span>{actionLoading ? "Updating..." : "Confirm: Reached Customer"}</span>
+                  </button>
+                )}
+
+                {stage === "AT_CUSTOMER" && (
+                  <button
+                    type="button"
+                    onClick={handleRequestOtp}
+                    disabled={actionLoading}
+                    className="w-full py-3 px-4 rounded-2xl bg-purple-600 hover:bg-purple-700 text-xs font-bold text-white transition flex items-center justify-center gap-2 shadow-[0_0_14px_rgba(147,51,234,0.35)] cursor-pointer disabled:opacity-50"
+                  >
+                    <KeyRound size={16} />
+                    <span>{actionLoading ? "Generating..." : "Request Delivery OTP"}</span>
+                  </button>
+                )}
+
+                {stage === "OTP_REQUESTED" && (
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+                        <KeyRound size={14} className="text-[#F97316]" />
+                        <span>Doorstep OTP Verification</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleRequestOtp}
+                        disabled={actionLoading || resendCooldown > 0}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#FDBA74] hover:text-[#F97316] transition cursor-pointer disabled:opacity-50"
+                      >
+                        <Send size={10} />
+                        <span>
+                          {resendCooldown > 0
+                            ? `Resend OTP (${resendCooldown}s)`
+                            : actionLoading
+                              ? "Sending..."
+                              : "Resend OTP"}
+                        </span>
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleVerifyOtp} className="space-y-2">
+                      <p className="text-[11px] text-[#A1A1AA]">
+                        Enter 6-digit OTP emailed to customer:
+                      </p>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          maxLength={6}
+                          placeholder="6-digit PIN"
+                          value={otpInput}
+                          onChange={(e) =>
+                            setOtpInput(e.target.value.replace(/\D/g, ""))
+                          }
+                          className="flex-1 px-3 py-2 bg-[#111214] border border-[#2A2B30] rounded-xl text-xs font-mono text-white placeholder-[#A1A1AA]/50 focus:border-[#F97316]/60 focus:outline-none transition tracking-widest text-center"
+                        />
+                        <button
+                          type="submit"
+                          disabled={actionLoading || otpInput.length < 6}
+                          className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-xs font-bold text-white transition disabled:opacity-40 cursor-pointer shadow-[0_0_12px_rgba(16,185,129,0.3)]"
+                        >
+                          {actionLoading ? "Verifying..." : "Verify & Complete"}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Other Active Deliveries in Queue */}
+            {activeRoutes.length > 1 && (
+              <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-4 space-y-2">
+                <p className="text-xs font-bold text-white font-mono uppercase tracking-wider">
+                  Queued Stops ({activeRoutes.length - 1})
+                </p>
+                {activeRoutes
+                  .filter((r) => r.id !== activeRoute.id)
+                  .sort((a, b) => (a.sequenceOrder || 1) - (b.sequenceOrder || 1))
+                  .map((r) => (
+                    <div
+                      key={r.id}
+                      onClick={() => setActiveRoute(r)}
+                      className="p-3 rounded-2xl border border-[#2A2B30] bg-[#111214] hover:border-[#F97316]/40 cursor-pointer flex items-center justify-between text-xs"
+                    >
+                      <div>
+                        <p className="text-white font-bold">
+                          Stop #{r.sequenceOrder || 2}: {r.customer}
+                        </p>
+                        <p className="text-[#A1A1AA] truncate text-[11px]">
+                          {r.address}
+                        </p>
+                      </div>
+                      <span className="text-[#FDBA74] font-mono text-[10px]">
+                        Switch
+                      </span>
+                    </div>
+                  ))}
               </div>
             )}
           </div>
+
+          {/* Right: Interactive 2-Segment Live Map */}
+          <div className="space-y-4 lg:col-span-2">
+            <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] overflow-hidden shadow-sm">
+              <div className="p-4 border-b border-[#2A2B30]/60 flex items-center justify-between">
+                <h3 className="text-sm font-bold text-white font-display flex items-center gap-2">
+                  <Navigation size={15} className="text-[#F97316]" />
+                  <span>Live Two-Segment Driver Navigation</span>
+                </h3>
+                <div className="flex items-center gap-2 text-xs font-mono text-[#FDBA74]">
+                  <span>GPS: {currentCoords ? "Locked" : "Acquiring..."}</span>
+                </div>
+              </div>
+
+              <div className="h-[460px] overflow-hidden">
+                {activeRoute?.batchId || (activeRoute?.sequenceOrder && activeRoute.sequenceOrder > 1) || activeRoutes.length > 1 ? (
+                  <BulkTwoStageDeliveryMap
+                    agentPosition={agentPositionForMap}
+                    warehousePosition={
+                      activeRoute.pickupLatitude && activeRoute.pickupLongitude
+                        ? {
+                            lat: Number(activeRoute.pickupLatitude),
+                            lng: Number(activeRoute.pickupLongitude),
+                            name: activeRoute.pickupName || "Merchant Warehouse",
+                            address: activeRoute.pickupAddress?.fullAddress,
+                          }
+                        : null
+                    }
+                    stops={activeRoutes.map((r, idx) => ({
+                      id: r.id,
+                      orderId: r.orderId,
+                      customer: r.customer,
+                      lat: Number(r.latitude) || (r.deliveryAddress?.latitude ? Number(r.deliveryAddress.latitude) : 13.0827),
+                      lng: Number(r.longitude) || (r.deliveryAddress?.longitude ? Number(r.deliveryAddress.longitude) : 80.2707),
+                      sequenceOrder: r.sequenceOrder || idx + 1,
+                      isCompleted: r.status === "delivered" || r.status === "completed" || r.deliveryStage === "DELIVERED",
+                      isActive: r.id === activeRoute.id,
+                      address: r.address || r.deliveryAddress?.fullAddress,
+                    }))}
+                    deliveryStage={stage}
+                  />
+                ) : (
+                  <TwoStageDeliveryMap
+                    agentPosition={agentPositionForMap}
+                    warehousePosition={
+                      activeRoute.pickupLatitude && activeRoute.pickupLongitude
+                        ? {
+                            lat: Number(activeRoute.pickupLatitude),
+                            lng: Number(activeRoute.pickupLongitude),
+                            name: activeRoute.pickupName || "Merchant Warehouse",
+                            address: activeRoute.pickupAddress?.fullAddress,
+                          }
+                        : null
+                    }
+                    customerPosition={
+                      activeRoute.latitude && activeRoute.longitude
+                        ? {
+                            lat: Number(activeRoute.latitude),
+                            lng: Number(activeRoute.longitude),
+                            name: activeRoute.customer,
+                            address: activeRoute.address,
+                          }
+                        : null
+                    }
+                    deliveryStage={stage}
+                    isDelivered={false}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="rounded-3xl border border-[#2A2B30] bg-[#1A1B1E] p-16 text-center space-y-3">
+          <Truck size={36} className="mx-auto text-[#A1A1AA]" />
+          <h3 className="text-lg font-bold text-white">No Active Deliveries</h3>
+          <p className="text-xs text-[#A1A1AA] max-w-md mx-auto">
+            You do not have any active shipments. Go to the Deliveries tab to claim available orders from the fleet pool.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

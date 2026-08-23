@@ -1,7 +1,8 @@
 import type { DeliveryRecord } from "@/components/delivery/deliveryData";
+export type DeliveryItem = DeliveryRecord;
 
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export interface DashboardData {
   activeDeliveries: number;
@@ -236,9 +237,17 @@ export async function completeRegistration(
 ): Promise<any> {
   const isFormData = typeof FormData !== "undefined" && payload instanceof FormData;
 
+  let body: any = payload;
+  if (!isFormData && typeof payload === "object" && payload !== null) {
+    body = JSON.stringify({
+      ...payload,
+      confirmPassword: payload.confirmPassword || payload.password,
+    });
+  }
+
   return apiRequest<any>("/api/auth/register", {
     method: "POST",
-    body: isFormData ? payload : JSON.stringify(payload),
+    body: isFormData ? payload : body,
   });
 }
 
@@ -296,6 +305,30 @@ export async function fetchOwnerProductById(id: string): Promise<any> {
   return apiRequest<any>(`/api/products/${id}`);
 }
 
+export async function generateOwnerSku(name?: string): Promise<{ success: boolean; sku: string }> {
+  const query = name ? `?name=${encodeURIComponent(name)}` : "";
+  return apiRequest<{ success: boolean; sku: string }>(`/api/products/generate-sku${query}`);
+}
+
+export async function uploadOwnerProductImage(
+  fileOrUrl: File | string,
+): Promise<{ success: boolean; url: string }> {
+  if (typeof fileOrUrl === "string") {
+    return apiRequest<{ success: boolean; url: string }>("/api/products/upload-image", {
+      method: "POST",
+      body: JSON.stringify({ imageUrl: fileOrUrl }),
+    });
+  }
+
+  const formData = new FormData();
+  formData.append("image", fileOrUrl);
+
+  return apiRequest<{ success: boolean; url: string }>("/api/products/upload-image", {
+    method: "POST",
+    body: formData,
+  });
+}
+
 export async function createOwnerProduct(payload: unknown): Promise<any> {
   return apiRequest<any>("/api/products", {
     method: "POST",
@@ -320,11 +353,13 @@ export async function deleteOwnerProduct(id: string): Promise<any> {
 }
 
 export async function fetchOwnerInventory(): Promise<any> {
-  return apiRequest<any>("/api/inventory");
+  const res = await apiRequest<any>("/api/inventory");
+  return Array.isArray(res) ? res : res?.data || [];
 }
 
 export async function fetchOwnerInventoryHistory(): Promise<any> {
-  return apiRequest<any>("/api/inventory/history");
+  const res = await apiRequest<any>("/api/inventory/history");
+  return Array.isArray(res) ? res : res?.data || [];
 }
 
 export async function updateOwnerStock(
@@ -386,10 +421,56 @@ export async function fetchDeliveries(): Promise<DeliveryRecord[]> {
   return apiRequest<DeliveryRecord[]>("/api/deliveries?mine=true");
 }
 
-export async function claimDelivery(orderId: string): Promise<DeliveryRecord> {
+export async function claimDelivery(
+  orderId: string,
+  location?: { latitude: number; longitude: number; accuracy?: number },
+): Promise<DeliveryRecord> {
   return apiRequest<DeliveryRecord>(`/api/deliveries/orders/${orderId}/claim`, {
     method: "POST",
+    body: JSON.stringify(location || {}),
   });
+}
+
+export async function reachedPickupWarehouse(
+  orderId: string,
+): Promise<{ success: boolean; data: DeliveryRecord; message: string }> {
+  return apiRequest<{ success: boolean; data: DeliveryRecord; message: string }>(
+    `/api/deliveries/orders/${orderId}/reached-warehouse`,
+    {
+      method: "POST",
+    },
+  );
+}
+
+export async function reachedCustomerLocation(
+  orderId: string,
+): Promise<{ success: boolean; data: DeliveryRecord; message: string }> {
+  return apiRequest<{ success: boolean; data: DeliveryRecord; message: string }>(
+    `/api/deliveries/orders/${orderId}/reached-customer`,
+    {
+      method: "POST",
+    },
+  );
+}
+
+export async function sendAgentTelemetry(
+  orderId: string,
+  telemetry: {
+    latitude: number;
+    longitude: number;
+    accuracy?: number;
+    speed?: number;
+    heading?: number;
+    addressName?: string;
+  },
+): Promise<{ success: boolean; message: string }> {
+  return apiRequest<{ success: boolean; message: string }>(
+    `/api/deliveries/orders/${orderId}/telemetry`,
+    {
+      method: "POST",
+      body: JSON.stringify(telemetry),
+    },
+  );
 }
 
 export async function requestDeliveryOtp(
@@ -446,6 +527,56 @@ export async function addOrderToBatch(
       method: "POST",
     },
   );
+}
+
+export interface NearbyOrderCandidate {
+  id: string;
+  orderId: string;
+  customer: string;
+  shopName: string;
+  distanceKm: number;
+  isSameWarehouse: boolean;
+  pickupAddress?: any;
+  deliveryAddress?: any;
+  totalPrice?: number;
+  itemsCount?: number;
+}
+
+export interface NearbyOrdersResponse {
+  totalEligible: number;
+  within1km: NearbyOrderCandidate[];
+  within2km: NearbyOrderCandidate[];
+  within3km: NearbyOrderCandidate[];
+  allCandidates: NearbyOrderCandidate[];
+}
+
+export async function fetchNearbyOrders(
+  orderId: string,
+): Promise<NearbyOrdersResponse> {
+  return apiRequest<NearbyOrdersResponse>(
+    `/api/deliveries/orders/${orderId}/nearby`,
+  );
+}
+
+export async function bulkClaimOrders(
+  orderIds: string[],
+  coords: { latitude: number; longitude: number; accuracy?: number },
+): Promise<{
+  success: boolean;
+  batchId: string;
+  count: number;
+  data: DeliveryRecord[];
+  message: string;
+}> {
+  return apiRequest<any>("/api/deliveries/bulk-claim", {
+    method: "POST",
+    body: JSON.stringify({
+      orderIds,
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+      accuracy: coords.accuracy,
+    }),
+  });
 }
 
 export async function checkAgentAvailability(
@@ -590,6 +721,24 @@ export interface AdminDocument {
   rejectionReason: string;
 }
 
+export interface AdminWarehouseAddress {
+  businessName?: string;
+  fullAddress?: string;
+  street?: string;
+  doorNo?: string;
+  area?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+  latitude?: number;
+  longitude?: number;
+  status?: "pending" | "approved" | "rejected";
+  isVerified?: boolean;
+  rejectionReason?: string;
+  verifiedAt?: string;
+}
+
 export interface AdminUser {
   _id: string;
   fullName: string;
@@ -601,6 +750,7 @@ export interface AdminUser {
   businessName?: string;
   gstNumber?: string;
   businessAddress?: string;
+  warehouseAddress?: AdminWarehouseAddress;
   documents: {
     aadhaar: AdminDocument;
     drivingLicense: AdminDocument;
@@ -652,6 +802,17 @@ export async function updateAdminDocumentStatus(
   return apiRequest<{ message: string; user: AdminUser }>(`/api/admin/${userId}/document`, {
     method: "PATCH",
     body: JSON.stringify({ documentName, status, rejectionReason: rejectionReason || "" }),
+  });
+}
+
+export async function updateAdminLocationStatus(
+  userId: string,
+  status: "approved" | "rejected",
+  rejectionReason?: string,
+): Promise<{ message: string; user: AdminUser }> {
+  return apiRequest<{ message: string; user: AdminUser }>(`/api/admin/${userId}/location`, {
+    method: "PATCH",
+    body: JSON.stringify({ status, rejectionReason: rejectionReason || "" }),
   });
 }
 

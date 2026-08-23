@@ -1,6 +1,11 @@
+const fs = require("fs");
 const Product = require("../models/product");
 const InventoryHistory = require("../models/InventoryHistory");
+const uploadToCloudinary = require("../utils/uploadToCloudinary");
 const { createRoleNotification } = require("../services/notificationService");
+
+const DEFAULT_PRODUCT_IMAGE =
+  "https://images.unsplash.com/photo-1580894908361-967195033215";
 
 function isLowStock(product) {
   return (
@@ -10,14 +15,119 @@ function isLowStock(product) {
   );
 }
 
+function generateSkuString(name = "PRD") {
+  const cleanPrefix =
+    name.trim().replace(/[^a-zA-Z0-9]/g, "").slice(0, 3).toUpperCase() || "PRD";
+  const chars = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+  let randomPart = "";
+  for (let i = 0; i < 6; i++) {
+    randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `${cleanPrefix}-${randomPart}`;
+}
+
+// Generate a unique SKU for a business owner
+exports.generateSku = async (req, res, next) => {
+  try {
+    const { name, prefix } = req.query;
+    let basePrefix =
+      prefix ||
+      (name ? name.trim().replace(/[^a-zA-Z0-9]/g, "").slice(0, 3).toUpperCase() : "PRD");
+    if (!basePrefix) basePrefix = "PRD";
+
+    let generated = "";
+    let isUnique = false;
+    let attempts = 0;
+
+    while (!isUnique && attempts < 10) {
+      generated = generateSkuString(basePrefix);
+      const existing = await Product.findOne({
+        ownerId: req.user.id,
+        sku: generated,
+        isActive: true,
+      });
+      if (!existing) {
+        isUnique = true;
+      }
+      attempts++;
+    }
+
+    res.json({ success: true, sku: generated });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Upload a product image from file or URL to Cloudinary
+exports.uploadProductImage = async (req, res, next) => {
+  try {
+    if (req.file) {
+      const allowedMimes = [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/gif",
+        "image/svg+xml",
+      ];
+      if (!allowedMimes.includes(req.file.mimetype)) {
+        if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        return res.status(400).json({
+          success: false,
+          message: "Invalid file type. Supported formats: JPEG, PNG, WEBP, GIF, SVG.",
+        });
+      }
+
+      if (req.file.size > 10 * 1024 * 1024) {
+        if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        return res.status(400).json({
+          success: false,
+          message: "File size exceeds 10MB limit.",
+        });
+      }
+
+      const secureUrl = await uploadToCloudinary(
+        req.file.path,
+        "logitrack/products"
+      );
+      return res.json({ success: true, url: secureUrl });
+    }
+
+    const { imageUrl } = req.body;
+    if (
+      imageUrl &&
+      (imageUrl.startsWith("http://") || imageUrl.startsWith("https://"))
+    ) {
+      // If already a Cloudinary asset, reuse directly
+      if (imageUrl.includes("res.cloudinary.com")) {
+        return res.json({ success: true, url: imageUrl });
+      }
+
+      const secureUrl = await uploadToCloudinary(
+        imageUrl,
+        "logitrack/products"
+      );
+      return res.json({ success: true, url: secureUrl });
+    }
+
+    return res.status(400).json({
+      success: false,
+      message: "Please upload an image file or provide a valid image URL",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // Create a new product
 exports.createProduct = async (req, res, next) => {
   try {
-    const {
+    let {
       name,
       description,
       price,
       images,
+      image,
+      imageUrl,
       category,
       sku,
       tags,
@@ -25,24 +135,112 @@ exports.createProduct = async (req, res, next) => {
       minStock,
     } = req.body;
 
-    if (!name || price == null) {
+    if (!name || !name.trim()) {
       return res
         .status(400)
-        .json({ success: false, message: "Name and price are required" });
+        .json({ success: false, message: "Product name is required" });
+    }
+
+    if (price == null || isNaN(Number(price)) || Number(price) < 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Valid positive price is required" });
+    }
+
+    // 1. Process Product Images (File or URL via Cloudinary)
+    let finalImages = [];
+
+    if (req.file) {
+      // Local file uploaded directly via multipart
+      const secureUrl = await uploadToCloudinary(
+        req.file.path,
+        "logitrack/products"
+      );
+      finalImages.push(secureUrl);
+    } else {
+      const rawImage =
+        imageUrl ||
+        image ||
+        (Array.isArray(images) && images.length ? images[0] : null);
+
+      if (rawImage && typeof rawImage === "string" && rawImage.trim()) {
+        const trimmedUrl = rawImage.trim();
+        if (
+          trimmedUrl.startsWith("http://") ||
+          trimmedUrl.startsWith("https://")
+        ) {
+          if (trimmedUrl.includes("res.cloudinary.com")) {
+            finalImages.push(trimmedUrl);
+          } else {
+            try {
+              // Upload external URL to Cloudinary
+              const secureUrl = await uploadToCloudinary(
+                trimmedUrl,
+                "logitrack/products"
+              );
+              finalImages.push(secureUrl);
+            } catch (uploadErr) {
+              console.warn(
+                "Cloudinary import from URL failed, using URL fallback:",
+                uploadErr.message
+              );
+              finalImages.push(trimmedUrl);
+            }
+          }
+        } else {
+          finalImages.push(trimmedUrl);
+        }
+      } else {
+        finalImages.push(DEFAULT_PRODUCT_IMAGE);
+      }
+    }
+
+    // 2. Process and Validate SKU
+    let finalSku = sku ? sku.trim() : "";
+    if (finalSku) {
+      const existingSku = await Product.findOne({
+        ownerId: req.user.id,
+        sku: finalSku,
+        isActive: true,
+      });
+
+      if (existingSku) {
+        return res.status(400).json({
+          success: false,
+          message: `SKU '${finalSku}' already exists in your inventory. Please choose a unique SKU.`,
+        });
+      }
+    } else {
+      // Auto-generate a unique SKU
+      let attempts = 0;
+      let isUnique = false;
+      while (!isUnique && attempts < 10) {
+        finalSku = generateSkuString(name);
+        const existing = await Product.findOne({
+          ownerId: req.user.id,
+          sku: finalSku,
+          isActive: true,
+        });
+        if (!existing) {
+          isUnique = true;
+        }
+        attempts++;
+      }
     }
 
     const product = new Product({
-      name,
-      description,
-      price,
-      images,
-      category,
-      sku,
-      tags,
-      stock,
-      minStock,
+      name: name.trim(),
+      description: description ? description.trim() : "",
+      price: Number(price),
+      images: finalImages,
+      category: category || "general",
+      sku: finalSku,
+      tags: Array.isArray(tags) ? tags : [],
+      stock: Number(stock) || 0,
+      minStock: minStock != null ? Number(minStock) : 5,
       ownerId: req.user.id,
     });
+
     await product.save();
 
     await InventoryHistory.create({
@@ -59,11 +257,12 @@ exports.createProduct = async (req, res, next) => {
       recipientRole: "Business Owner",
       type: "product-added",
       title: "Product added",
-      message: `${product.name} was added to your catalog.`,
+      message: `${product.name} was added to your catalog with SKU ${finalSku}.`,
       orderId: null,
       orderCode: null,
       metadata: {
         status: isLowStock(product) ? "low-stock" : "active",
+        sku: finalSku,
       },
     });
 
@@ -83,6 +282,12 @@ exports.createProduct = async (req, res, next) => {
 
     res.status(201).json({ success: true, data: product });
   } catch (err) {
+    if (err.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "Duplicate product attribute detected. Please check SKU.",
+      });
+    }
     next(err);
   }
 };
@@ -136,9 +341,9 @@ exports.getProductById = async (req, res, next) => {
 // Update product
 exports.updateProduct = async (req, res, next) => {
   try {
-    const updates = req.body;
+    const updates = { ...req.body };
     // Prevent setting negative stock
-    if (updates.stock != null && updates.stock < 0) {
+    if (updates.stock != null && Number(updates.stock) < 0) {
       return res
         .status(400)
         .json({ success: false, message: "Stock cannot be negative" });
@@ -152,6 +357,51 @@ exports.updateProduct = async (req, res, next) => {
       return res
         .status(404)
         .json({ success: false, message: "Product not found" });
+
+    // Handle SKU uniqueness if updating SKU
+    if (updates.sku && updates.sku.trim() !== original.sku) {
+      const trimmedSku = updates.sku.trim();
+      const existingSku = await Product.findOne({
+        _id: { $ne: req.params.id },
+        ownerId: req.user.id,
+        sku: trimmedSku,
+        isActive: true,
+      });
+      if (existingSku) {
+        return res.status(400).json({
+          success: false,
+          message: `SKU '${trimmedSku}' already exists in your inventory. Please choose a unique SKU.`,
+        });
+      }
+      updates.sku = trimmedSku;
+    }
+
+    // Handle file upload or image URL
+    if (req.file) {
+      const secureUrl = await uploadToCloudinary(
+        req.file.path,
+        "logitrack/products"
+      );
+      updates.images = [secureUrl];
+    } else if (updates.imageUrl || updates.image) {
+      const rawImage = (updates.imageUrl || updates.image).trim();
+      if (rawImage.startsWith("http://") || rawImage.startsWith("https://")) {
+        if (rawImage.includes("res.cloudinary.com")) {
+          updates.images = [rawImage];
+        } else {
+          try {
+            const secureUrl = await uploadToCloudinary(
+              rawImage,
+              "logitrack/products"
+            );
+            updates.images = [secureUrl];
+          } catch (err) {
+            console.warn("Cloudinary URL import error on update:", err.message);
+            updates.images = [rawImage];
+          }
+        }
+      }
+    }
 
     const product = await Product.findOneAndUpdate(
       { _id: req.params.id, ownerId: req.user.id },

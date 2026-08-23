@@ -1,7 +1,9 @@
 const User = require("../models/User");
 const nodemailer = require("nodemailer");
-
-
+const {
+    buildAccountApprovedEmail,
+    buildAccountRejectedEmail,
+} = require("../utils/emailTemplate");
 
 const transporter = nodemailer.createTransport({
     host: "smtp-relay.brevo.com",
@@ -140,17 +142,23 @@ const approveUser = async (req, res) => {
             ];
         }
 
-        const allReviewed = docs.every(
-            (doc) => doc.status === "approved" || doc.status === "rejected"
-        );
-
-        if (!allReviewed) {
-            return res.status(400).json({
-                message: "Review all documents before approving the user",
-            });
+        if (user.role === "Business Owner" && user.warehouseAddress && (user.warehouseAddress.latitude != null || user.warehouseAddress.fullAddress)) {
+            if (user.warehouseAddress.status === "rejected") {
+                return res.status(400).json({
+                    message: "Cannot approve account: Business location has been rejected. Please resolve location first.",
+                });
+            }
+            if (user.warehouseAddress.status === "pending") {
+                return res.status(400).json({
+                    message: "Please review and accept or reject the business location before approving the user.",
+                });
+            }
         }
 
         user.status = "approved";
+        if (user.warehouseAddress && user.warehouseAddress.status === "approved") {
+            user.warehouseAddress.isVerified = true;
+        }
 
         await user.save();
 
@@ -165,38 +173,7 @@ const approveUser = async (req, res) => {
                 from: "LogiTrack <logitrack862@gmail.com>",
                 to: user.email,
                 subject: "LogiTrack Account Approved",
-                html: `
-                    <div style="font-family: Arial, sans-serif; background:#0b0b0b; color:#ffffff; padding:32px;">
-                        <div style="max-width:560px; margin:0 auto; background:#111111; border:1px solid #27272a; border-radius:24px; padding:32px;">
-                            <h1 style="margin:0 0 16px; font-size:32px;">
-                                Logi<span style="color:#7F1D1D;">Track</span>
-                            </h1>
-            
-                            <h2 style="color:#22c55e;">
-                                Account Approved ✅
-                            </h2>
-            
-                            <p>
-                                Dear ${user.fullName},
-                            </p>
-            
-                            <p>
-                                Your LogiTrack account has been verified and approved by the administrator.
-                            </p>
-            
-                            <p>
-                                You can now log in and access your dashboard.
-                            </p>
-            
-                            <br>
-            
-                            <p>
-                                Regards,<br>
-                                LogiTrack Team
-                            </p>
-                        </div>
-                    </div>
-                `,
+                html: buildAccountApprovedEmail(user),
             });
         } catch (emailError) {
             console.warn("Approval notification email could not be sent:", emailError.message);
@@ -275,114 +252,7 @@ const rejectUser = async (req, res) => {
                 from: "LogiTrack <logitrack862@gmail.com>",
                 to: user.email,
                 subject: "LogiTrack Account Rejected",
-                html: `
-                <div style="font-family: Arial, sans-serif; background:#0b0b0b; color:#ffffff; padding:32px;">
-                    <div style="max-width:560px; margin:0 auto; background:#111111; border:1px solid #27272a; border-radius:24px; padding:32px;">
-                
-                        <h1 style="margin:0 0 16px; font-size:32px;">
-                            Logi<span style="color:#7F1D1D;">Track</span>
-                        </h1>
-                
-                        <h2 style="color:#ef4444;">
-                            Account Rejected ❌
-                        </h2>
-                
-                        <p>Dear ${user.fullName},</p>
-                
-                        <p>
-                            Your registration request has been rejected by the administrator.
-                        </p>
-                
-                        <hr>
-                
-                        <h3>Document Verification Status</h3>
-                
-                        ${user.documents.gstCertificate.path
-                        ?
-                        `
-                            <p>
-                                <b>GST Certificate</b><br>
-                                Status : ${user.documents.gstCertificate.status}<br>
-                                ${user.documents.gstCertificate.status === "rejected"
-                            ? `Reason : ${user.documents.gstCertificate.rejectionReason}`
-                            : ""
-                        }
-                            </p>
-                            `
-                        : ""
-                    }
-                
-                        ${user.documents.shopLicense.path
-                        ?
-                        `
-                            <p>
-                                <b>Shop License</b><br>
-                                Status : ${user.documents.shopLicense.status}<br>
-                                ${user.documents.shopLicense.status === "rejected"
-                            ? `Reason : ${user.documents.shopLicense.rejectionReason}`
-                            : ""
-                        }
-                            </p>
-                            `
-                        : ""
-                    }
-                
-                        ${user.documents.aadhaar.path
-                        ?
-                        `
-                            <p>
-                                <b>Aadhaar Card</b><br>
-                                Status : ${user.documents.aadhaar.status}<br>
-                                ${user.documents.aadhaar.status === "rejected"
-                            ? `Reason : ${user.documents.aadhaar.rejectionReason}`
-                            : ""
-                        }
-                            </p>
-                            `
-                        : ""
-                    }
-                
-                        ${user.documents.drivingLicense.path
-                        ?
-                        `
-                            <p>
-                                <b>Driving License</b><br>
-                                Status : ${user.documents.drivingLicense.status}<br>
-                                ${user.documents.drivingLicense.status === "rejected"
-                            ? `Reason : ${user.documents.drivingLicense.rejectionReason}`
-                            : ""
-                        }
-                            </p>
-                            `
-                        : ""
-                    }
-                
-                        <hr>
-                
-                        <h3 style="color:#ef4444;">
-                            Main Rejection Reason
-                        </h3>
-                
-                        <p>
-                            ${user.applicationRejectionReason}
-                        </p>
-                
-                        <br>
-                
-                        <p>
-                            Please review the rejected documents and register again with corrected information.
-                        </p>
-                
-                        <br>
-                
-                        <p>
-                            Regards,<br>
-                            LogiTrack Team
-                        </p>
-                
-                    </div>
-                </div>
-                `,
+                html: buildAccountRejectedEmail(user, rejectionReason),
             });
         } catch (emailError) {
             console.warn("Rejection notification email could not be sent:", emailError.message);
@@ -481,6 +351,56 @@ const updateDocumentStatus = async (req, res) => {
     }
 };
 
+// APPROVE / REJECT BUSINESS LOCATION INDEPENDENTLY
+const updateLocationStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status, rejectionReason } = req.body;
+
+        if (!["approved", "rejected"].includes(status)) {
+            return res.status(400).json({
+                message: "Invalid status. Must be approved or rejected.",
+            });
+        }
+
+        if (status === "rejected" && (!rejectionReason || !rejectionReason.trim())) {
+            return res.status(400).json({
+                message: "Rejection reason is required when rejecting a location",
+            });
+        }
+
+        const user = await User.findById(id);
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found",
+            });
+        }
+
+        if (!user.warehouseAddress || (!user.warehouseAddress.latitude && !user.warehouseAddress.fullAddress)) {
+            return res.status(400).json({
+                message: "User has no business location record to review",
+            });
+        }
+
+        user.warehouseAddress.status = status;
+        user.warehouseAddress.isVerified = (status === "approved");
+        user.warehouseAddress.rejectionReason = status === "rejected" ? rejectionReason.trim() : "";
+        user.warehouseAddress.verifiedAt = new Date();
+
+        await user.save();
+
+        res.status(200).json({
+            message: `Business location marked as ${status}`,
+            user,
+        });
+    } catch (error) {
+        console.error("Location status update error:", error);
+        res.status(500).json({
+            message: "Failed to update location status",
+        });
+    }
+};
+
 module.exports = {
     getPendingUsers,
     getApprovedUsers,
@@ -488,5 +408,6 @@ module.exports = {
     approveUser,
     rejectUser,
     updateDocumentStatus,
+    updateLocationStatus,
     getDashboardStats,
 };

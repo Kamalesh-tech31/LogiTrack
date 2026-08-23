@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ShoppingCart, Clock, CheckCircle2, Copy, Check, Package, ArrowRight } from "lucide-react";
-import { fetchOrders, fetchProducts } from "@/lib/api";
+import { fetchOrders, fetchProducts, fetchCurrentUser } from "@/lib/api";
+import { HomeAddressPrompt } from "@/components/customer/home-address-prompt";
 
 function formatDisplayId(rawId: string | null | undefined) {
   if (!rawId) return "--";
@@ -20,6 +21,7 @@ function formatDisplayId(rawId: string | null | undefined) {
 }
 
 export default function CustomerDashboard() {
+  const [user, setUser] = useState<any>(null);
   const [orders, setOrders] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
@@ -29,13 +31,15 @@ export default function CustomerDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [ordersData, productsData] = await Promise.all([
+        const [ordersData, productsData, userData] = await Promise.all([
           fetchOrders(),
           fetchProducts(),
+          fetchCurrentUser().catch(() => null),
         ]);
 
         setOrders(Array.isArray(ordersData) ? ordersData : []);
         setProducts(Array.isArray(productsData) ? productsData : []);
+        setUser(userData);
       } catch {
         setOrders([]);
         setProducts([]);
@@ -104,8 +108,8 @@ export default function CustomerDashboard() {
   const recentOrders = useMemo(() => {
     return [...safeOrders]
       .sort((a, b) => {
-        const aDate = new Date(a.date || a.createdAt || a.updatedAt || 0).getTime();
-        const bDate = new Date(b.date || b.createdAt || b.updatedAt || 0).getTime();
+        const aDate = new Date(a.createdAt || a.updatedAt || a.date || 0).getTime();
+        const bDate = new Date(a.createdAt || a.updatedAt || a.date || 0).getTime();
         return bDate - aDate;
       })
       .slice(0, 5);
@@ -125,6 +129,14 @@ export default function CustomerDashboard() {
           Browse new products, check recent orders, and track your deliveries in real time.
         </p>
       </div>
+
+      {/* Optional Home Address Suggestion (Non-blocking) */}
+      {user && (
+        <HomeAddressPrompt
+          user={user}
+          onAddressSaved={(addr) => setUser((prev: any) => ({ ...prev, defaultAddress: addr }))}
+        />
+      )}
 
       {/* 3-Tier Metric Overview Cards */}
       <div className="grid gap-5 sm:grid-cols-3">

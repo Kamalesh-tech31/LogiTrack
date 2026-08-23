@@ -9,6 +9,7 @@ import {
   approveAdminUser,
   rejectAdminUser,
   updateAdminDocumentStatus,
+  updateAdminLocationStatus,
   type AdminUser,
 } from "@/lib/api";
 
@@ -79,6 +80,20 @@ export default function PendingUsersPage() {
     }
   }
 
+  async function handleUpdateLocation(
+    userId: string,
+    status: "approved" | "rejected",
+    reason?: string
+  ) {
+    try {
+      const res = await updateAdminLocationStatus(userId, status, reason);
+      toast.success(res.message || `Business location marked as ${status}.`);
+      loadUsers();
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to update location status.");
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
@@ -139,6 +154,9 @@ export default function PendingUsersPage() {
               onReject={(reason) => handleReject(user._id, reason)}
               onDocumentUpdate={(documentName, status, reason) =>
                 handleUpdateDocument(user._id, documentName, status, reason)
+              }
+              onLocationUpdate={(status, reason) =>
+                handleUpdateLocation(user._id, status, reason)
               }
             />
           ))}

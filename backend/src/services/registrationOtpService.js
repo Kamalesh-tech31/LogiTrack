@@ -43,20 +43,10 @@ function getRegistrationTokenSecret() {
   return secret;
 }
 
+const { buildRegistrationOtpEmail } = require("../utils/emailTemplate");
+
 function buildOtpEmailHtml(otp, expiryMinutes) {
-  return `
-    <div style="font-family: Arial, sans-serif; background:#0b0b0b; color:#ffffff; padding:32px;">
-      <div style="max-width:560px; margin:0 auto; background:#111111; border:1px solid #27272a; border-radius:24px; padding:32px;">
-        <h1 style="margin:0 0 16px; font-size:32px; line-height:1.1;">Logi<span style="color:#7F1D1D;">Track</span></h1>
-        <p style="margin:0 0 24px; color:#d4d4d8; font-size:16px;">Use the OTP below to verify your Gmail address and continue registration.</p>
-        <div style="background:#1a1a1a; border:1px solid #7F1D1D; border-radius:18px; padding:20px; text-align:center; margin:0 0 24px;">
-          <div style="font-size:12px; letter-spacing:0.2em; text-transform:uppercase; color:#a1a1aa; margin-bottom:10px;">One-time passcode</div>
-          <div style="font-size:36px; font-weight:700; letter-spacing:0.3em; color:#ffffff;">${otp}</div>
-        </div>
-        <p style="margin:0; color:#a1a1aa; font-size:14px;">This code expires in ${expiryMinutes} minutes and can be used once.</p>
-      </div>
-    </div>
-  `;
+  return buildRegistrationOtpEmail(otp, expiryMinutes);
 }
 
 async function upsertOtpDocument(email) {
@@ -236,6 +226,10 @@ async function completeRegistration({
   password,
   confirmPassword,
   role,
+  businessName,
+  businessAddress,
+  warehouseAddress,
+  defaultAddress,
   passwordValidator,
   documents,
 }) {
@@ -325,6 +319,10 @@ async function completeRegistration({
     email: normalizedEmail,
     password: hashedPassword,
     role,
+    businessName: businessName || (warehouseAddress?.businessName || ""),
+    businessAddress: businessAddress || (warehouseAddress?.fullAddress || ""),
+    warehouseAddress: warehouseAddress || undefined,
+    defaultAddress: defaultAddress || undefined,
 
     status:
       role === "Customer"
@@ -347,7 +345,7 @@ async function completeRegistration({
       shopLicense: {
         path: documents?.shopLicense || "",
       },
-        },
+    },
   });
 
   
