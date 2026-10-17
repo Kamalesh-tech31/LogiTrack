@@ -1,284 +1,63 @@
-# LogiTrack — Smart Supply Chain & Delivery Management Platform
+# LogiTrack
 
-## 🚀 Project Overview
+A full-stack logistics and supply chain management platform with separate dashboards for business owners, customers, delivery agents and admins.
 
-LogiTrack is a full-stack logistics and delivery management platform designed for small businesses to manage:
+## Features
 
-- 📦 Products & Inventory
-- 🧾 Orders
-- 🚚 Deliveries & Delivery Agents
-- 📊 Business Analytics
-- 👥 Multi-role Authentication
-- 🛒 Customer Ordering System
+- **Role-based access:** four roles, each with its own dashboard (owner, customer, delivery agent, admin)
+- **Owner:** product management (add, edit), inventory and restocking, order management, delivery agent management, analytics and revenue charts
+- **Customer:** browse products, cart and checkout, order history, order tracking on a map, profile and analytics
+- **Delivery agent:** assigned deliveries, bulk and nearby deliveries, route maps, earnings, delivery history
+- **Admin:** review and approve or reject new user registrations
+- **Authentication:** OTP email verification on registration (Brevo SMTP), forgot-password flow, account deletion
+- **Maps and location:** Leaflet maps with OSRM routing, address geocoding with Geoapify
+- **Media:** product image uploads through Cloudinary
 
-The platform provides real-time operational visibility with modern dashboards, scalable backend APIs, and responsive UI experiences.
+## Tech Stack
 
----
+| Layer | Technologies |
+|---|---|
+| Frontend | Next.js, React, TypeScript, Tailwind CSS, shadcn/ui, Leaflet |
+| Backend | Node.js, Express |
+| Database | MongoDB (Mongoose) |
+| Services | Cloudinary, Geoapify, Brevo SMTP |
+| Deployment | Vercel (frontend) |
 
-# 🌟 Features
+## Project Structure
 
-## 👨‍💼 Business Owner Dashboard
-
-### 📦 Product Management
-
-- Add/Edit/Delete products
-- Product image support
-- SKU management
-- Stock quantity management
-- Category filtering
-
-### 📊 Inventory Management
-
-- Low stock alerts
-- Inventory overview
-- Dynamic stock updates
-- Real-time inventory tracking
-
-### 🧾 Order Management
-
-- Incoming customer orders
-- Payment status tracking
-- Order lifecycle management
-- Customer details
-
-### 🚚 Delivery Management
-
-- Assign delivery agents
-- Delivery tracking
-- Delivery status updates
-- Route overview
-
-### 📈 Analytics Dashboard
-
-- Revenue tracking
-- Total orders
-- Sales growth
-- Low stock analytics
-- Delivery statistics
-
----
-
-## 🚚 Delivery Agent Module
-
-- Assigned delivery list
-- Delivery status updates
-- Delivery tracking
-- Mobile responsive UI
-- Earnings simulation
-
----
-
-## 🛒 Customer Module
-
-- Browse products
-- Place orders
-- Order tracking
-- Checkout flow
-- Delivery status monitoring
-
----
-
-# 🧠 AI Features (Planned / Simulated)
-
-- Demand Forecasting
-- Smart Auto-Assign
-- Customer Churn Prediction
-
----
-
-# 🛠 Tech Stack
-
-## Frontend
-
-- Next.js (App Router)
-- TypeScript
-- Tailwind CSS
-- Recharts
-- Lucide React
-
-## Backend
-
-- Node.js
-- Express.js
-- MongoDB Atlas
-- Mongoose
-
-## Database
-
-- MongoDB Atlas
-
----
-
-# 📁 Project Structure
-
-```bash
+```
 LogiTrack/
-│
-├── frontend/
-│   ├── app/
-│   ├── components/
-│   ├── lib/
-│   └── public/
-│
 ├── backend/
-│   ├── src/
-│   │   ├── config/
-│   │   ├── controllers/
-│   │   ├── middleware/
-│   │   ├── models/
-│   │   ├── routes/
-│   │   └── server.js
-│   │
-│   ├── .env
-│   └── package.json
-│
-└── README.md
+│   └── src/
+│       ├── config/        # database, Cloudinary, multer
+│       ├── controllers/   # business logic per feature
+│       ├── middleware/    # auth, validation, errors, CORS
+│       ├── models/        # Mongoose schemas
+│       ├── routes/        # API route definitions
+│       ├── services/      # OTP, geocoding, notifications
+│       └── utils/
+└── frontend/
+    ├── app/               # Next.js routes: admin, owner, customer, delivery
+    ├── components/        # UI components grouped by role
+    └── lib/               # API client, cart, helpers
 ```
 
----
+## Getting Started
 
-# ⚙️ Installation & Setup
+### Prerequisites
+- Node.js 19+
+- A MongoDB database (local or MongoDB Atlas)
 
-## 1️⃣ Clone Repository
-
-```bash
-git clone <your-repo-url>
-cd LogiTrack
-```
-
----
-
-# 🔥 Backend Setup
-
-## Install Dependencies
-
+### Backend
 ```bash
 cd backend
 npm install
-```
-
-## Create `.env`
-
-```env
-PORT=5000
-MONGO_URI=your_mongodb_connection_string
-JWT_SECRET=your_secret_key
-```
-
-## Start Backend Server
-
-```bash
 npm run dev
 ```
 
-Backend runs on:
-
-```bash
-http://localhost:5000
-```
-
----
-
-# 🎨 Frontend Setup
-
-## Install Dependencies
-
+### Frontend
 ```bash
 cd frontend
 npm install
-```
-
-## Start Frontend
-
-```bash
 npm run dev
 ```
-
-Frontend runs on:
-
-```bash
-http://localhost:3000
-```
-
----
-
-# 📡 Backend API Endpoints
-
-## 📦 Products
-
-```http
-GET    /api/products
-POST   /api/products
-PUT    /api/products/:id
-DELETE /api/products/:id
-```
-
----
-
-## 🧾 Orders
-
-```http
-GET    /api/orders
-POST   /api/orders
-PUT    /api/orders/:id/status
-DELETE /api/orders/:id
-```
-
----
-
-## 📊 Inventory
-
-```http
-GET    /api/inventory
-GET    /api/inventory/low-stock
-PUT    /api/inventory/:productId
-```
-
----
-
-## 🚚 Deliveries
-
-```http
-GET    /api/deliveries
-POST   /api/deliveries
-PUT    /api/deliveries/:id
-DELETE /api/deliveries/:id
-```
-
----
-
-## 📈 Analytics
-
-```http
-GET /api/analytics
-```
-
----
-
-# 📈 Current Status
-
-- ✅ Backend APIs completed
-- ✅ MongoDB integration completed
-- ✅ Frontend-backend integration completed
-- ✅ Dynamic dashboards implemented
-- ✅ Inventory management completed
-- ✅ Order management completed
-- ✅ Delivery management completed
-
----
-
-# 🚀 Future Improvements
-
-- Real-time WebSockets
-- AI-powered forecasting
-- Razorpay/Stripe payments
-- Route optimization with Leaflet.js
-- JWT Authentication
-- Role-based authorization
-- Notification system
-
----
-
-# 📄 License
-
-This project is developed for **DevFusion Hackathon 2.0**.

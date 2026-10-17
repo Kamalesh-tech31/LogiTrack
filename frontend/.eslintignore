@@ -1,0 +1,12 @@
+node_modules
+.next
+out
+build
+dist
+package-lock.json
+**/package-lock.json
+backend
+data
+public
+README.md
+components.json
