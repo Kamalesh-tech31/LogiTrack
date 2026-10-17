@@ -45,14 +45,13 @@ LogiTrack/
 ## Getting Started
 
 ### Prerequisites
-- Node.js 18+
+- Node.js 19+
 - A MongoDB database (local or MongoDB Atlas)
 
 ### Backend
 ```bash
 cd backend
 npm install
-cp .env.example .env    # then fill in your own values
 npm run dev
 ```
 
