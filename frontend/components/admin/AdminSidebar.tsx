@@ -44,8 +44,13 @@ export default function AdminSidebar({ onLogout }: AdminSidebarProps) {
     if (onLogout) {
       onLogout();
     } else {
-      sessionStorage.removeItem("admin_auth");
-      window.location.href = "/admin";
+      localStorage.removeItem("token");
+      localStorage.removeItem("role");
+      localStorage.removeItem("user");
+      localStorage.removeItem("userId");
+      localStorage.removeItem("userName");
+      localStorage.removeItem("userEmail");
+      window.location.href = "/";
     }
   };
 

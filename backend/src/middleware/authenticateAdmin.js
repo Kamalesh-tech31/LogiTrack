@@ -1,27 +1,71 @@
+const jwt = require("jsonwebtoken");
+const User = require("../models/User");
+
 /**
  * Admin authorization middleware.
- * Verifies admin access via x-admin-key header or Authorization Bearer header.
- * For hackathon purposes, accepts 'aswinabi1' as the admin gate key.
+ * Verifies admin access via Authorization Bearer token (JWT).
+ * Requires valid signature, active approved user in database, and role === "Admin".
  */
-const authenticateAdmin = (req, res, next) => {
+const authenticateAdmin = async (req, res, next) => {
   try {
-    const adminKey =
-      req.headers["x-admin-key"] ||
-      (req.headers["authorization"] &&
-        req.headers["authorization"].replace(/^Bearer\s+/i, "").trim());
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
 
-    if (adminKey === "aswinabi1") {
-      return next();
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Admin authorization token required. Access denied.",
+      });
     }
 
-    return res.status(401).json({
-      success: false,
-      message: "Admin authorization required. Access denied.",
-    });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded?.id || decoded?._id || decoded?.userId;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid token payload.",
+      });
+    }
+
+    const user = await User.findById(userId).select("-password");
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    if (user.isActive === false) {
+      return res.status(401).json({
+        success: false,
+        message: "Account has been deleted.",
+      });
+    }
+
+    if (user.role !== "Admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: Admin access required.",
+      });
+    }
+
+    if (user.status !== "approved") {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: Admin account is not approved.",
+      });
+    }
+
+    req.user = user;
+    req.user.id = user._id.toString();
+
+    next();
   } catch (error) {
     return res.status(401).json({
       success: false,
-      message: "Admin authorization failed.",
+      message: "Admin authorization failed or token expired.",
     });
   }
 };

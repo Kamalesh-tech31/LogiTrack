@@ -92,8 +92,6 @@ function getApiBaseUrl() {
 async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const token =
     typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  const adminKey =
-    typeof window !== "undefined" ? sessionStorage.getItem("admin_auth") : null;
 
   const isFormData =
     typeof FormData !== "undefined" && init?.body instanceof FormData;
@@ -101,7 +99,6 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const headers: Record<string, string> = {
     ...(isFormData ? {} : { "Content-Type": "application/json" }),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...(adminKey ? { "x-admin-key": adminKey } : {}),
     ...((init?.headers as Record<string, string>) || {}),
   };
 
@@ -111,6 +108,17 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
+    if (response.status === 401 && path.startsWith("/api/admin")) {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("token");
+        localStorage.removeItem("role");
+        localStorage.removeItem("user");
+        localStorage.removeItem("userId");
+        localStorage.removeItem("userName");
+        localStorage.removeItem("userEmail");
+        window.location.href = "/register";
+      }
+    }
     let errorBody: any = null;
     try {
       errorBody = await response.json();
@@ -205,16 +213,27 @@ export async function requestRegistrationOtp(email: string): Promise<{
   });
 }
 
+export interface VerifyRegistrationOtpResponse {
+  email?: string;
+  registrationToken?: string;
+  isAdmin?: boolean;
+  token?: string;
+  adminToken?: string;
+  role?: string;
+  user?: any;
+  message?: string;
+}
+
 export async function verifyRegistrationOtp(
   payloadOrEmail: { email: string; otp: string } | string,
   otpCode?: string,
-): Promise<{ email: string; registrationToken: string }> {
+): Promise<VerifyRegistrationOtpResponse> {
   const payload =
     typeof payloadOrEmail === "string"
       ? { email: payloadOrEmail.trim().toLowerCase(), otp: (otpCode || "").trim() }
       : { email: payloadOrEmail.email.trim().toLowerCase(), otp: payloadOrEmail.otp.trim() };
 
-  return apiRequest<{ email: string; registrationToken: string }>(
+  return apiRequest<VerifyRegistrationOtpResponse>(
     "/api/auth/register/verify-otp",
     {
       method: "POST",
@@ -239,9 +258,10 @@ export async function completeRegistration(
 
   let body: any = payload;
   if (!isFormData && typeof payload === "object" && payload !== null) {
+    const dataObj = payload as Record<string, any>;
     body = JSON.stringify({
-      ...payload,
-      confirmPassword: payload.confirmPassword || payload.password,
+      ...dataObj,
+      confirmPassword: dataObj.confirmPassword || dataObj.password,
     });
   }
 
@@ -816,3 +836,17 @@ export async function updateAdminLocationStatus(
   });
 }
 
+
+export async function fetchAdminMe(): Promise<{
+  id: string;
+  email: string;
+  role: string;
+  fullName?: string;
+}> {
+  return apiRequest<{
+    id: string;
+    email: string;
+    role: string;
+    fullName?: string;
+  }>("/api/admin/me");
+}

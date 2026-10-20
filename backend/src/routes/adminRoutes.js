@@ -2,6 +2,7 @@ const express = require("express");
 const authenticateAdmin = require("../middleware/authenticateAdmin");
 
 const {
+    getAdminMe,
     getPendingUsers,
     getApprovedUsers,
     getRejectedUsers,
@@ -16,6 +17,8 @@ const router = express.Router();
 
 // Protect all admin routes with admin authorization
 router.use(authenticateAdmin);
+
+router.get("/me", getAdminMe);
 
 router.get("/pending", getPendingUsers);
 
