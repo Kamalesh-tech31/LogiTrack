@@ -4,20 +4,15 @@ import React from "react";
 import Link from "next/link";
 import {
   ArrowRight,
-  ShieldCheck,
   Truck,
   MapPin,
   Package,
-  Activity,
   Layers,
   FileCheck2,
   KeyRound,
   BarChart3,
   CheckCircle2,
-  ChevronRight,
-  Sparkles,
   Zap,
-  Radio,
 } from "lucide-react";
 import { VehicleAnimation } from "@/components/landing/VehicleAnimation";
 
@@ -44,19 +39,6 @@ export default function LandingPage() {
               Logi<span className="text-[#F97316]">Track</span>
             </span>
           </Link>
-
-          {/* Navigation Links */}
-          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-[#A1A1AA]">
-            <a href="#roles" className="hover:text-white transition-colors">
-              Role Portals
-            </a>
-            <a href="#telemetry" className="hover:text-white transition-colors">
-              Live Telemetry
-            </a>
-            <a href="#capabilities" className="hover:text-white transition-colors">
-              Capabilities
-            </a>
-          </nav>
 
           {/* Action CTAs */}
           <div className="flex items-center gap-4">
@@ -92,17 +74,6 @@ export default function LandingPage() {
 
         {/* Hero Content Container (Undisputed Central Safe Zone) */}
         <div className="relative z-10 mx-auto max-w-4xl text-center space-y-10 sm:space-y-12 my-auto">
-          {/* Overline Release Badge */}
-          <div>
-            <div className="inline-flex items-center gap-2.5 rounded-full border border-[#2A2B30] bg-[#1A1B1E]/95 px-5 py-2.5 text-xs font-semibold text-[#FDBA74] backdrop-blur-md shadow-md">
-              <span className="flex h-2 w-2 rounded-full bg-[#F97316] animate-pulse" />
-              <span>LogiTrack 2.0 • Autonomous Fleet Orchestration</span>
-              <span className="text-[#A1A1AA]">|</span>
-              <a href="#roles" className="text-[#A1A1AA] hover:text-white flex items-center gap-1 cursor-pointer">
-                Explore Roles <ChevronRight size={12} />
-              </a>
-            </div>
-          </div>
 
           {/* Main H1 Headline with generous line-height and letter-spacing */}
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white leading-[1.16]">
@@ -115,7 +86,7 @@ export default function LandingPage() {
           {/* Subtitle with increased breathing space */}
           <p className="mx-auto max-w-2xl text-base sm:text-lg text-[#A1A1AA] leading-relaxed mt-2">
             Unify real-time GPS telemetry, inventory intelligence, and OTP-verified
-            dispatching in one high-velocity operating system built for modern commerce.
+            dispatching in one system built for modern commerce.
           </p>
 
           {/* Dual Call-To-Action Buttons */}
@@ -133,75 +104,14 @@ export default function LandingPage() {
               className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-[#1A1B1E] hover:bg-[#111214] border border-[#2A2B30] hover:border-[#F97316]/50 px-9 py-4.5 text-base font-semibold text-[#F4F4F5] hover:text-white transition-all cursor-pointer"
             >
               <Zap size={18} className="text-[#F97316]" />
-              <span>Explore Live Portals</span>
+              <span>See How It Works</span>
             </Link>
           </div>
         </div>
       </section>
 
       {/* ---------------------------------------------------- */}
-      {/* 3. LIVE DEMO TELEMETRY & STATS TICKER                */}
-      {/* ---------------------------------------------------- */}
-      <section id="telemetry" className="relative z-20 border-y border-[#2A2B30] bg-[#1A1B1E]/70 backdrop-blur-md py-12 px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          {/* Visual Framing Micro-Label */}
-          <div className="flex items-center justify-between mb-8 pb-4 border-b border-[#2A2B30]/60">
-            <div className="flex items-center gap-3">
-              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#F97316]/20 text-[#F97316]">
-                <Radio size={14} className="animate-pulse" />
-              </div>
-              <span className="text-xs font-mono uppercase tracking-widest text-[#FDBA74]">
-                LIVE DEMO TELEMETRY • REAL-TIME FLEET SIMULATION
-              </span>
-            </div>
-            <span className="text-xs font-mono text-[#A1A1AA] hidden sm:inline-block">
-              NODE SYNC: ACTIVE (STABLE)
-            </span>
-          </div>
-
-          {/* Telemetry Stat Tiles */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="rounded-3xl border border-[#2A2B30] bg-[#111214] p-6 shadow-sm hover:border-[#F97316]/40 transition-colors">
-              <p className="text-xs uppercase tracking-wider text-[#A1A1AA] font-mono">Fulfillment Rate</p>
-              <p className="mt-2 text-4xl font-extrabold text-white">99.8%</p>
-              <div className="mt-2 flex items-center gap-2 text-xs text-[#22C55E]">
-                <Activity size={14} />
-                <span>+2.4% over benchmark</span>
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-[#2A2B30] bg-[#111214] p-6 shadow-sm hover:border-[#F97316]/40 transition-colors">
-              <p className="text-xs uppercase tracking-wider text-[#A1A1AA] font-mono">Dispatch Latency</p>
-              <p className="mt-2 text-4xl font-extrabold text-[#F97316]">&lt; 4.2 min</p>
-              <div className="mt-2 flex items-center gap-2 text-xs text-[#A1A1AA]">
-                <Zap size={14} className="text-[#F97316]" />
-                <span>Sub-second GPS ping</span>
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-[#2A2B30] bg-[#111214] p-6 shadow-sm hover:border-[#F97316]/40 transition-colors">
-              <p className="text-xs uppercase tracking-wider text-[#A1A1AA] font-mono">Verified Drivers</p>
-              <p className="mt-2 text-4xl font-extrabold text-white">100% KYC</p>
-              <div className="mt-2 flex items-center gap-2 text-xs text-[#FDBA74]">
-                <ShieldCheck size={14} />
-                <span>Cloudinary doc-verified</span>
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-[#2A2B30] bg-[#111214] p-6 shadow-sm hover:border-[#F97316]/40 transition-colors">
-              <p className="text-xs uppercase tracking-wider text-[#A1A1AA] font-mono">Delivery Assurance</p>
-              <p className="mt-2 text-4xl font-extrabold text-white">6-Digit OTP</p>
-              <div className="mt-2 flex items-center gap-2 text-xs text-[#22C55E]">
-                <CheckCircle2 size={14} />
-                <span>Zero-loss package handover</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ---------------------------------------------------- */}
-      {/* 4. BALANCED THREE-WAY ROLE EXPERIENCE MATRIX          */}
+      {/* 3. BALANCED THREE-WAY ROLE EXPERIENCE MATRIX          */}
       {/* ---------------------------------------------------- */}
       <section id="roles" className="py-24 px-6 lg:px-8 relative z-10">
         <div className="mx-auto max-w-7xl">
@@ -361,7 +271,7 @@ export default function LandingPage() {
       </section>
 
       {/* ---------------------------------------------------- */}
-      {/* 5. DEEP PLATFORM CAPABILITIES                         */}
+      {/* 4. DEEP PLATFORM CAPABILITIES                         */}
       {/* ---------------------------------------------------- */}
       <section id="capabilities" className="py-24 px-6 lg:px-8 border-t border-[#2A2B30] bg-[#111214]/90 relative z-10">
         <div className="mx-auto max-w-7xl">
@@ -450,55 +360,10 @@ export default function LandingPage() {
       </section>
 
       {/* ---------------------------------------------------- */}
-      {/* 6. BOTTOM CONVERSION CTA BANNER                       */}
-      {/* ---------------------------------------------------- */}
-      <section className="py-20 px-6 lg:px-8 relative overflow-hidden z-10">
-        <div className="mx-auto max-w-7xl">
-          <div className="relative rounded-[2.5rem] border border-[#2A2B30] bg-gradient-to-b from-[#1A1B1E] to-[#111214] p-10 sm:p-16 text-center overflow-hidden shadow-2xl">
-            {/* Background Orange Radial Glow */}
-            <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-[#F97316]/20 rounded-full blur-[110px]" />
-
-            <div className="relative z-10 max-w-3xl mx-auto space-y-6">
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#F97316]/30 bg-[#F97316]/10 px-4 py-1.5 text-xs font-semibold text-[#FDBA74]">
-                <Sparkles size={14} />
-                <span>Ready to Modernize Your Fleet?</span>
-              </span>
-
-              <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
-                Launch Your Logistics Engine in Minutes
-              </h2>
-
-              <p className="text-base sm:text-lg text-[#A1A1AA]">
-                Join verified business owners and delivery agents across the country.
-                No complex setup, zero hardware requirements.
-              </p>
-
-              <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
-                <Link
-                  href="/register"
-                  className="w-full sm:w-auto flex items-center justify-center gap-3 rounded-2xl bg-[#F97316] hover:bg-[#EA580C] px-8 py-4 text-base font-bold text-white shadow-[0_0_25px_rgba(249,115,22,0.4)] transition-all cursor-pointer hover:shadow-[0_0_35px_rgba(249,115,22,0.6)] active:scale-[0.98]"
-                >
-                  <span>Create Free Account</span>
-                  <ArrowRight size={18} />
-                </Link>
-
-                <Link
-                  href="/login"
-                  className="w-full sm:w-auto rounded-2xl bg-[#111214] border border-[#2A2B30] hover:border-[#F97316]/50 px-8 py-4 text-base font-semibold text-[#F4F4F5] hover:text-white transition-all cursor-pointer"
-                >
-                  Sign In to Existing Portal
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ---------------------------------------------------- */}
-      {/* 7. GLOBAL FOOTER                                      */}
+      {/* 5. GLOBAL FOOTER                                      */}
       {/* ---------------------------------------------------- */}
       <footer className="border-t border-[#2A2B30] bg-[#111214] py-12 px-6 lg:px-8 text-sm text-[#A1A1AA] relative z-10">
-        <div className="mx-auto max-w-7xl flex flex-col md:flex-row items-center justify-between gap-6">
+         <div className="mx-auto max-w-7xl flex flex-col items-center justify-center gap-6 text-center">
           <div className="flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#1A1B1E] border border-[#2A2B30] text-[#F97316]">
               <Truck size={16} />
@@ -508,28 +373,6 @@ export default function LandingPage() {
             </span>
             <span className="text-xs text-[#A1A1AA]/60 ml-2">
               © {new Date().getFullYear()} LogiTrack Inc. All rights reserved.
-            </span>
-          </div>
-
-          <div className="flex items-center gap-6 text-xs">
-            <Link href="/login" className="hover:text-white transition-colors">
-              Owner Portal
-            </Link>
-            <Link href="/login" className="hover:text-white transition-colors">
-              Agent Portal
-            </Link>
-            <Link href="/login" className="hover:text-white transition-colors">
-              Customer Portal
-            </Link>
-            <Link href="/admin" className="hover:text-[#F97316] transition-colors">
-              Admin Gateway
-            </Link>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-[#22C55E] animate-pulse" />
-            <span className="text-xs font-mono text-[#A1A1AA]">
-              ALL SYSTEMS OPERATIONAL
             </span>
           </div>
         </div>
