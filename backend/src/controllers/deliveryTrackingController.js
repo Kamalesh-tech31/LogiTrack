@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 const Order = require("../models/Order");
-const CustomerOrder = require("../models/CustomerOrder");
+
 const DeliveryTracking = require("../models/DeliveryTracking");
 const User = require("../models/User");
 const LocationUpdate = require("../models/LocationUpdate");
@@ -8,38 +8,28 @@ const LocationUpdate = require("../models/LocationUpdate");
 const resolveOrder = async (orderIdParam) => {
   if (!orderIdParam) return null;
 
+  const cleanId = String(orderIdParam)
+    .replace(/^(deliv_|track_)/, "")
+    .replace(/^#/, "")
+    .trim();
+
+  if (!cleanId) return null;
+
   // 1. Try Order by ObjectId
-  if (mongoose.Types.ObjectId.isValid(orderIdParam)) {
-    const order = await Order.findById(orderIdParam)
+  if (mongoose.Types.ObjectId.isValid(cleanId)) {
+    const order = await Order.findById(cleanId)
       .populate("customerId", "fullName email phone phoneNumber")
       .populate("assignedAgent", "fullName email phone phoneNumber role")
       .populate("ownerId", "fullName businessName warehouseAddress businessAddress phone");
     if (order) return { order, model: "Order" };
   }
 
-  // 2. Try Order by orderId string (e.g. "ORD-12345678" or suffix)
-  let order = await Order.findOne({ orderId: orderIdParam })
+  // 2. Try Order by exact orderId string
+  const order = await Order.findOne({ orderId: cleanId })
     .populate("customerId", "fullName email phone phoneNumber")
     .populate("assignedAgent", "fullName email phone phoneNumber role")
     .populate("ownerId", "fullName businessName warehouseAddress businessAddress phone");
   if (order) return { order, model: "Order" };
-
-  // 3. Try Order by regex on orderId
-  order = await Order.findOne({
-    orderId: { $regex: new RegExp(orderIdParam.replace("#", ""), "i") },
-  })
-    .populate("customerId", "fullName email phone phoneNumber")
-    .populate("assignedAgent", "fullName email phone phoneNumber role")
-    .populate("ownerId", "fullName businessName warehouseAddress businessAddress phone");
-  if (order) return { order, model: "Order" };
-
-  // 4. Try legacy CustomerOrder
-  if (mongoose.Types.ObjectId.isValid(orderIdParam)) {
-    const legacy = await CustomerOrder.findById(orderIdParam);
-    if (legacy) return { order: legacy, model: "CustomerOrder" };
-  }
-  const legacy = await CustomerOrder.findOne({ orderId: orderIdParam });
-  if (legacy) return { order: legacy, model: "CustomerOrder" };
 
   return null;
 };
@@ -64,6 +54,25 @@ exports.getDeliveryByOrderId = async (req, res) => {
     }
 
     const { order } = resolved;
+    const userId = String(req.user?.id || req.user?._id || "");
+
+    const customerId = order.customerId?._id
+      ? String(order.customerId._id)
+      : String(order.customerId || "");
+    const ownerId = order.ownerId?._id
+      ? String(order.ownerId._id)
+      : String(order.ownerId || "");
+    const assignedAgentId = order.assignedAgent?._id
+      ? String(order.assignedAgent._id)
+      : String(order.assignedAgent || "");
+
+    const isCustomer = Boolean(customerId && customerId === userId);
+    const isOwner = Boolean(ownerId && ownerId === userId);
+    const isAssignedAgent = Boolean(assignedAgentId && assignedAgentId === userId);
+
+    if (!isCustomer && !isOwner && !isAssignedAgent) {
+      return res.status(404).json({ message: "Order not found" });
+    }
 
     // UNCLAIMED ORDER: Customer sees standby state without fake map or fake route
     if (!order.assignedAgent || order.status === "pending" || order.deliveryStage === "UNCLAIMED") {
