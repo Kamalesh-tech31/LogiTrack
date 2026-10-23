@@ -14,11 +14,10 @@ router.post(
   orderController.getAddressSuggestionsController,
 );
 
-router.post("/", orderController.createOrder);
+router.post("/", authenticateToken, orderController.createOrder);
 router.get("/", authenticateToken, orderController.getOrders);
 router.get("/business", authenticateToken, orderController.getBusinessOrders);
 router.get("/:id", authenticateToken, orderController.getOrderById);
-router.put("/:id", orderController.updateOrderStatus);
-router.delete("/:id", orderController.deleteOrder);
+router.delete("/:id", authenticateToken, orderController.deleteOrder);
 
 module.exports = router;

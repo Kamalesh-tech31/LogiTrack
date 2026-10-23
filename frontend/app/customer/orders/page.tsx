@@ -256,7 +256,7 @@ export default function OrdersPage() {
                     rawStatus === "delivered" || rawStatus === "completed";
                   const isShipped = rawStatus === "shipped";
                   const canCancel =
-                    rawStatus === "pending" || rawStatus === "processing";
+                    rawStatus === "pending";
 
                   return (
                     <tr
