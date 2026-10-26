@@ -3,6 +3,7 @@ const Order = require("../models/Order");
 const Product = require("../models/product");
 const User = require("../models/User");
 const { createOrderEventNotifications } = require("../services/notificationService");
+const { isBusinessOwner } = require("../services/deliveryOtpService");
 const { geocodeAddress, getAddressSuggestions } = require("../services/geocodingService");
 const fs = require("fs");
 const path = require("path");
@@ -243,7 +244,7 @@ exports.getOrders = async (req, res, next) => {
 
     if (role === "Customer") {
       filter.customerId = userId;
-    } else if (role === "Business Owner" || role === "Owner") {
+    } else if (isBusinessOwner(req.user)) {
       filter.ownerId = userId;
     } else if (role === "Delivery Agent") {
       filter.$or = [

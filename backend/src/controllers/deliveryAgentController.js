@@ -1,9 +1,13 @@
 const DeliveryAgent = require("../models/DeliveryAgent");
 const User = require("../models/User");
 const { createRoleNotification } = require("../services/notificationService");
+const { isBusinessOwner } = require("../services/deliveryOtpService");
 
 const getAllDeliveryAgents = async (req, res, next) => {
   try {
+    if (!isBusinessOwner(req.user)) {
+      return res.status(403).json({ success: false, message: "Access denied" });
+    }
     const userAgents = await User.find({ role: "Delivery Agent" }).lean();
     const formattedUserAgents = userAgents.map((user) => ({
       _id: user._id,
@@ -39,6 +43,9 @@ const getDeliveryAgentById = async (req, res, next) => {
 
 const createDeliveryAgent = async (req, res, next) => {
   try {
+    if (!isBusinessOwner(req.user)) {
+      return res.status(403).json({ success: false, message: "Access denied" });
+    }
     const { name, contact, vehicle, isAvailable = true } = req.body;
 
     if (!name || !contact) {
@@ -55,7 +62,7 @@ const createDeliveryAgent = async (req, res, next) => {
       isAvailable: Boolean(isAvailable),
     });
 
-    if (req.user?.role === "Business Owner") {
+    if (isBusinessOwner(req.user)) {
       await createRoleNotification({
         recipient: req.user.id,
         recipientRole: "Business Owner",

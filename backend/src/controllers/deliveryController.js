@@ -12,7 +12,7 @@ const {
   computeRouteSequenceRoad,
 } = require("../utils/geo");
 const deliveryOtpService = require("../services/deliveryOtpService");
-const { isDeliveryAgent } = deliveryOtpService;
+const { isDeliveryAgent, isBusinessOwner } = deliveryOtpService;
 const {
   createOrderEventNotifications,
   createNotificationForRecipients,
@@ -212,6 +212,7 @@ const getAllDeliveries = async (req, res, next) => {
   try {
     const user = req.user;
     const { owner, mine, status } = req.query;
+    if (!user) return res.status(401).json({ message: "Unauthorized" });
 
     const filter = {};
     const terminalStatuses = [
@@ -228,7 +229,9 @@ const getAllDeliveries = async (req, res, next) => {
     }
 
     if (owner === "true") {
-      if (!user) return res.status(401).json({ message: "Unauthorized" });
+      if (!isBusinessOwner(user)) {
+        return res.status(403).json({ success: false, message: "Access denied" });
+      }
       const userId = user._id || user.id;
       filter.ownerId = userId;
     } else if (user && isDeliveryAgent(user)) {
@@ -239,13 +242,20 @@ const getAllDeliveries = async (req, res, next) => {
         { assignedAgent: null },
       ];
     } else if (mine === "true") {
-      if (!user) return res.status(401).json({ message: "Unauthorized" });
+      if (!isDeliveryAgent(user)) {
+        return res.status(403).json({ success: false, message: "Access denied" });
+      }
       const userId = user._id || user.id;
       filter.$or = [
         { assignedAgent: userId },
         { assignedAgent: { $exists: false } },
         { assignedAgent: null },
       ];
+    } else if (user && isBusinessOwner(user)) {
+      const userId = user._id || user.id;
+      filter.ownerId = userId;
+    } else {
+      return res.status(403).json({ success: false, message: "Access denied" });
     }
 
     const orders = await Order.find(filter)
@@ -264,7 +274,20 @@ const getAllDeliveries = async (req, res, next) => {
 // GET /api/deliveries/agent/:agentId/availability
 const checkAgentAvailability = async (req, res, next) => {
   try {
+    const user = req.user;
+    if (!user) return res.status(401).json({ message: "Unauthorized" });
+
+    const userId = user._id || user.id;
     const { agentId } = req.params;
+
+    if (isDeliveryAgent(user)) {
+      if (String(userId) !== String(agentId)) {
+        return res.status(403).json({ success: false, message: "Access denied" });
+      }
+    } else if (!isBusinessOwner(user)) {
+      return res.status(403).json({ success: false, message: "Access denied" });
+    }
+
     const agent = await User.findById(agentId);
     if (!agent || agent.role !== "Delivery Agent") {
       return res.status(404).json({ message: "Agent not found" });
@@ -705,7 +728,7 @@ const assignOrder = async (req, res, next) => {
     if (!order) return res.status(404).json({ message: "Order not found" });
 
     const userId = user._id || user.id;
-    if (String(order.ownerId) !== String(userId) && user.role !== "Owner") {
+    if (!isBusinessOwner(user) || String(order.ownerId) !== String(userId)) {
       return res
         .status(403)
         .json({ message: "Not authorized to assign this order" });
@@ -831,21 +854,48 @@ const acceptOrder = async (req, res, next) => {
       }
     }
 
-    if (
-      !order.assignedAgent ||
-      String(order.assignedAgent._id || order.assignedAgent) !== String(userId)
-    ) {
-      order.assignedAgent = userId;
+    if (terminalStatuses.includes(order.status)) {
+      return res.status(400).json({
+        message: `Cannot accept an order in '${order.status}' status`,
+      });
     }
 
-    order.status = "shipped";
-    order.shippedAt = new Date();
-    await order.save();
+    if (
+      order.assignedAgent &&
+      String(order.assignedAgent._id || order.assignedAgent) !== String(userId)
+    ) {
+      return res.status(409).json({
+        message: "Order has already been claimed or assigned to another agent",
+      });
+    }
+
+    const updatedOrder = await Order.findOneAndUpdate(
+      {
+        _id: order._id,
+        $or: [{ assignedAgent: null }, { assignedAgent: userId }],
+        status: { $nin: terminalStatuses },
+      },
+      {
+        $set: {
+          assignedAgent: userId,
+          status: "shipped",
+          shippedAt: new Date(),
+        },
+      },
+      { new: true }
+    );
+
+    if (!updatedOrder) {
+      return res.status(409).json({
+        success: false,
+        message: "Order has already been claimed or assigned to another agent",
+      });
+    }
 
     await User.findByIdAndUpdate(userId, { agentStatus: "on-delivery" });
-    await createOrderEventNotifications(order, "shipped");
+    await createOrderEventNotifications(updatedOrder, "shipped");
 
-    const populated = await Order.findById(order._id)
+    const populated = await Order.findById(updatedOrder._id)
       .populate("customerId", "fullName email phone phoneNumber")
       .populate("assignedAgent", "fullName email role")
       .populate("items.product", "name");
@@ -863,7 +913,7 @@ const acceptOrder = async (req, res, next) => {
 const addOrderToBatch = async (req, res, next) => {
   try {
     const user = req.user;
-    if (!user || user.role !== "Delivery Agent") {
+    if (!user || !isDeliveryAgent(user)) {
       return res
         .status(403)
         .json({ message: "Only delivery agents can batch orders" });
@@ -1253,10 +1303,13 @@ const bulkClaimOrders = async (req, res, next) => {
   }
 };
 
-// PATCH /api/deliveries/:id/status - update status (owner or agent)
+// PATCH /api/deliveries/:id/status - update status (assigned agent only)
 const updateDeliveryStatus = async (req, res, next) => {
   try {
     const user = req.user;
+    if (!user || !isDeliveryAgent(user)) {
+      return res.status(403).json({ success: false, message: "Access denied" });
+    }
     const { id } = req.params;
     const { status, otp, completionPhoto } = req.body;
 
@@ -1270,17 +1323,20 @@ const updateDeliveryStatus = async (req, res, next) => {
     }
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    const userId = user ? user._id || user.id : null;
+    const userId = user._id || user.id;
 
-    if (
-      order.assignedAgent &&
-      userId &&
-      String(order.assignedAgent) !== String(userId)
-    ) {
-      if (!user || user.role !== "Owner")
-        return res
-          .status(403)
-          .json({ message: "Not authorized to update this order" });
+    if (!order.assignedAgent) {
+      return res.status(400).json({
+        success: false,
+        message: "Order is not assigned yet. Orders must be claimed or accepted before updating status.",
+      });
+    }
+
+    if (String(order.assignedAgent) !== String(userId)) {
+      return res.status(409).json({
+        success: false,
+        message: "Order is assigned to another delivery agent.",
+      });
     }
 
     const allowed = [
@@ -1361,6 +1417,9 @@ const updateDeliveryStatus = async (req, res, next) => {
 const getActiveDeliveries = async (req, res, next) => {
   try {
     const user = req.user;
+    if (!user || !isDeliveryAgent(user)) {
+      return res.status(403).json({ success: false, message: "Access denied" });
+    }
     const agentId = user && (user._id || user.id);
     const filter = {
       status: { $in: ["assigned", "shipped", "out-for-delivery"] },
@@ -1382,6 +1441,9 @@ const getActiveDeliveries = async (req, res, next) => {
 const getHistoryDeliveries = async (req, res, next) => {
   try {
     const user = req.user;
+    if (!user || !isDeliveryAgent(user)) {
+      return res.status(403).json({ success: false, message: "Access denied" });
+    }
     const agentId = req.user?.id || req.user?._id;
     if (!agentId) return res.status(401).json({ message: "Unauthorized" });
 
@@ -1426,6 +1488,12 @@ const getDashboard = async (req, res, next) => {
       activeFilter.$or = [{ assignedAgent: agentId }, { claimedBy: agentId }];
       completedFilter.$or = [{ assignedAgent: agentId }, { claimedBy: agentId }];
       followUpFilter.$or = [{ assignedAgent: agentId }, { claimedBy: agentId }];
+    } else if (user && isBusinessOwner(user) && agentId) {
+      activeFilter.ownerId = agentId;
+      completedFilter.ownerId = agentId;
+      followUpFilter.ownerId = agentId;
+    } else {
+      return res.status(403).json({ success: false, message: "Access denied" });
     }
 
     const activeDeliveriesCount = await Order.countDocuments(activeFilter);
@@ -1488,6 +1556,10 @@ const getDashboard = async (req, res, next) => {
 
 const getEarnings = async (req, res, next) => {
   try {
+    const user = req.user;
+    if (!user || !isDeliveryAgent(user)) {
+      return res.status(403).json({ success: false, message: "Access denied" });
+    }
     const agentId = req.user?._id || req.user?.id;
     if (!agentId) return res.status(401).json({ message: "Unauthorized" });
     const deliveries = await Order.find({

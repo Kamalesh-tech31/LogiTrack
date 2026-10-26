@@ -12,6 +12,10 @@ const DELIVERY_OTP_EXPIRY_MINUTES = Number(
 const OTP_RESEND_COOLDOWN_SECONDS = 30;
 const MAX_OTP_ATTEMPTS = 5;
 
+function isBusinessOwner(user) {
+  return Boolean(user && user.role === "Business Owner");
+}
+
 function isDeliveryAgent(user) {
   if (!user) return false;
   const role = String(
@@ -496,6 +500,7 @@ async function verifyDeliveryOtp(orderId, otp, deliveryAgentUser) {
 }
 
 module.exports = {
+  isBusinessOwner,
   isDeliveryAgent,
   generateDeliveryOtp,
   verifyDeliveryOtp,
