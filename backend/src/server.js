@@ -112,71 +112,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/location-updates", locationRoutes);
 app.use("/api/admin", adminRoutes);
 
-/* =========================
-   Test/Seed Routes (for development)
-========================= */
-app.post("/api/test/seed-order", async (req, res) => {
-  try {
-    const CustomerOrder = require("./models/CustomerOrder");
-    const DeliveryTracking = require("./models/DeliveryTracking");
 
-    // Create a sample customer order
-    const order = await CustomerOrder.create({
-      orderId: `ORD-${Date.now()}`,
-      customerName: "bad Customer",
-      status: "shipped",
-      amount: 599,
-      date: new Date(),
-      items: [],
-      shippingAddress: {
-        street: "123 Main Street",
-        city: "Chennai",
-        state: "Tamil Nadu",
-        postalCode: "600001",
-        country: "India",
-      },
-    });
-
-    // Create delivery tracking for this order
-    const delivery = await DeliveryTracking.create({
-      order: order._id,
-      origin: {
-        name: "Warehouse",
-        lat: 13.0827,
-        lng: 80.2707,
-      },
-      destination: {
-        name: "Customer Location",
-        lat: 13.0569,
-        lng: 80.2425,
-      },
-      currentPosition: {
-        name: "Delivery Agent Location",
-        lat: 13.065,
-        lng: 80.255,
-      },
-      waypoints: [
-        { lat: 13.0827, lng: 80.2707 },
-        { lat: 13.07, lng: 80.26 },
-        { lat: 13.0569, lng: 80.2425 },
-      ],
-      status: "in-transit",
-    });
-
-    res.status(201).json({
-      success: true,
-      message: "Sample order and delivery created",
-      order: { id: order._id, orderId: order.orderId },
-      delivery: { id: delivery._id },
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to create sample data",
-      error: error.message,
-    });
-  }
-});
 
 /* =========================
    404 Handler

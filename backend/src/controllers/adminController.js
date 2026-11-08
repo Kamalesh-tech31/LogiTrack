@@ -401,7 +401,37 @@ const updateLocationStatus = async (req, res) => {
     }
 };
 
+// GET current admin profile
+const getAdminMe = async (req, res) => {
+    try {
+        const user = req.user;
+        if (!user || user.role !== "Admin") {
+            return res.status(403).json({
+                success: false,
+                message: "Forbidden: Admin access required",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                id: user._id,
+                _id: user._id,
+                email: user.email,
+                role: user.role,
+                fullName: user.fullName || "Administrator",
+            },
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+
 module.exports = {
+    getAdminMe,
     getPendingUsers,
     getApprovedUsers,
     getRejectedUsers,

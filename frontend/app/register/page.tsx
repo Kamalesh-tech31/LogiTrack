@@ -237,7 +237,25 @@ export default function RegisterPage() {
 
     try {
       const response = await verifyRegistrationOtp(normalizedEmail, normalizedOtp);
-      setRegistrationToken(response.registrationToken);
+
+      if (response.isAdmin === true || response.role === "Admin") {
+        const token = response.token || response.adminToken;
+        if (token) {
+          localStorage.setItem("token", token);
+          localStorage.setItem("role", "Admin");
+          localStorage.setItem("userRole", "Admin");
+          if (response.user) {
+            if (response.user.fullName) localStorage.setItem("userName", response.user.fullName);
+            if (response.user._id) localStorage.setItem("userId", response.user._id);
+            if (response.user.email) localStorage.setItem("userEmail", response.user.email);
+          } else {
+            localStorage.setItem("userEmail", normalizedEmail);
+          }
+        }
+        router.replace("/admin");
+        return;
+      }
+      setRegistrationToken(response.registrationToken || "");
       setStep("details");
       setSuccess("Email verified successfully! Please complete your account profile.");
       toast.success("Email verified successfully!");

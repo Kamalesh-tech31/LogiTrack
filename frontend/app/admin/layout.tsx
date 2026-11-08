@@ -1,146 +1,88 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Lock, ArrowRight, ShieldAlert, KeyRound, Eye, EyeOff } from "lucide-react";
+import { useRouter } from "next/navigation";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminNavbar from "@/components/admin/AdminNavbar";
-
-const ADMIN_PASS = "aswinabi1";
+import { fetchAdminMe } from "@/lib/api";
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    const auth = sessionStorage.getItem("admin_auth");
-    if (auth === ADMIN_PASS) {
-      setIsAuthenticated(true);
-    } else {
-      setIsAuthenticated(false);
-    }
-  }, []);
+    let isMounted = true;
 
-  const handlePasswordSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setError(null);
-
-    setTimeout(() => {
-      if (password === ADMIN_PASS) {
-        sessionStorage.setItem("admin_auth", ADMIN_PASS);
-        setIsAuthenticated(true);
-      } else {
-        setError("Invalid admin password. Access denied.");
+    const verifyAdmin = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        if (isMounted) {
+          setIsAuthenticated(false);
+          router.replace("/register");
+        }
+        return;
       }
-      setIsSubmitting(false);
-    }, 200);
-  };
+
+      try {
+        const adminData = await fetchAdminMe();
+        if (!isMounted) return;
+
+        if (adminData && adminData.role === "Admin") {
+          setIsAuthenticated(true);
+        } else {
+          localStorage.removeItem("token");
+          localStorage.removeItem("role");
+          localStorage.removeItem("user");
+          localStorage.removeItem("userId");
+          localStorage.removeItem("userName");
+          localStorage.removeItem("userEmail");
+          setIsAuthenticated(false);
+          router.replace("/register");
+        }
+      } catch {
+        if (!isMounted) return;
+        localStorage.removeItem("token");
+        localStorage.removeItem("role");
+        localStorage.removeItem("user");
+        localStorage.removeItem("userId");
+        localStorage.removeItem("userName");
+        localStorage.removeItem("userEmail");
+        setIsAuthenticated(false);
+        router.replace("/register");
+      }
+    };
+
+    void verifyAdmin();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [router]);
 
   const handleLogout = () => {
-    sessionStorage.removeItem("admin_auth");
-    setIsAuthenticated(false);
-    setPassword("");
-    setError(null);
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    localStorage.removeItem("user");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("userName");
+    localStorage.removeItem("userEmail");
+    router.replace("/");
   };
 
-  // Initial client-side loading state
-  if (isAuthenticated === null) {
+  // Show nothing from admin pages until verification passes
+  if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-[#111214] text-[#F4F4F5] flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[#F97316] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-[#111214] text-[#F4F4F5] flex flex-col items-center justify-center gap-3">
+        <div className="w-10 h-10 border-2 border-[#F97316] border-t-transparent rounded-full animate-spin" />
+        <p className="text-[#A1A1AA] text-sm">Verifying administrator authorization...</p>
       </div>
     );
   }
 
-  // Password Gate Form
-  if (!isAuthenticated) {
-    return (
-      <main className="min-h-screen bg-[#111214] text-[#F4F4F5] flex items-center justify-center px-4">
-        <div className="w-full max-w-md bg-[#1A1B1E]/95 backdrop-blur-xl border border-[#F97316]/30 rounded-3xl p-8 shadow-[0_0_50px_rgba(249,115,22,0.15)]">
-          {/* Brand Header */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#F97316]/15 border border-[#F97316]/40 text-[#F97316] mb-4">
-              <KeyRound size={30} />
-            </div>
-            <h1 className="text-4xl font-bold tracking-tight text-white">
-              Logi<span className="text-[#F97316]">Track</span>
-            </h1>
-            <p className="text-[#A1A1AA] text-sm mt-2">
-              Administrator Control Center
-            </p>
-          </div>
-
-          <form onSubmit={handlePasswordSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-[#A1A1AA] mb-2">
-                Admin Password
-              </label>
-              <div className="relative">
-                <Lock
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-[#A1A1AA]"
-                  size={18}
-                />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    if (error) setError(null);
-                  }}
-                  placeholder="Enter admin password"
-                  autoFocus
-                  required
-                  className="w-full bg-[#111214] border border-[#2A2B30] rounded-2xl pl-11 pr-12 py-3.5 text-[#F4F4F5] placeholder:text-neutral-600 outline-none focus:border-[#F97316] focus:ring-1 focus:ring-[#F97316] transition-all"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#A1A1AA] hover:text-white transition"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-            </div>
-
-            {error && (
-              <div className="flex items-center gap-2 p-3.5 rounded-2xl bg-red-950/50 border border-red-800/60 text-red-300 text-sm">
-                <ShieldAlert size={18} className="shrink-0 text-red-400" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={isSubmitting || !password}
-              className="w-full bg-[#F97316] hover:bg-[#EA580C] text-white font-semibold py-3.5 rounded-2xl transition-all duration-200 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(249,115,22,0.3)] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-            >
-              {isSubmitting ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <>
-                  <span>Unlock Admin Portal</span>
-                  <ArrowRight size={18} />
-                </>
-              )}
-            </button>
-          </form>
-
-          <p className="text-center text-xs text-[#A1A1AA] mt-8">
-            Restricted area. Authorized personnel only.
-          </p>
-        </div>
-      </main>
-    );
-  }
-
-  // Authenticated Admin Shell
   return (
     <div className="min-h-screen bg-[#111214] text-[#F4F4F5] flex">
       {/* Shared Admin Sidebar */}

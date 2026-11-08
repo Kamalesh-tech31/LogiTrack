@@ -5,6 +5,7 @@
 
 # environment variables
 .env*
+!.env.example
 
 # logs
 npm-debug.log*
@@ -29,8 +30,8 @@ coverage
 
 # misc
 .DS_Store
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.vscode
+*.pem
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts

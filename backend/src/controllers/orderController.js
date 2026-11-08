@@ -1,7 +1,9 @@
+const mongoose = require("mongoose");
 const Order = require("../models/Order");
 const Product = require("../models/product");
 const User = require("../models/User");
 const { createOrderEventNotifications } = require("../services/notificationService");
+const { isBusinessOwner } = require("../services/deliveryOtpService");
 const { geocodeAddress, getAddressSuggestions } = require("../services/geocodingService");
 const fs = require("fs");
 const path = require("path");
@@ -22,15 +24,23 @@ const generateOrderId = () =>
 // Create order with automatic delivery creation
 exports.createOrder = async (req, res, next) => {
   try {
-    const { userId, items, deliveryAddress } = req.body;
-
-    if (!userId || !items || !Array.isArray(items) || items.length === 0) {
-      return res
-        .status(400)
-        .json({ success: false, message: "userId and items are required" });
+    if (req.user?.role !== "Customer") {
+      return res.status(403).json({
+        success: false,
+        message: "Only customers can create orders",
+      });
     }
 
-    const user = await User.findById(userId);
+    const customerId = req.user?.id || req.user?._id;
+    const { items, deliveryAddress } = req.body;
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Items are required" });
+    }
+
+    const user = await User.findById(customerId);
     if (!user) {
       return res
         .status(404)
@@ -201,7 +211,7 @@ exports.createOrder = async (req, res, next) => {
     const orderId = generateOrderId();
     const order = new Order({
       orderId,
-      customerId: userId,
+      customerId,
       ownerId,
       customerName: user.fullName,
       items: orderItems,
@@ -234,7 +244,7 @@ exports.getOrders = async (req, res, next) => {
 
     if (role === "Customer") {
       filter.customerId = userId;
-    } else if (role === "Business Owner" || role === "Owner") {
+    } else if (isBusinessOwner(req.user)) {
       filter.ownerId = userId;
     } else if (role === "Delivery Agent") {
       filter.$or = [
@@ -392,24 +402,86 @@ exports.updateOrderStatus = async (req, res, next) => {
 // Delete/Cancel order
 exports.deleteOrder = async (req, res, next) => {
   try {
-    const order = await Order.findById(req.params.id);
-    if (!order)
-      return res
-        .status(404)
-        .json({ success: false, message: "Order not found" });
-
-    // If order not delivered, return stock
-    if (order.status !== "delivered") {
-      await createOrderEventNotifications(order, "cancelled");
-      for (const it of order.items) {
-        await Product.findByIdAndUpdate(it.product, {
-          $inc: { stock: it.quantity },
-        });
-      }
+    const userId = req.user?.id || req.user?._id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
-    await Order.findByIdAndDelete(req.params.id);
-    res.json({ success: true, message: "Order deleted and stock restored" });
+    const orderIdParam = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(orderIdParam)) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    const rawReason =
+      typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
+    const cancellationReason =
+      rawReason.slice(0, 200) || "Cancelled by customer";
+
+    const cancelledOrder = await Order.findOneAndUpdate(
+      {
+        _id: orderIdParam,
+        customerId: userId,
+        status: "pending",
+        assignedAgent: null,
+        claimedBy: null,
+        deliveryStage: "UNCLAIMED",
+      },
+      {
+        $set: {
+          status: "cancelled",
+          cancelledAt: new Date(),
+          cancellationReason,
+        },
+      },
+      { new: true }
+    );
+
+    if (cancelledOrder) {
+      for (const it of cancelledOrder.items) {
+        if (it.product && it.quantity) {
+          await Product.findByIdAndUpdate(it.product, {
+            $inc: { stock: it.quantity },
+          });
+        }
+      }
+
+      try {
+        await createOrderEventNotifications(cancelledOrder, "cancelled");
+      } catch (notifErr) {
+        console.error("Failed to send order cancellation notification:", notifErr);
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Order cancelled and stock restored successfully",
+        data: cancelledOrder,
+      });
+    }
+
+    const existingOrder = await Order.findOne({
+      _id: orderIdParam,
+      customerId: userId,
+    });
+
+    if (!existingOrder) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    if (existingOrder.status === "cancelled") {
+      return res.status(409).json({
+        success: false,
+        message: "This order is already cancelled.",
+      });
+    }
+
+    return res.status(409).json({
+      success: false,
+      message:
+        "This order can no longer be cancelled because it has already been processed.",
+    });
   } catch (err) {
     next(err);
   }

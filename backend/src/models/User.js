@@ -4,7 +4,9 @@ const userSchema = new mongoose.Schema(
   {
     fullName: {
       type: String,
-      required: true,
+      required: function () {
+        return this.role !== "Admin";
+      },
     },
 
     email: {
@@ -19,12 +21,14 @@ const userSchema = new mongoose.Schema(
 
     password: {
       type: String,
-      required: true,
+      required: function () {
+        return this.role !== "Admin";
+      },
     },
 
     role: {
       type: String,
-      enum: ["Business Owner", "Delivery Agent", "Customer"],
+      enum: ["Business Owner", "Delivery Agent", "Customer", "Admin"],
       required: true,
     },
 

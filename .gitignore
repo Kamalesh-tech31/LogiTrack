@@ -74,3 +74,4 @@ mongodb-data/
 # uploads
 
 uploads/
+*.log

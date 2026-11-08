@@ -1,17 +1,8 @@
-const express = require("express")
-const router = express.Router()
-const {
-  getAllTrackings,
-  getTrackingByOrderId,
-  createTracking,
-  updateTracking,
-  deleteTracking,
-} = require("../controllers/orderTrackingController")
+const express = require("express");
+const authenticateToken = require("../middleware/authenticateToken");
+const router = express.Router();
+const { getTrackingByOrderId } = require("../controllers/orderTrackingController");
 
-router.get("/", getAllTrackings)
-router.get("/order/:orderId", getTrackingByOrderId)
-router.post("/", createTracking)
-router.put("/:id", updateTracking)
-router.delete("/:id", deleteTracking)
+router.get("/order/:orderId", authenticateToken, getTrackingByOrderId);
 
-module.exports = router
+module.exports = router;

@@ -1,19 +1,11 @@
-const express = require("express")
+const express = require("express");
 const authenticateToken = require("../middleware/authenticateToken");
 const router = express.Router();
 
 const {
   getDashboardStats,
-  getDashboardStatsById,
-  createDashboardStats,
-  updateDashboardStats,
-  deleteDashboardStats,
-} = require("../controllers/dashboardStatsController")
+} = require("../controllers/dashboardStatsController");
 
-router.get("/", getDashboardStats)
-router.get("/:id", getDashboardStatsById)
-router.post("/", authenticateToken, createDashboardStats)
-router.put("/:id", authenticateToken, updateDashboardStats)
-router.delete("/:id", authenticateToken, deleteDashboardStats)
+router.get("/", authenticateToken, getDashboardStats);
 
-module.exports = router
+module.exports = router;

@@ -9,16 +9,12 @@ const {
   getDashboard,
   getEarnings,
   updateDeliveryStatus,
-  createDelivery,
-  updateDelivery,
-  deleteDelivery,
   claimOrder,
   reachedWarehouse,
   reachedCustomer,
   updateAgentTelemetry,
   acceptOrder,
   assignOrder,
-  getDeliveries,
   generateDeliveryOtp,
   verifyCustomerOtp,
   getNearbyOrders,
@@ -72,15 +68,6 @@ router.post("/orders/:orderId/accept", acceptOrder);
 
 // Owner assigns an agent to an order
 router.post("/orders/:orderId/assign", assignOrder);
-
-// Create delivery
-router.post("/", createDelivery);
-
-// Update whole delivery (PUT)
-router.put("/:id", updateDelivery);
-
-// Delete delivery
-router.delete("/:id", deleteDelivery);
 
 // Update delivery status
 router.patch("/:id/status", updateDeliveryStatus);

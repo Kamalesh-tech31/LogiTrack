@@ -34,7 +34,6 @@ const corsOptions = {
     "Content-Type",
     "Accept",
     "Authorization",
-    "x-admin-key",
   ],
   optionsSuccessStatus: 200,
 };

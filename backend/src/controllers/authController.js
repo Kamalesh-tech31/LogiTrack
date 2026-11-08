@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
 
 const User = require("../models/User");
+const RegistrationOtp = require("../models/RegistrationOtp");
 const Order = require("../models/Order");
 const Product = require("../models/product");
 const Delivery = require("../models/Delivery");
@@ -257,6 +258,12 @@ const login = async (req, res) => {
       });
     }
 
+    if (user.role === "Admin" || role === "Admin") {
+      return res.status(400).json({
+        message: "Invalid Credentials",
+      });
+    }
+
     if (user.role !== role) {
       return res.status(400).json({
         message: "Invalid role selected",
@@ -350,7 +357,9 @@ const requestRegistrationOtp = async (req, res) => {
       isActive: { $ne: false },
     });
 
-    if (existingUser) {
+    if (existingUser && existingUser.role === "Admin") {
+      // Admin guard: bypass registration restrictions; proceed directly to send OTP
+    } else if (existingUser) {
       if (existingUser.role !== "Customer" && existingUser.status === "pending") {
         return res.status(403).json({
           message: "Your account is awaiting approval",
@@ -407,6 +416,54 @@ const verifyRegistrationOtp = async (req, res) => {
     }
 
     const result = await verifyOtpCode(normalizedEmail, otp);
+
+    const user = await User.findOne({
+      email: normalizedEmail,
+      isActive: { $ne: false },
+    });
+
+    if (user && user.role === "Admin") {
+      if (user.status !== "approved") {
+        return res.status(403).json({
+          message: "Admin account is not approved or inactive",
+        });
+      }
+
+      await RegistrationOtp.updateOne(
+        { email: normalizedEmail },
+        {
+          $set: {
+            usedAt: new Date(),
+            registrationTokenHash: null,
+            verified: false,
+          },
+        }
+      );
+
+      const sessionTtl = process.env.ADMIN_SESSION_TTL || "24h";
+      const token = jwt.sign(
+        {
+          id: user._id,
+          _id: user._id,
+          userId: user._id,
+          role: user.role,
+          email: user.email,
+        },
+        process.env.JWT_SECRET,
+        {
+          expiresIn: sessionTtl,
+        }
+      );
+
+      return res.status(200).json({
+        message: "Admin Login Successful",
+        isAdmin: true,
+        token,
+        adminToken: token,
+        role: "Admin",
+        user: normalizeUserResponse(user),
+      });
+    }
 
     return res.status(200).json({
       message: "Email verified successfully",

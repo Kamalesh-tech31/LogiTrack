@@ -1,5 +1,6 @@
 import { CustomerSidebar } from "@/components/customer/sidebar";
 import { CustomerHeader } from "@/components/customer/header";
+import { AdminRoleRedirect } from "@/components/common/AdminRoleRedirect";
 
 export default function CustomerLayout({
   children,
@@ -8,6 +9,7 @@ export default function CustomerLayout({
 }) {
   return (
     <div className="relative flex h-screen w-screen overflow-hidden bg-[#111214] text-[#F4F4F5] font-sans selection:bg-[#F97316]/30">
+      <AdminRoleRedirect />
       {/* Subtle Ambient Orange Glow */}
       <div className="pointer-events-none absolute top-0 right-0 w-[600px] h-[350px] bg-[#F97316]/8 rounded-full blur-[140px] z-0" />
       <div className="pointer-events-none absolute bottom-0 left-64 w-[500px] h-[300px] bg-[#FDBA74]/5 rounded-full blur-[120px] z-0" />
