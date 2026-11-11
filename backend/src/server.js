@@ -11,10 +11,12 @@ const adminRoutes = require("./routes/adminRoutes");
 /* =========================
    Middleware Imports
 ========================= */
+const helmet = require("helmet");
 const corsConfig = require("./middleware/corsConfig");
 const errorHandler = require("./middleware/errorHandler");
 const requestLogger = require("./middleware/requestLogger");
 const authenticateToken = require("./middleware/authenticateToken");
+const { globalLimiter } = require("./middleware/rateLimiter");
 
 /* =========================
    Customer Routes
@@ -43,7 +45,21 @@ const locationRoutes = require("./routes/locations");
 ========================= */
 const app = express();
 
-
+// Trust proxy configuration for reverse proxies / load balancers (defaults to OFF)
+const trustProxySetting = process.env.TRUST_PROXY;
+if (trustProxySetting === "true" || trustProxySetting === "1") {
+  app.set("trust proxy", 1);
+} else if (
+  trustProxySetting &&
+  trustProxySetting !== "false" &&
+  trustProxySetting !== "0" &&
+  trustProxySetting !== "off"
+) {
+  const numericHops = Number(trustProxySetting);
+  app.set("trust proxy", Number.isNaN(numericHops) ? trustProxySetting : numericHops);
+} else {
+  app.set("trust proxy", false);
+}
 
 const PORT = Number(process.env.PORT || 5000);
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
@@ -53,9 +69,13 @@ const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 ========================= */
 app.use(corsConfig);
 
-
-
-
+// Cross-Origin-Resource-Policy is set to "cross-origin" only because /uploads
+// is served statically to the cross-origin frontend for user documents/images.
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
 
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
@@ -64,6 +84,8 @@ app.use(
   "/uploads",
   express.static(path.join(__dirname, "../uploads"))
 );
+
+app.use(globalLimiter);
 
 app.use(requestLogger);
 

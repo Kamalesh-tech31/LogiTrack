@@ -1,6 +1,10 @@
 const express = require("express");
 const authenticateToken = require("../middleware/authenticateToken");
 const {
+  deliveryOtpGenerateLimiter,
+  deliveryOtpVerifyLimiter,
+} = require("../middleware/rateLimiter");
+const {
   checkAgentAvailability,
   addOrderToBatch,
   getAllDeliveries,
@@ -58,10 +62,18 @@ router.post("/orders/:orderId/telemetry", updateAgentTelemetry);
 router.post("/orders/:orderId/add-to-batch", addOrderToBatch);
 
 // Generate delivery verification OTP (after reaching customer)
-router.post("/orders/:orderId/generate-otp", generateDeliveryOtp);
+router.post(
+  "/orders/:orderId/generate-otp",
+  deliveryOtpGenerateLimiter,
+  generateDeliveryOtp
+);
 
 // Verify customer delivery OTP (delivery agent)
-router.post("/orders/:orderId/verify-customer", verifyCustomerOtp);
+router.post(
+  "/orders/:orderId/verify-customer",
+  deliveryOtpVerifyLimiter,
+  verifyCustomerOtp
+);
 
 // Accept order as delivery agent
 router.post("/orders/:orderId/accept", acceptOrder);
