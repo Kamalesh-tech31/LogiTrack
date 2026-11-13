@@ -109,17 +109,24 @@ export default function EditProductPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml"];
+    const validTypes = ["image/jpeg", "image/png", "image/webp"];
     if (!validTypes.includes(file.type)) {
-      toast.error("Please select a valid image file (JPEG, PNG, WEBP, GIF, SVG).");
+      const msg = "Please select a valid image file (JPEG, PNG, or WEBP).";
+      setError(msg);
+      toast.error(msg);
+      e.target.value = "";
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("Image file size exceeds 10MB limit.");
+    if (file.size > 3 * 1024 * 1024) {
+      const msg = "Image file size exceeds 3MB limit.";
+      setError(msg);
+      toast.error(msg);
+      e.target.value = "";
       return;
     }
 
+    setError(null);
     setSelectedFile(file);
     const localPreview = URL.createObjectURL(file);
     setPreviewUrl(localPreview);
@@ -164,6 +171,13 @@ export default function EditProductPage() {
       let finalImageUrl = previewUrl;
 
       if (imageInputMode === "device" && selectedFile) {
+        const validTypes = ["image/jpeg", "image/png", "image/webp"];
+        if (!validTypes.includes(selectedFile.type)) {
+          throw new Error("Please select a valid image file (JPEG, PNG, or WEBP).");
+        }
+        if (selectedFile.size > 3 * 1024 * 1024) {
+          throw new Error("Image file size exceeds 3MB limit.");
+        }
         toast.loading("Uploading image to Cloudinary...", { id: "upload-toast" });
         const uploadRes = await uploadOwnerProductImage(selectedFile);
         toast.dismiss("upload-toast");
@@ -402,7 +416,7 @@ export default function EditProductPage() {
                   <input
                     type="file"
                     ref={fileInputRef}
-                    accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
+                    accept="image/jpeg,image/png,image/webp"
                     onChange={handleFileChange}
                     className="hidden"
                   />
@@ -418,7 +432,7 @@ export default function EditProductPage() {
                       Click to replace image from device
                     </p>
                     <p className="text-[11px] text-[#A1A1AA] mt-1">
-                      JPEG, PNG, WEBP, GIF up to 10MB
+                      JPEG, PNG, WEBP up to 3MB
                     </p>
                   </div>
                 </div>

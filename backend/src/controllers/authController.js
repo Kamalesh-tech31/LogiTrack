@@ -179,19 +179,19 @@ const register = async (req, res) => {
     const files = req.files || {};
 
     const aadhaarUrl = files.aadhaar?.[0]
-      ? await uploadToCloudinary(files.aadhaar[0].path, "aadhaar")
+      ? await uploadToCloudinary(files.aadhaar[0].buffer, "aadhaar")
       : "";
 
     const drivingLicenseUrl = files.drivingLicense?.[0]
-      ? await uploadToCloudinary(files.drivingLicense[0].path, "driving-license")
+      ? await uploadToCloudinary(files.drivingLicense[0].buffer, "driving-license")
       : "";
 
     const gstCertificateUrl = files.gstCertificate?.[0]
-      ? await uploadToCloudinary(files.gstCertificate[0].path, "gst-certificate")
+      ? await uploadToCloudinary(files.gstCertificate[0].buffer, "gst-certificate")
       : "";
 
     const shopLicenseUrl = files.shopLicense?.[0]
-      ? await uploadToCloudinary(files.shopLicense[0].path, "shop-license")
+      ? await uploadToCloudinary(files.shopLicense[0].buffer, "shop-license")
       : "";
 
     const user = await completeRegistrationFlow({
