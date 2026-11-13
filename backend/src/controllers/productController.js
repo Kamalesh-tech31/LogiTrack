@@ -1,4 +1,3 @@
-const fs = require("fs");
 const Product = require("../models/product");
 const InventoryHistory = require("../models/InventoryHistory");
 const uploadToCloudinary = require("../utils/uploadToCloudinary");
@@ -62,31 +61,8 @@ exports.generateSku = async (req, res, next) => {
 exports.uploadProductImage = async (req, res, next) => {
   try {
     if (req.file) {
-      const allowedMimes = [
-        "image/jpeg",
-        "image/png",
-        "image/webp",
-        "image/gif",
-        "image/svg+xml",
-      ];
-      if (!allowedMimes.includes(req.file.mimetype)) {
-        if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-        return res.status(400).json({
-          success: false,
-          message: "Invalid file type. Supported formats: JPEG, PNG, WEBP, GIF, SVG.",
-        });
-      }
-
-      if (req.file.size > 10 * 1024 * 1024) {
-        if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-        return res.status(400).json({
-          success: false,
-          message: "File size exceeds 10MB limit.",
-        });
-      }
-
       const secureUrl = await uploadToCloudinary(
-        req.file.path,
+        req.file.buffer,
         "logitrack/products"
       );
       return res.json({ success: true, url: secureUrl });
@@ -151,9 +127,9 @@ exports.createProduct = async (req, res, next) => {
     let finalImages = [];
 
     if (req.file) {
-      // Local file uploaded directly via multipart
+      // In-memory file uploaded directly via multipart
       const secureUrl = await uploadToCloudinary(
-        req.file.path,
+        req.file.buffer,
         "logitrack/products"
       );
       finalImages.push(secureUrl);
@@ -379,7 +355,7 @@ exports.updateProduct = async (req, res, next) => {
     // Handle file upload or image URL
     if (req.file) {
       const secureUrl = await uploadToCloudinary(
-        req.file.path,
+        req.file.buffer,
         "logitrack/products"
       );
       updates.images = [secureUrl];

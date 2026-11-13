@@ -1,35 +1,55 @@
+const crypto = require("crypto");
 const cloudinary = require("../config/cloudinary");
-const fs = require("fs");
 
-const uploadToCloudinary = async (filePathOrUrl, folderName = "logitrack/products") => {
-    try {
-        const result = await cloudinary.uploader.upload(filePathOrUrl, {
-            folder: folderName,
-            resource_type: "auto",
-        });
-
-        // delete local file if it exists on disk
-        if (typeof filePathOrUrl === "string" && fs.existsSync(filePathOrUrl)) {
-            try {
-                fs.unlinkSync(filePathOrUrl);
-            } catch (err) {
-                console.warn("Could not remove temp file:", err.message);
-            }
+/**
+ * Upload an in-memory file buffer (via upload_stream) or a remote HTTP(S) URL to Cloudinary.
+ */
+const uploadBufferToCloudinary = (buffer, folderName) =>
+  new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder: folderName,
+        public_id: crypto.randomUUID(),
+        resource_type: "auto",
+      },
+      (error, result) => {
+        if (error) {
+          return reject(error);
         }
-
-        return result.secure_url;
-    } catch (error) {
-        // delete local file even if upload fails
-        if (typeof filePathOrUrl === "string" && fs.existsSync(filePathOrUrl)) {
-            try {
-                fs.unlinkSync(filePathOrUrl);
-            } catch (err) {
-                console.warn("Could not remove temp file after failure:", err.message);
-            }
+        if (!result || !result.secure_url) {
+          return reject(new Error("Cloudinary upload did not return a secure URL"));
         }
+        return resolve(result.secure_url);
+      }
+    );
 
-        throw error;
-    }
+    stream.end(buffer);
+  });
+
+const uploadToCloudinary = async (source, folderName = "logitrack/products") => {
+  const buffer = Buffer.isBuffer(source)
+    ? source
+    : source && Buffer.isBuffer(source.buffer)
+      ? source.buffer
+      : null;
+
+  if (buffer) {
+    return uploadBufferToCloudinary(buffer, folderName);
+  }
+
+  if (
+    typeof source === "string" &&
+    (source.startsWith("http://") || source.startsWith("https://"))
+  ) {
+    const result = await cloudinary.uploader.upload(source, {
+      folder: folderName,
+      public_id: crypto.randomUUID(),
+      resource_type: "auto",
+    });
+    return result.secure_url;
+  }
+
+  throw new Error("Invalid upload source: expected file buffer or HTTP(S) URL");
 };
 
 module.exports = uploadToCloudinary;

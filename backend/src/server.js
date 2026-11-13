@@ -2,7 +2,6 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
-const path = require("path");
 const connectDB = require("./config/db");
 const deliveryAgentRoutes = require("./routes/deliveryAgents");
 const adminRoutes = require("./routes/adminRoutes");
@@ -69,21 +68,10 @@ const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 ========================= */
 app.use(corsConfig);
 
-// Cross-Origin-Resource-Policy is set to "cross-origin" only because /uploads
-// is served statically to the cross-origin frontend for user documents/images.
-app.use(
-  helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" },
-  })
-);
+app.use(helmet());
 
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ extended: true, limit: "50mb" }));
-
-app.use(
-  "/uploads",
-  express.static(path.join(__dirname, "../uploads"))
-);
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
 app.use(globalLimiter);
 

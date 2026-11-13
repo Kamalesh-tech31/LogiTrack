@@ -83,18 +83,25 @@ export default function AddProductPage() {
     if (!file) return;
 
     // Validate type
-    const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml"];
+    const validTypes = ["image/jpeg", "image/png", "image/webp"];
     if (!validTypes.includes(file.type)) {
-      toast.error("Please select a valid image file (JPEG, PNG, WEBP, GIF, SVG).");
+      const msg = "Please select a valid image file (JPEG, PNG, or WEBP).";
+      setError(msg);
+      toast.error(msg);
+      e.target.value = "";
       return;
     }
 
-    // Validate size (10MB max)
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("Image file size exceeds 10MB limit.");
+    // Validate size (3MB max)
+    if (file.size > 3 * 1024 * 1024) {
+      const msg = "Image file size exceeds 3MB limit.";
+      setError(msg);
+      toast.error(msg);
+      e.target.value = "";
       return;
     }
 
+    setError(null);
     setSelectedFile(file);
     const localPreview = URL.createObjectURL(file);
     setPreviewUrl(localPreview);
@@ -138,6 +145,13 @@ export default function AddProductPage() {
 
       // If user uploaded a local file from device:
       if (imageInputMode === "device" && selectedFile) {
+        const validTypes = ["image/jpeg", "image/png", "image/webp"];
+        if (!validTypes.includes(selectedFile.type)) {
+          throw new Error("Please select a valid image file (JPEG, PNG, or WEBP).");
+        }
+        if (selectedFile.size > 3 * 1024 * 1024) {
+          throw new Error("Image file size exceeds 3MB limit.");
+        }
         toast.loading("Uploading image to Cloudinary...", { id: "upload-toast" });
         const uploadRes = await uploadOwnerProductImage(selectedFile);
         toast.dismiss("upload-toast");
@@ -379,7 +393,7 @@ export default function AddProductPage() {
                   <input
                     type="file"
                     ref={fileInputRef}
-                    accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
+                    accept="image/jpeg,image/png,image/webp"
                     onChange={handleFileChange}
                     className="hidden"
                   />
@@ -395,7 +409,7 @@ export default function AddProductPage() {
                       Click to browse image from your device
                     </p>
                     <p className="text-[11px] text-[#A1A1AA] mt-1">
-                      JPEG, PNG, WEBP, GIF up to 10MB
+                      JPEG, PNG, WEBP up to 3MB
                     </p>
                   </div>
                 </div>

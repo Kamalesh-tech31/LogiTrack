@@ -34,6 +34,31 @@ import { isPasswordValid, PASSWORD_REQUIREMENTS } from "@/lib/passwordValidation
 
 const OTP_LENGTH = 6;
 const DEFAULT_RESEND_SECONDS = 60;
+const MAX_DOCUMENT_SIZE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_DOCUMENT_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/pdf",
+];
+const ALLOWED_DOCUMENT_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".pdf"];
+
+function validateDocumentFile(file: File, label: string): string | null {
+  const lowerName = file.name.toLowerCase();
+  const hasAllowedType = file.type
+    ? ALLOWED_DOCUMENT_TYPES.includes(file.type)
+    : ALLOWED_DOCUMENT_EXTENSIONS.some((ext) => lowerName.endsWith(ext));
+
+  if (!hasAllowedType) {
+    return `${label} must be a JPEG, PNG, WebP, or PDF file.`;
+  }
+
+  if (file.size > MAX_DOCUMENT_SIZE_BYTES) {
+    return `${label} exceeds the 5 MB file size limit.`;
+  }
+
+  return null;
+}
 
 function isGmailAddress(value: string) {
   return /^[^\s@]+@gmail\.com$/i.test(value.trim());
@@ -278,6 +303,30 @@ export default function RegisterPage() {
     await startOtpFlow();
   };
 
+  const handleDocumentChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+    setter: (file: File | null) => void,
+    label: string,
+  ) => {
+    const file = event.target.files?.[0] || null;
+    if (!file) {
+      setter(null);
+      return;
+    }
+
+    const validationError = validateDocumentFile(file, label);
+    if (validationError) {
+      event.target.value = "";
+      setter(null);
+      setError(validationError);
+      toast.error(validationError);
+      return;
+    }
+
+    setError(null);
+    setter(file);
+  };
+
   const handleRegister = async (event: React.FormEvent) => {
     event.preventDefault();
 
@@ -306,6 +355,15 @@ export default function RegisterPage() {
           setIsSubmitting(false);
           return;
         }
+        const docError =
+          validateDocumentFile(aadhaar, "Aadhaar Card") ||
+          validateDocumentFile(drivingLicense, "Driving License");
+        if (docError) {
+          setError(docError);
+          toast.error(docError);
+          setIsSubmitting(false);
+          return;
+        }
         formData.append("aadhaar", aadhaar);
         formData.append("drivingLicense", drivingLicense);
       }
@@ -313,6 +371,15 @@ export default function RegisterPage() {
       if (selectedRole === "Business Owner") {
         if (!gstCertificate || !shopLicense) {
           setError("Please upload both GST Certificate and Shop License documents.");
+          setIsSubmitting(false);
+          return;
+        }
+        const docError =
+          validateDocumentFile(gstCertificate, "GST Certificate") ||
+          validateDocumentFile(shopLicense, "Shop License");
+        if (docError) {
+          setError(docError);
+          toast.error(docError);
           setIsSubmitting(false);
           return;
         }
@@ -679,7 +746,8 @@ export default function RegisterPage() {
                   </label>
                   <input
                     type="file"
-                    onChange={(e) => setAadhaar(e.target.files?.[0] || null)}
+                    accept=".jpg,.jpeg,.png,.webp,.pdf"
+                    onChange={(e) => handleDocumentChange(e, setAadhaar, "Aadhaar Card")}
                     className="w-full rounded-2xl border border-[#2A2B30] bg-[#111214] px-5 py-4 text-[#A1A1AA]"
                     required
                   />
@@ -691,7 +759,8 @@ export default function RegisterPage() {
                   </label>
                   <input
                     type="file"
-                    onChange={(e) => setDrivingLicense(e.target.files?.[0] || null)}
+                    accept=".jpg,.jpeg,.png,.webp,.pdf"
+                    onChange={(e) => handleDocumentChange(e, setDrivingLicense, "Driving License")}
                     className="w-full rounded-2xl border border-[#2A2B30] bg-[#111214] px-5 py-4 text-[#A1A1AA]"
                     required
                   />
@@ -731,7 +800,8 @@ export default function RegisterPage() {
                     </label>
                     <input
                       type="file"
-                      onChange={(e) => setGstCertificate(e.target.files?.[0] || null)}
+                      accept=".jpg,.jpeg,.png,.webp,.pdf"
+                      onChange={(e) => handleDocumentChange(e, setGstCertificate, "GST Certificate")}
                       className="w-full rounded-2xl border border-[#2A2B30] bg-[#111214] px-5 py-4 text-[#A1A1AA]"
                       required
                     />
@@ -743,7 +813,8 @@ export default function RegisterPage() {
                     </label>
                     <input
                       type="file"
-                      onChange={(e) => setShopLicense(e.target.files?.[0] || null)}
+                      accept=".jpg,.jpeg,.png,.webp,.pdf"
+                      onChange={(e) => handleDocumentChange(e, setShopLicense, "Shop License")}
                       className="w-full rounded-2xl border border-[#2A2B30] bg-[#111214] px-5 py-4 text-[#A1A1AA]"
                       required
                     />

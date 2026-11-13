@@ -1,6 +1,10 @@
 const express = require("express");
 const authenticateToken = require("../middleware/authenticateToken");
-const upload = require("../config/multer");
+const { documentUpload } = require("../config/multer");
+const {
+  DOCUMENT_FIELD_ALLOWED_TYPES,
+  validateUploadedFiles,
+} = require("../middleware/validateUpload");
 const {
   loginIpLimiter,
   loginAccountLimiter,
@@ -28,12 +32,13 @@ const router = express.Router();
 router.post(
 	"/register",
 	registerUploadLimiter,
-	upload.fields([
+	documentUpload.fields([
 		{ name: "aadhaar", maxCount: 1 },
 		{ name: "drivingLicense", maxCount: 1 },
 		{ name: "gstCertificate", maxCount: 1 },
 		{ name: "shopLicense", maxCount: 1 },
 	]),
+	validateUploadedFiles(DOCUMENT_FIELD_ALLOWED_TYPES),
 	register
   );
 router.post(
